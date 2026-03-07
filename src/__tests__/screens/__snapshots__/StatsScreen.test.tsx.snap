@@ -1,0 +1,4028 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`MonthCalendar matches snapshot for January 2025 1`] = `
+<View
+  style={
+    {
+      "paddingHorizontal": 16,
+      "paddingVertical": 8,
+    }
+  }
+  testID="month-calendar"
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "justifyContent": "space-between",
+        "marginBottom": 8,
+      }
+    }
+  >
+    <View
+      accessibilityLabel="Previous month"
+      accessibilityRole="button"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onClick={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "height": 44,
+          "justifyContent": "center",
+          "opacity": 1,
+          "width": 44,
+        }
+      }
+      testID="calendar-prev"
+    >
+      <Text
+        style={
+          {
+            "color": "#F56600",
+            "fontSize": 28,
+            "fontWeight": "700",
+          }
+        }
+      >
+        ‹
+      </Text>
+    </View>
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "TradeGothicNextLT-Bold",
+          "fontSize": 24,
+          "lineHeight": 32,
+        }
+      }
+      testID="calendar-month-label"
+    >
+      January 2025
+    </Text>
+    <View
+      accessibilityLabel="Next month"
+      accessibilityRole="button"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onClick={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "height": 44,
+          "justifyContent": "center",
+          "opacity": 1,
+          "width": 44,
+        }
+      }
+      testID="calendar-next"
+    >
+      <Text
+        style={
+          [
+            {
+              "color": "#F56600",
+              "fontSize": 28,
+              "fontWeight": "700",
+            },
+            false,
+          ]
+        }
+      >
+        ›
+      </Text>
+    </View>
+  </View>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "justifyContent": "space-around",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#A0A0B0",
+            "fontFamily": "Biotif-Regular",
+            "fontSize": 12,
+            "lineHeight": 16,
+            "textAlign": "center",
+          }
+        }
+      >
+        Sun
+      </Text>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#A0A0B0",
+            "fontFamily": "Biotif-Regular",
+            "fontSize": 12,
+            "lineHeight": 16,
+            "textAlign": "center",
+          }
+        }
+      >
+        Mon
+      </Text>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#A0A0B0",
+            "fontFamily": "Biotif-Regular",
+            "fontSize": 12,
+            "lineHeight": 16,
+            "textAlign": "center",
+          }
+        }
+      >
+        Tue
+      </Text>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#A0A0B0",
+            "fontFamily": "Biotif-Regular",
+            "fontSize": 12,
+            "lineHeight": 16,
+            "textAlign": "center",
+          }
+        }
+      >
+        Wed
+      </Text>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#A0A0B0",
+            "fontFamily": "Biotif-Regular",
+            "fontSize": 12,
+            "lineHeight": 16,
+            "textAlign": "center",
+          }
+        }
+      >
+        Thu
+      </Text>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#A0A0B0",
+            "fontFamily": "Biotif-Regular",
+            "fontSize": 12,
+            "lineHeight": 16,
+            "textAlign": "center",
+          }
+        }
+      >
+        Fri
+      </Text>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#A0A0B0",
+            "fontFamily": "Biotif-Regular",
+            "fontSize": 12,
+            "lineHeight": 16,
+            "textAlign": "center",
+          }
+        }
+      >
+        Sat
+      </Text>
+    </View>
+  </View>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "justifyContent": "space-around",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-outside-2024-12-29"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              {
+                "color": "#A0A0B0",
+                "opacity": 0.4,
+              },
+            ]
+          }
+        >
+          29
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-outside-2024-12-30"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              {
+                "color": "#A0A0B0",
+                "opacity": 0.4,
+              },
+            ]
+          }
+        >
+          30
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-outside-2024-12-31"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              {
+                "color": "#A0A0B0",
+                "opacity": 0.4,
+              },
+            ]
+          }
+        >
+          31
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            {
+              "backgroundColor": "#F56600",
+            },
+            false,
+          ]
+        }
+        testID="calendar-day-completed-1"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              {
+                "color": "#FFFFFF",
+                "fontWeight": "700",
+              },
+              false,
+            ]
+          }
+        >
+          1
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-2"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          2
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-3"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          3
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-4"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          4
+        </Text>
+      </View>
+    </View>
+  </View>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "justifyContent": "space-around",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-5"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          5
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-6"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          6
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-7"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          7
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-8"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          8
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-9"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          9
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-10"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          10
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-11"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          11
+        </Text>
+      </View>
+    </View>
+  </View>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "justifyContent": "space-around",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-12"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          12
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-13"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          13
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-14"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          14
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            {
+              "backgroundColor": "#F56600",
+            },
+            false,
+          ]
+        }
+        testID="calendar-day-completed-15"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              {
+                "color": "#FFFFFF",
+                "fontWeight": "700",
+              },
+              false,
+            ]
+          }
+        >
+          15
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-16"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          16
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-17"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          17
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-18"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          18
+        </Text>
+      </View>
+    </View>
+  </View>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "justifyContent": "space-around",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-19"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          19
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-20"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          20
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-21"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          21
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-22"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          22
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-23"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          23
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-24"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          24
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-25"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          25
+        </Text>
+      </View>
+    </View>
+  </View>
+  <View
+    style={
+      {
+        "flexDirection": "row",
+        "justifyContent": "space-around",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-26"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          26
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-27"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          27
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-28"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          28
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-29"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          29
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-30"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          30
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-31"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              false,
+            ]
+          }
+        >
+          31
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "paddingVertical": 2,
+        }
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 18,
+              "height": 36,
+              "justifyContent": "center",
+              "width": 36,
+            },
+            false,
+            false,
+          ]
+        }
+        testID="calendar-day-outside-2025-02-01"
+      >
+        <Text
+          style={
+            [
+              {
+                "color": "#FFFFFF",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              },
+              false,
+              {
+                "color": "#A0A0B0",
+                "opacity": 0.4,
+              },
+            ]
+          }
+        >
+          1
+        </Text>
+      </View>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`StatsScreen matches snapshot 1`] = `
+<RCTScrollView
+  contentContainerStyle={
+    {
+      "paddingBottom": 48,
+    }
+  }
+  style={
+    {
+      "backgroundColor": "#1A1A2E",
+      "flex": 1,
+    }
+  }
+  testID="stats-screen"
+>
+  <View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "paddingBottom": 16,
+          "paddingHorizontal": 16,
+          "paddingTop": 32,
+        }
+      }
+    >
+      <View
+        accessibilityLabel="Go back"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "height": 44,
+            "justifyContent": "center",
+            "marginRight": 8,
+            "opacity": 1,
+            "width": 44,
+          }
+        }
+        testID="back-button"
+      >
+        <Text
+          style={
+            {
+              "color": "#FFFFFF",
+              "fontSize": 32,
+              "fontWeight": "700",
+            }
+          }
+        >
+          ‹
+        </Text>
+      </View>
+      <Text
+        style={
+          {
+            "color": "#F56600",
+            "flex": 1,
+            "fontFamily": "TradeGothicNextLT-Bold",
+            "fontSize": 32,
+            "lineHeight": 40,
+          }
+        }
+        testID="habit-name"
+      >
+        Exercise
+      </Text>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "paddingVertical": 24,
+        }
+      }
+      testID="streak-section"
+    >
+      <Text
+        style={
+          {
+            "color": "#FFD700",
+            "fontFamily": "TradeGothicNextLT-Bold",
+            "fontSize": 48,
+            "lineHeight": 56,
+          }
+        }
+        testID="streak-count"
+      >
+        7
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#A0A0B0",
+            "fontFamily": "Biotif-Regular",
+            "fontSize": 16,
+            "lineHeight": 24,
+            "marginTop": 4,
+          }
+        }
+      >
+        day streak
+      </Text>
+    </View>
+    <View
+      style={
+        {
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="month-calendar"
+    >
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "justifyContent": "space-between",
+            "marginBottom": 8,
+          }
+        }
+      >
+        <View
+          accessibilityLabel="Previous month"
+          accessibilityRole="button"
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onClick={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            {
+              "alignItems": "center",
+              "height": 44,
+              "justifyContent": "center",
+              "opacity": 1,
+              "width": 44,
+            }
+          }
+          testID="calendar-prev"
+        >
+          <Text
+            style={
+              {
+                "color": "#F56600",
+                "fontSize": 28,
+                "fontWeight": "700",
+              }
+            }
+          >
+            ‹
+          </Text>
+        </View>
+        <Text
+          style={
+            {
+              "color": "#FFFFFF",
+              "fontFamily": "TradeGothicNextLT-Bold",
+              "fontSize": 24,
+              "lineHeight": 32,
+            }
+          }
+          testID="calendar-month-label"
+        >
+          March 2026
+        </Text>
+        <View
+          accessibilityLabel="Next month"
+          accessibilityRole="button"
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": true,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={false}
+          onClick={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          style={
+            {
+              "alignItems": "center",
+              "height": 44,
+              "justifyContent": "center",
+              "opacity": 0.3,
+              "width": 44,
+            }
+          }
+          testID="calendar-next"
+        >
+          <Text
+            style={
+              [
+                {
+                  "color": "#F56600",
+                  "fontSize": 28,
+                  "fontWeight": "700",
+                },
+                {
+                  "color": "#A0A0B0",
+                },
+              ]
+            }
+          >
+            ›
+          </Text>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "flexDirection": "row",
+            "justifyContent": "space-around",
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#A0A0B0",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              }
+            }
+          >
+            Sun
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#A0A0B0",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              }
+            }
+          >
+            Mon
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#A0A0B0",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              }
+            }
+          >
+            Tue
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#A0A0B0",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              }
+            }
+          >
+            Wed
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#A0A0B0",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              }
+            }
+          >
+            Thu
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#A0A0B0",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              }
+            }
+          >
+            Fri
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#A0A0B0",
+                "fontFamily": "Biotif-Regular",
+                "fontSize": 12,
+                "lineHeight": 16,
+                "textAlign": "center",
+              }
+            }
+          >
+            Sat
+          </Text>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "flexDirection": "row",
+            "justifyContent": "space-around",
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-1"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              1
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-2"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              2
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-3"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              3
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-4"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              4
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-5"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              5
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-6"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              6
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                {
+                  "borderColor": "#F56600",
+                  "borderWidth": 2,
+                },
+              ]
+            }
+            testID="calendar-day-7"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              7
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "flexDirection": "row",
+            "justifyContent": "space-around",
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-8"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              8
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-9"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              9
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-10"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              10
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-11"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              11
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-12"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              12
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-13"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              13
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-14"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              14
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "flexDirection": "row",
+            "justifyContent": "space-around",
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-15"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              15
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-16"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              16
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-17"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              17
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-18"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              18
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-19"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              19
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-20"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              20
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-21"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              21
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "flexDirection": "row",
+            "justifyContent": "space-around",
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-22"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              22
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-23"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              23
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-24"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              24
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-25"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              25
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-26"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              26
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-27"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              27
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-28"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              28
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "flexDirection": "row",
+            "justifyContent": "space-around",
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-29"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              29
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-30"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              30
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-31"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  false,
+                ]
+              }
+            >
+              31
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-outside-2026-04-01"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  {
+                    "color": "#A0A0B0",
+                    "opacity": 0.4,
+                  },
+                ]
+              }
+            >
+              1
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-outside-2026-04-02"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  {
+                    "color": "#A0A0B0",
+                    "opacity": 0.4,
+                  },
+                ]
+              }
+            >
+              2
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-outside-2026-04-03"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  {
+                    "color": "#A0A0B0",
+                    "opacity": 0.4,
+                  },
+                ]
+              }
+            >
+              3
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "borderRadius": 18,
+                  "height": 36,
+                  "justifyContent": "center",
+                  "width": 36,
+                },
+                false,
+                false,
+              ]
+            }
+            testID="calendar-day-outside-2026-04-04"
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#FFFFFF",
+                    "fontFamily": "Biotif-Regular",
+                    "fontSize": 12,
+                    "lineHeight": 16,
+                    "textAlign": "center",
+                  },
+                  false,
+                  {
+                    "color": "#A0A0B0",
+                    "opacity": 0.4,
+                  },
+                ]
+              }
+            >
+              4
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "paddingHorizontal": 16,
+          "paddingTop": 24,
+        }
+      }
+      testID="monthly-summary"
+    >
+      <Text
+        style={
+          {
+            "color": "#FFFFFF",
+            "fontFamily": "Biotif-Regular",
+            "fontSize": 16,
+            "lineHeight": 24,
+            "marginBottom": 8,
+          }
+        }
+        testID="summary-text"
+      >
+        0
+         / 
+        7
+         days completed
+      </Text>
+      <View
+        style={
+          {
+            "backgroundColor": "#16213E",
+            "borderRadius": 4,
+            "height": 8,
+            "overflow": "hidden",
+          }
+        }
+      >
+        <View
+          style={
+            [
+              {
+                "backgroundColor": "#F56600",
+                "borderRadius": 4,
+                "height": "100%",
+              },
+              {
+                "width": "0%",
+              },
+            ]
+          }
+          testID="progress-bar"
+        />
+      </View>
+    </View>
+  </View>
+</RCTScrollView>
+`;

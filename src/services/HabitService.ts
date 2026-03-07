@@ -64,6 +64,10 @@ export default class HabitService {
     });
   }
 
+  async getHabitById(habitId: string): Promise<Habit> {
+    return this.database.get<Habit>('habits').find(habitId);
+  }
+
   async getLogsForHabit(
     habitId: string,
     startDate: string,
