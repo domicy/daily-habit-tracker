@@ -19,6 +19,22 @@ export default class HabitService {
       .observe();
   }
 
+  getAllHabits(): Observable<Habit[]> {
+    return this.database
+      .get<Habit>('habits')
+      .query(Q.sortBy('created_at', Q.asc))
+      .observe();
+  }
+
+  async toggleHabitActive(habitId: string): Promise<void> {
+    const habit = await this.database.get<Habit>('habits').find(habitId);
+    await this.database.write(async () => {
+      await habit.update(h => {
+        h.isActive = !h.isActive;
+      });
+    });
+  }
+
   async createHabit(name: string): Promise<Habit> {
     const trimmed = name.trim();
     if (trimmed.length === 0) {
