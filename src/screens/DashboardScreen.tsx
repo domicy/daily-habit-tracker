@@ -1,13 +1,14 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
   StyleSheet,
+  AppState,
 } from 'react-native';
-import {format} from 'date-fns';
 import {colors} from '../theme/colors';
+import {getFormattedToday} from '../utils/dateUtils';
 import {fontFamily, typeScale} from '../theme/typography';
 import {spacing} from '../theme/spacing';
 import HabitCard, {HABIT_ROW_HEIGHT} from '../components/HabitCard';
@@ -31,7 +32,17 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const {habits, toggleHabit} = useHabits(service);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const today = useMemo(() => format(new Date(), 'EEEE, MMMM d'), []);
+  const [today, setToday] = useState(() => getFormattedToday());
+
+  // Update the displayed date when the app comes to the foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active') {
+        setToday(getFormattedToday());
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const handleToggle = useCallback(
     async (habitId: string) => {

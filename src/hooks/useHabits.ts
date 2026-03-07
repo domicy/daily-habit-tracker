@@ -1,7 +1,9 @@
 import {useState, useEffect, useRef, useCallback} from 'react';
-import {format} from 'date-fns';
+import {AppState} from 'react-native';
+import type {AppStateStatus} from 'react-native';
 import type Habit from '../models/Habit';
 import type HabitService from '../services/HabitService';
+import {getTodayString} from '../utils/dateUtils';
 
 export interface HabitDisplayData {
   id: string;
@@ -14,7 +16,9 @@ export function useHabits(habitService: HabitService) {
   const [habits, setHabits] = useState<HabitDisplayData[]>([]);
   const [loading, setLoading] = useState(true);
   const streakCacheRef = useRef<Map<string, number>>(new Map());
-  const todayRef = useRef(format(new Date(), 'yyyy-MM-dd'));
+  const todayRef = useRef(getTodayString());
+  const [, setDateVersion] = useState(0);
+  const rawHabitsRef = useRef<Habit[]>([]);
 
   const computeDisplayData = useCallback(
     async (rawHabits: Habit[]) => {
@@ -55,12 +59,38 @@ export function useHabits(habitService: HabitService) {
   useEffect(() => {
     const subscription = habitService.getActiveHabits().subscribe({
       next: rawHabits => {
+        rawHabitsRef.current = rawHabits;
         computeDisplayData(rawHabits);
       },
     });
 
     return () => subscription.unsubscribe();
   }, [habitService, computeDisplayData]);
+
+  // Midnight rollover: when the app comes to the foreground, check if the
+  // date has changed. If so, invalidate the streak cache and recompute
+  // everything so the dashboard shows the correct day.
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        const newToday = getTodayString();
+        if (newToday !== todayRef.current) {
+          todayRef.current = newToday;
+          streakCacheRef.current.clear();
+          setDateVersion(v => v + 1);
+          if (rawHabitsRef.current.length > 0) {
+            computeDisplayData(rawHabitsRef.current);
+          }
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
+    return () => subscription.remove();
+  }, [computeDisplayData]);
 
   const toggleHabit = useCallback(
     async (habitId: string) => {

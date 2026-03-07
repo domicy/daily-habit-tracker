@@ -8,6 +8,7 @@ import {
   Animated,
 } from 'react-native';
 import {format, getDaysInMonth} from 'date-fns';
+import {getTodayString} from '../utils/dateUtils';
 import {colors} from '../theme/colors';
 import {fontFamily, typeScale} from '../theme/typography';
 import {spacing} from '../theme/spacing';
@@ -70,7 +71,7 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
       const habit = await service.getHabitById(habitId);
       setHabitName(habit.name);
       setHabitCreatedAt(habit.createdAt);
-      const today = format(new Date(), 'yyyy-MM-dd');
+      const today = getTodayString();
       const currentStreak = await service.calculateStreak(habitId, today);
       setStreak(currentStreak);
     })();
