@@ -1,3 +1,6 @@
+// TODO: axios + axios-retry add ~15-30KB gzipped to the bundle.
+// Consider replacing with native fetch + a small retry wrapper (~2KB)
+// to reduce bundle size. The app only uses basic GET/POST with retry logic.
 import axios from 'axios';
 import axiosRetry from 'axios-retry';
 import AsyncStorage from '@react-native-async-storage/async-storage';

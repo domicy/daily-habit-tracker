@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import NotificationService from '../services/NotificationService';
 import {API_BASE_URL} from '../services/api';
 import database from '../models';
 import type Habit from '../models/Habit';
+import {useHabitObservable} from '../hooks/useHabitObservable';
 
 const APP_VERSION = '0.0.1';
 const REMINDER_ENABLED_KEY = 'reminder_enabled';
@@ -46,21 +47,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const sService = syncService ?? defaultSyncService;
   const nService = notificationService ?? defaultNotificationService;
 
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const allHabits$ = useMemo(() => hService.getAllHabits(), [hService]);
+  const habits = useHabitObservable<Habit[]>(allHabits$, []);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('08:00');
   const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [syncStatus, setSyncStatus] = useState<'online' | 'offline' | 'auth_failed'>('online');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
-
-  // Subscribe to all habits
-  useEffect(() => {
-    const subscription = hService.getAllHabits().subscribe({
-      next: allHabits => setHabits(allHabits),
-    });
-    return () => subscription.unsubscribe();
-  }, [hService]);
 
   // Load notification preferences
   useEffect(() => {

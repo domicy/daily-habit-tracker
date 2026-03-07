@@ -118,6 +118,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         getItemLayout={getItemLayout}
+        initialNumToRender={10}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+        removeClippedSubviews={true}
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={habits.length === 0 ? styles.emptyListContent : undefined}
         testID="habit-list"

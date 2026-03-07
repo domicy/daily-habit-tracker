@@ -4,6 +4,7 @@ import type {AppStateStatus} from 'react-native';
 import type Habit from '../models/Habit';
 import type HabitService from '../services/HabitService';
 import {getTodayString} from '../utils/dateUtils';
+import {useSubscriptionLeakDetector} from './useSubscriptionLeakDetector';
 
 export interface HabitDisplayData {
   id: string;
@@ -19,6 +20,7 @@ export function useHabits(habitService: HabitService) {
   const todayRef = useRef(getTodayString());
   const [, setDateVersion] = useState(0);
   const rawHabitsRef = useRef<Habit[]>([]);
+  const isMounted = useSubscriptionLeakDetector('useHabits');
 
   const computeDisplayData = useCallback(
     async (rawHabits: Habit[]) => {
@@ -59,6 +61,9 @@ export function useHabits(habitService: HabitService) {
   useEffect(() => {
     const subscription = habitService.getActiveHabits().subscribe({
       next: rawHabits => {
+        if (!isMounted()) {
+          return;
+        }
         rawHabitsRef.current = rawHabits;
         computeDisplayData(rawHabits);
       },
