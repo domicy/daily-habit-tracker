@@ -1,0 +1,21 @@
+# Cloudflare Tunnel configuration for the Habit Tracker API.
+#
+# Usage (standalone / systemd):
+#   1. Replace <TUNNEL_UUID> with your tunnel UUID.
+#   2. Update credentials-file to point to your credentials JSON.
+#   3. Replace api.example.com with your actual subdomain.
+#   4. Copy this file to ~/.cloudflared/config.yml or pass it via --config.
+#
+# Usage (Docker Compose):
+#   The docker-compose tunnel service bind-mounts this file and the
+#   credentials JSON into /etc/cloudflared/. Set the service field to
+#   http://api:8000 so the tunnel container reaches the API container
+#   over the Compose network.
+
+tunnel: <TUNNEL_UUID>
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: api.example.com
+    service: http://api:8000
+  - service: http_status:404
