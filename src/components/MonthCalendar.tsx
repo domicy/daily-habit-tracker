@@ -6,8 +6,8 @@ import {
   getDay,
   format,
   isAfter,
-  isSameDay,
 } from 'date-fns';
+import {getTodayString} from '../utils/dateUtils';
 import {colors} from '../theme/colors';
 import {fontFamily, typeScale} from '../theme/typography';
 import {spacing} from '../theme/spacing';
@@ -28,7 +28,7 @@ const MonthCalendar: React.FC<MonthCalendarProps> = ({
   onMonthChange,
 }) => {
   const today = new Date();
-  const todayStr = format(today, 'yyyy-MM-dd');
+  const todayStr = getTodayString();
 
   const isCurrentMonth =
     today.getFullYear() === year && today.getMonth() === month;
