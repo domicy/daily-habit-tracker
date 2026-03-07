@@ -2,6 +2,7 @@ import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import DashboardScreen from '../screens/DashboardScreen';
+import StatsScreen from '../screens/StatsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 const HomeStack = createNativeStackNavigator();
@@ -11,6 +12,7 @@ const Tab = createBottomTabNavigator();
 const HomeStackScreen: React.FC = () => (
   <HomeStack.Navigator screenOptions={{headerShown: false}}>
     <HomeStack.Screen name="Dashboard" component={DashboardScreen} />
+    <HomeStack.Screen name="Stats" component={StatsScreen} />
   </HomeStack.Navigator>
 );
 
