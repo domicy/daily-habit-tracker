@@ -182,7 +182,7 @@ describe('DashboardScreen', () => {
 
     // The toggle was called but hasn't resolved - yet UI should already show streak of 1
     await waitFor(() => {
-      expect(getByText('🔥 1 days')).toBeTruthy();
+      expect(getByText('🔥 1 day')).toBeTruthy();
     });
   });
 

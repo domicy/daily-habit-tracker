@@ -258,16 +258,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       <View style={styles.section}>
         {syncStatus === 'offline' ? (
           <Text style={styles.syncStatus} testID="sync-status">
-            Offline — {unsyncedCount} {unsyncedCount === 1 ? 'log' : 'logs'} pending
+            Offline — <Text testID="pending-sync-count">{unsyncedCount}</Text> {unsyncedCount === 1 ? 'log' : 'logs'} pending
           </Text>
         ) : syncStatus === 'auth_failed' ? (
           <Text style={styles.syncStatus} testID="sync-status">
-            Authentication required — {unsyncedCount}{' '}
+            Authentication required — <Text testID="pending-sync-count">{unsyncedCount}</Text>{' '}
             {unsyncedCount === 1 ? 'log' : 'logs'} pending
           </Text>
         ) : (
           <Text style={styles.syncStatus} testID="sync-status">
-            {unsyncedCount} {unsyncedCount === 1 ? 'log' : 'logs'} pending sync
+            <Text testID="pending-sync-count">{unsyncedCount}</Text> {unsyncedCount === 1 ? 'log' : 'logs'} pending sync
           </Text>
         )}
         <TouchableOpacity

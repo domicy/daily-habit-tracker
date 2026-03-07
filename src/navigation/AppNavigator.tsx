@@ -30,8 +30,16 @@ const SettingsStackScreen: React.FC = () => (
 
 const AppNavigator: React.FC = () => (
   <Tab.Navigator screenOptions={{headerShown: false}}>
-    <Tab.Screen name="Home" component={HomeStackScreen} />
-    <Tab.Screen name="Settings" component={SettingsStackScreen} />
+    <Tab.Screen
+      name="Home"
+      component={HomeStackScreen}
+      options={{tabBarTestID: 'tab-home'}}
+    />
+    <Tab.Screen
+      name="Settings"
+      component={SettingsStackScreen}
+      options={{tabBarTestID: 'tab-settings'}}
+    />
   </Tab.Navigator>
 );
 
