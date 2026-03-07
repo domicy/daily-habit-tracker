@@ -4,6 +4,7 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import DashboardScreen from '../screens/DashboardScreen';
 import StatsScreen from '../screens/StatsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import CreateHabitModal from '../screens/CreateHabitModal';
 
 const HomeStack = createNativeStackNavigator();
 const SettingsStack = createNativeStackNavigator();
@@ -13,6 +14,11 @@ const HomeStackScreen: React.FC = () => (
   <HomeStack.Navigator screenOptions={{headerShown: false}}>
     <HomeStack.Screen name="Dashboard" component={DashboardScreen} />
     <HomeStack.Screen name="Stats" component={StatsScreen} />
+    <HomeStack.Screen
+      name="CreateHabit"
+      component={CreateHabitModal}
+      options={{presentation: 'modal'}}
+    />
   </HomeStack.Navigator>
 );
 
