@@ -113,11 +113,19 @@ export default class HabitService {
     let streak = 0;
     let currentDate = asOfDate;
 
-    // Fetch all logs for this habit up to asOfDate in one query for performance
+    // Only fetch logs within the last 400 days to bound the query size.
+    // A streak longer than 400 days would be extremely rare, and this avoids
+    // scanning thousands of historical rows for long-running habits.
+    const cutoffDate = format(
+      subDays(new Date(asOfDate + 'T00:00:00'), 400),
+      'yyyy-MM-dd',
+    );
+
     const logs = await this.database
       .get<HabitLog>('habit_logs')
       .query(
         Q.where('habit_id', habitId),
+        Q.where('completed_date', Q.gte(cutoffDate)),
         Q.where('completed_date', Q.lte(asOfDate)),
       )
       .fetch();
