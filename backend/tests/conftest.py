@@ -42,8 +42,18 @@ async def client(db_session: AsyncSession):
 @pytest.fixture
 def auth_header() -> dict[str, str]:
     payload = {
-        "sub": "test-device",
+        "sub": "user",
         "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+    }
+    token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def expired_auth_header() -> dict[str, str]:
+    payload = {
+        "sub": "user",
+        "exp": datetime.now(timezone.utc) - timedelta(hours=1),
     }
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return {"Authorization": f"Bearer {token}"}

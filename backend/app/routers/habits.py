@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,8 +15,14 @@ router = APIRouter(
 
 
 @router.get("/", response_model=list[HabitRead])
-async def list_habits(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Habit).order_by(Habit.created_at))
+async def list_habits(
+    active: bool | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(Habit).order_by(Habit.created_at)
+    if active is not None:
+        stmt = stmt.where(Habit.is_active == active)
+    result = await db.execute(stmt)
     return result.scalars().all()
 
 
@@ -26,14 +32,6 @@ async def create_habit(body: HabitCreate, db: AsyncSession = Depends(get_db)):
     db.add(habit)
     await db.commit()
     await db.refresh(habit)
-    return habit
-
-
-@router.get("/{habit_id}", response_model=HabitRead)
-async def get_habit(habit_id: str, db: AsyncSession = Depends(get_db)):
-    habit = await db.get(Habit, habit_id)
-    if not habit:
-        raise HTTPException(status_code=404, detail="Habit not found")
     return habit
 
 
@@ -49,12 +47,3 @@ async def update_habit(
     await db.commit()
     await db.refresh(habit)
     return habit
-
-
-@router.delete("/{habit_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_habit(habit_id: str, db: AsyncSession = Depends(get_db)):
-    habit = await db.get(Habit, habit_id)
-    if not habit:
-        raise HTTPException(status_code=404, detail="Habit not found")
-    await db.delete(habit)
-    await db.commit()
