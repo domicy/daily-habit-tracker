@@ -1,0 +1,416 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DashboardScreen matches snapshot 1`] = `
+<View
+  style={
+    {
+      "backgroundColor": "#1A1A2E",
+      "flex": 1,
+    }
+  }
+  testID="dashboard-screen"
+>
+  <View
+    style={
+      {
+        "alignItems": "flex-start",
+        "flexDirection": "row",
+        "justifyContent": "space-between",
+        "paddingBottom": 16,
+        "paddingHorizontal": 16,
+        "paddingTop": 32,
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "flex": 1,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#F56600",
+            "fontFamily": "TradeGothicNextLT-Bold",
+            "fontSize": 32,
+            "lineHeight": 40,
+          }
+        }
+      >
+        Daily Habits
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#A0A0B0",
+            "fontFamily": "Biotif-Regular",
+            "fontSize": 16,
+            "lineHeight": 24,
+            "marginTop": 4,
+          }
+        }
+      >
+        Wednesday, March 5
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Create new habit"
+      accessibilityRole="button"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": undefined,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onClick={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#F56600",
+          "borderRadius": 22,
+          "height": 44,
+          "justifyContent": "center",
+          "marginTop": 4,
+          "opacity": 1,
+          "width": 44,
+        }
+      }
+      testID="add-habit-button"
+    >
+      <Text
+        style={
+          {
+            "color": "#FFFFFF",
+            "fontSize": 28,
+            "fontWeight": "700",
+            "lineHeight": 30,
+          }
+        }
+      >
+        +
+      </Text>
+    </View>
+  </View>
+  <RCTScrollView
+    ListEmptyComponent={[Function]}
+    data={
+      [
+        {
+          "completedToday": true,
+          "id": "1",
+          "name": "Exercise",
+          "streak": 7,
+        },
+        {
+          "completedToday": false,
+          "id": "2",
+          "name": "Read",
+          "streak": 0,
+        },
+      ]
+    }
+    getItem={[Function]}
+    getItemCount={[Function]}
+    getItemLayout={[Function]}
+    keyExtractor={[Function]}
+    onContentSizeChange={[Function]}
+    onLayout={[Function]}
+    onMomentumScrollBegin={[Function]}
+    onMomentumScrollEnd={[Function]}
+    onScroll={[Function]}
+    onScrollBeginDrag={[Function]}
+    onScrollEndDrag={[Function]}
+    removeClippedSubviews={false}
+    renderItem={[Function]}
+    scrollEventThrottle={0.0001}
+    stickyHeaderIndices={[]}
+    testID="habit-list"
+    viewabilityConfigCallbackPairs={[]}
+  >
+    <View>
+      <View
+        onFocusCapture={[Function]}
+        style={null}
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "backgroundColor": "#16213E",
+              "borderBottomColor": "#2A2A4A",
+              "borderBottomWidth": 1,
+              "flexDirection": "row",
+              "height": 72,
+              "justifyContent": "space-between",
+              "paddingHorizontal": 16,
+            }
+          }
+          testID="habit-card-1"
+        >
+          <View
+            style={
+              {
+                "flex": 1,
+                "marginRight": 16,
+              }
+            }
+          >
+            <Text
+              numberOfLines={1}
+              style={
+                {
+                  "color": "#FFFFFF",
+                  "fontFamily": "Biotif-Regular",
+                  "fontSize": 16,
+                  "lineHeight": 24,
+                }
+              }
+            >
+              Exercise
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#FFD700",
+                  "fontFamily": "Biotif-Regular",
+                  "fontSize": 12,
+                  "lineHeight": 16,
+                  "marginTop": 4,
+                }
+              }
+            >
+              🔥 
+              7
+               days
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Mark Exercise as incomplete. Current streak: 7 days."
+            accessibilityRole="button"
+            accessibilityState={
+              {
+                "busy": undefined,
+                "checked": undefined,
+                "disabled": undefined,
+                "expanded": undefined,
+                "selected": undefined,
+              }
+            }
+            accessibilityValue={
+              {
+                "max": undefined,
+                "min": undefined,
+                "now": undefined,
+                "text": undefined,
+              }
+            }
+            accessible={true}
+            collapsable={false}
+            focusable={true}
+            hitSlop={
+              {
+                "bottom": 8,
+                "left": 8,
+                "right": 8,
+                "top": 8,
+              }
+            }
+            onClick={[Function]}
+            onResponderGrant={[Function]}
+            onResponderMove={[Function]}
+            onResponderRelease={[Function]}
+            onResponderTerminate={[Function]}
+            onResponderTerminationRequest={[Function]}
+            onStartShouldSetResponder={[Function]}
+            style={
+              {
+                "opacity": 1,
+              }
+            }
+            testID="toggle-1"
+          >
+            <View
+              style={
+                [
+                  {
+                    "alignItems": "center",
+                    "borderRadius": 28,
+                    "height": 56,
+                    "justifyContent": "center",
+                    "width": 56,
+                  },
+                  {
+                    "backgroundColor": "#4CAF50",
+                  },
+                ]
+              }
+            >
+              <Text
+                collapsable={false}
+                style={
+                  {
+                    "color": "#FFFFFF",
+                    "fontSize": 24,
+                    "fontWeight": "700",
+                    "transform": [
+                      {
+                        "scale": 0.5,
+                      },
+                    ],
+                  }
+                }
+              >
+                ✓
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+      <View
+        onFocusCapture={[Function]}
+        style={null}
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "backgroundColor": "#16213E",
+              "borderBottomColor": "#2A2A4A",
+              "borderBottomWidth": 1,
+              "flexDirection": "row",
+              "height": 72,
+              "justifyContent": "space-between",
+              "paddingHorizontal": 16,
+            }
+          }
+          testID="habit-card-2"
+        >
+          <View
+            style={
+              {
+                "flex": 1,
+                "marginRight": 16,
+              }
+            }
+          >
+            <Text
+              numberOfLines={1}
+              style={
+                {
+                  "color": "#FFFFFF",
+                  "fontFamily": "Biotif-Regular",
+                  "fontSize": 16,
+                  "lineHeight": 24,
+                }
+              }
+            >
+              Read
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#FFD700",
+                  "fontFamily": "Biotif-Regular",
+                  "fontSize": 12,
+                  "lineHeight": 16,
+                  "marginTop": 4,
+                }
+              }
+            >
+              🔥 
+              0
+               days
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Mark Read as complete. Current streak: 0 days."
+            accessibilityRole="button"
+            accessibilityState={
+              {
+                "busy": undefined,
+                "checked": undefined,
+                "disabled": undefined,
+                "expanded": undefined,
+                "selected": undefined,
+              }
+            }
+            accessibilityValue={
+              {
+                "max": undefined,
+                "min": undefined,
+                "now": undefined,
+                "text": undefined,
+              }
+            }
+            accessible={true}
+            collapsable={false}
+            focusable={true}
+            hitSlop={
+              {
+                "bottom": 8,
+                "left": 8,
+                "right": 8,
+                "top": 8,
+              }
+            }
+            onClick={[Function]}
+            onResponderGrant={[Function]}
+            onResponderMove={[Function]}
+            onResponderRelease={[Function]}
+            onResponderTerminate={[Function]}
+            onResponderTerminationRequest={[Function]}
+            onStartShouldSetResponder={[Function]}
+            style={
+              {
+                "opacity": 1,
+              }
+            }
+            testID="toggle-2"
+          >
+            <View
+              style={
+                [
+                  {
+                    "alignItems": "center",
+                    "borderRadius": 28,
+                    "height": 56,
+                    "justifyContent": "center",
+                    "width": 56,
+                  },
+                  {
+                    "backgroundColor": "transparent",
+                    "borderColor": "#F56600",
+                    "borderWidth": 3,
+                  },
+                ]
+              }
+            />
+          </View>
+        </View>
+      </View>
+    </View>
+  </RCTScrollView>
+</View>
+`;
