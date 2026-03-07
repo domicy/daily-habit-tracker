@@ -6,6 +6,7 @@ import type HabitService from '../../services/HabitService';
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
+  removeItem: jest.fn(),
 }));
 
 jest.mock('../../services/api', () => {
@@ -117,9 +118,12 @@ describe('SyncService', () => {
 
       (apiClient.post as jest.Mock).mockRejectedValueOnce({
         response: {status: 500, data: {detail: 'Server error'}},
+        message: 'Request failed with status code 500',
       });
 
-      await expect(syncService.pushUnsyncedLogs()).rejects.toBeDefined();
+      // Now fails silently instead of throwing
+      const result = await syncService.pushUnsyncedLogs();
+      expect(result).toEqual({pushed: 0, failed: 0});
       expect(logs[0].markSynced).not.toHaveBeenCalled();
     });
 
@@ -163,18 +167,20 @@ describe('SyncService', () => {
       (apiClient.post as jest.Mock)
         .mockRejectedValueOnce({
           response: {status: 500, data: {detail: 'Server error'}},
+          message: 'Request failed with status code 500',
         })
         .mockResolvedValueOnce({
           data: {synced: 1, errors: []},
         });
 
-      // First call fails
-      await expect(syncService.pushUnsyncedLogs()).rejects.toBeDefined();
+      // First call fails silently
+      const result1 = await syncService.pushUnsyncedLogs();
+      expect(result1).toEqual({pushed: 0, failed: 0});
       expect(logs[0].markSynced).not.toHaveBeenCalled();
 
       // Second call succeeds
-      const result = await syncService.pushUnsyncedLogs();
-      expect(result.pushed).toBe(1);
+      const result2 = await syncService.pushUnsyncedLogs();
+      expect(result2.pushed).toBe(1);
       expect(logs[0].markSynced).toHaveBeenCalled();
     });
 
@@ -188,7 +194,9 @@ describe('SyncService', () => {
 
       (apiClient.post as jest.Mock).mockRejectedValueOnce(networkError);
 
-      await expect(syncService.pushUnsyncedLogs()).rejects.toThrow('Network Error');
+      // Now fails silently instead of throwing
+      const result = await syncService.pushUnsyncedLogs();
+      expect(result).toEqual({pushed: 0, failed: 0});
       expect(logs[0].markSynced).not.toHaveBeenCalled();
     });
   });
@@ -202,7 +210,7 @@ describe('SyncService', () => {
       jest.useRealTimers();
     });
 
-    it('batches 5 rapid calls into 1 HTTP request', () => {
+    it('batches 5 rapid calls into 1 HTTP request', async () => {
       const logs = [createMockLog('habit-1', '2025-01-01')];
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
@@ -227,6 +235,9 @@ describe('SyncService', () => {
 
       // Advance past the 2-second debounce
       jest.advanceTimersByTime(2000);
+
+      // Flush async microtasks (pushUnsyncedLogs checks AsyncStorage)
+      await Promise.resolve();
 
       // Only 1 sync attempt should have been triggered
       expect(habitService.getUnsyncedLogs).toHaveBeenCalledTimes(1);

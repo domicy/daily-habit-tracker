@@ -50,6 +50,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('08:00');
   const [unsyncedCount, setUnsyncedCount] = useState(0);
+  const [syncStatus, setSyncStatus] = useState<'online' | 'offline' | 'auth_failed'>('online');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -78,12 +79,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   // Load sync info
   useEffect(() => {
     (async () => {
-      const logs = await hService.getUnsyncedLogs();
-      setUnsyncedCount(logs.length);
+      const status = await sService.getSyncStatus();
+      setUnsyncedCount(status.pendingCount);
+      setSyncStatus(status.status);
       const ts = await AsyncStorage.getItem(LAST_SYNC_KEY);
       setLastSyncTime(ts);
     })();
-  }, [hService]);
+  }, [hService, sService]);
 
   const handleToggleActive = useCallback(
     async (habitId: string) => {
@@ -143,12 +145,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const handleSyncNow = useCallback(async () => {
     setSyncing(true);
     try {
-      await sService.pushUnsyncedLogs();
-      const now = new Date().toISOString();
-      await AsyncStorage.setItem(LAST_SYNC_KEY, now);
-      setLastSyncTime(now);
-      const logs = await hService.getUnsyncedLogs();
-      setUnsyncedCount(logs.length);
+      const result = await sService.pushUnsyncedLogs();
+      if (result.pushed > 0) {
+        const now = new Date().toISOString();
+        await AsyncStorage.setItem(LAST_SYNC_KEY, now);
+        setLastSyncTime(now);
+      }
+      const status = await sService.getSyncStatus();
+      setUnsyncedCount(status.pendingCount);
+      setSyncStatus(status.status);
     } finally {
       setSyncing(false);
     }
@@ -257,9 +262,20 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {/* Sync */}
       <Text style={styles.sectionTitle}>Sync</Text>
       <View style={styles.section}>
-        <Text style={styles.syncStatus} testID="sync-status">
-          {unsyncedCount} {unsyncedCount === 1 ? 'log' : 'logs'} pending sync
-        </Text>
+        {syncStatus === 'offline' ? (
+          <Text style={styles.syncStatus} testID="sync-status">
+            Offline — {unsyncedCount} {unsyncedCount === 1 ? 'log' : 'logs'} pending
+          </Text>
+        ) : syncStatus === 'auth_failed' ? (
+          <Text style={styles.syncStatus} testID="sync-status">
+            Authentication required — {unsyncedCount}{' '}
+            {unsyncedCount === 1 ? 'log' : 'logs'} pending
+          </Text>
+        ) : (
+          <Text style={styles.syncStatus} testID="sync-status">
+            {unsyncedCount} {unsyncedCount === 1 ? 'log' : 'logs'} pending sync
+          </Text>
+        )}
         <TouchableOpacity
           style={styles.syncButton}
           onPress={handleSyncNow}
