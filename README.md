@@ -73,6 +73,34 @@ src/
 e2e/             # Detox end-to-end tests
 ```
 
+## CI / Branch Protection
+
+This project uses GitHub Actions for continuous integration. The workflow is defined in `.github/workflows/ci.yml`.
+
+### CI Jobs
+
+| Job                  | Trigger                          | Runner         | Description                                      |
+|----------------------|----------------------------------|----------------|--------------------------------------------------|
+| `lint-and-type-check`| Push/PR to `main`               | `ubuntu-latest`| Runs ESLint and TypeScript compiler (`tsc --noEmit`) |
+| `unit-tests`         | Push/PR to `main`               | `ubuntu-latest`| Runs Jest with `--coverage --ci`, uploads coverage artifact |
+| `backend-tests`      | Push/PR to `main`               | `ubuntu-latest`| Runs pytest with coverage (minimum 85%)          |
+| `e2e-tests`          | Manual (`workflow_dispatch`) or push to `main` | `macos-latest` | Builds and runs Detox E2E tests on iOS Simulator |
+
+### Branch Protection Rules
+
+The following rules should be configured in **Settings > Branches > Branch protection rules** for `main`:
+
+- **Require status checks to pass before merging:**
+  - `lint-and-type-check`
+  - `unit-tests`
+  - `backend-tests`
+- **`e2e-tests`** runs on-demand via `workflow_dispatch` and is **not** a required check (it is expensive and uses a macOS runner).
+
+### Coverage Thresholds
+
+- **Frontend (Jest):** 80% minimum for lines, functions, and branches (enforced in `jest.config.js`).
+- **Backend (pytest):** 85% minimum line coverage (enforced via `--cov-fail-under=85`).
+
 ## Troubleshooting
 
 - **Pod install fails**: Make sure you have the correct Ruby version and run `sudo gem install cocoapods` first.
