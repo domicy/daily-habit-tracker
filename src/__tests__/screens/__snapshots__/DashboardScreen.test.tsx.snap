@@ -158,6 +158,33 @@ exports[`DashboardScreen matches snapshot 1`] = `
         style={null}
       >
         <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onClick={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
           style={
             {
               "alignItems": "center",
@@ -167,6 +194,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
               "flexDirection": "row",
               "height": 72,
               "justifyContent": "space-between",
+              "opacity": 1,
               "paddingHorizontal": 16,
             }
           }
@@ -190,6 +218,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
                   "lineHeight": 24,
                 }
               }
+              testID="habit-name-1"
             >
               Exercise
             </Text>
@@ -203,10 +232,10 @@ exports[`DashboardScreen matches snapshot 1`] = `
                   "marginTop": 4,
                 }
               }
+              testID="streak-1"
             >
               🔥 
-              7
-               days
+              7 days
             </Text>
           </View>
           <View
@@ -284,6 +313,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
                     ],
                   }
                 }
+                testID="checkmark-1"
               >
                 ✓
               </Text>
@@ -296,6 +326,33 @@ exports[`DashboardScreen matches snapshot 1`] = `
         style={null}
       >
         <View
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onClick={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
           style={
             {
               "alignItems": "center",
@@ -305,6 +362,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
               "flexDirection": "row",
               "height": 72,
               "justifyContent": "space-between",
+              "opacity": 1,
               "paddingHorizontal": 16,
             }
           }
@@ -328,6 +386,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
                   "lineHeight": 24,
                 }
               }
+              testID="habit-name-2"
             >
               Read
             </Text>
@@ -341,10 +400,10 @@ exports[`DashboardScreen matches snapshot 1`] = `
                   "marginTop": 4,
                 }
               }
+              testID="streak-2"
             >
               🔥 
-              0
-               days
+              0 days
             </Text>
           </View>
           <View

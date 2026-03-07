@@ -60,6 +60,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     navigation?.navigate('CreateHabit');
   }, [navigation]);
 
+  const handleHabitPress = useCallback(
+    (habitId: string) => {
+      navigation?.navigate('Stats', {habitId});
+    },
+    [navigation],
+  );
+
   const keyExtractor = useCallback((item: HabitDisplayData) => item.id, []);
 
   const getItemLayout = useCallback(
@@ -79,9 +86,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         completedToday={item.completedToday}
         streak={item.streak}
         onToggle={handleToggle}
+        onPress={handleHabitPress}
       />
     ),
-    [handleToggle],
+    [handleToggle, handleHabitPress],
   );
 
   const renderEmpty = useCallback(

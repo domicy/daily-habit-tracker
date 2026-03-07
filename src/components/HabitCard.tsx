@@ -18,6 +18,7 @@ interface HabitCardProps {
   completedToday: boolean;
   streak: number;
   onToggle: (habitId: string) => void;
+  onPress?: (habitId: string) => void;
 }
 
 const CHECK_CIRCLE_SIZE = 56;
@@ -27,7 +28,8 @@ function areEqual(prev: HabitCardProps, next: HabitCardProps): boolean {
     prev.habitId === next.habitId &&
     prev.name === next.name &&
     prev.completedToday === next.completedToday &&
-    prev.streak === next.streak
+    prev.streak === next.streak &&
+    prev.onPress === next.onPress
   );
 }
 
@@ -37,6 +39,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
   completedToday,
   streak,
   onToggle,
+  onPress,
 }) => {
   const scaleAnim = useRef(new Animated.Value(completedToday ? 1 : 0)).current;
 
@@ -58,17 +61,27 @@ const HabitCard: React.FC<HabitCardProps> = ({
     onToggle(habitId);
   }, [habitId, onToggle]);
 
+  const handlePress = useCallback(() => {
+    onPress?.(habitId);
+  }, [habitId, onPress]);
+
   const accessibilityLabel = `Mark ${name} as ${
     completedToday ? 'incomplete' : 'complete'
   }. Current streak: ${streak} days.`;
 
+  const streakLabel = streak === 1 ? '1 day' : `${streak} days`;
+
   return (
-    <View style={styles.container} testID={`habit-card-${habitId}`}>
+    <TouchableOpacity
+      style={styles.container}
+      testID={`habit-card-${habitId}`}
+      onPress={handlePress}
+      activeOpacity={onPress ? 0.7 : 1}>
       <View style={styles.textContainer}>
-        <Text style={styles.habitName} numberOfLines={1}>
+        <Text style={styles.habitName} numberOfLines={1} testID={`habit-name-${habitId}`}>
           {name}
         </Text>
-        <Text style={styles.streakText}>🔥 {streak} days</Text>
+        <Text style={styles.streakText} testID={`streak-${habitId}`}>🔥 {streakLabel}</Text>
       </View>
       <TouchableOpacity
         onPress={handleToggle}
@@ -83,6 +96,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
           ]}>
           {completedToday && (
             <Animated.Text
+              testID={`checkmark-${habitId}`}
               style={[
                 styles.checkmark,
                 {transform: [{scale: scaleAnim}]},
@@ -92,7 +106,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
           )}
         </View>
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 };
 
