@@ -17,6 +17,7 @@ import {fontFamily, typeScale} from '../theme/typography';
 import {spacing} from '../theme/spacing';
 import HabitService from '../services/HabitService';
 import SyncService from '../services/SyncService';
+import NotificationService from '../services/NotificationService';
 import {API_BASE_URL} from '../services/api';
 import database from '../models';
 import type Habit from '../models/Habit';
@@ -29,17 +30,21 @@ const LAST_SYNC_KEY = 'last_sync_timestamp';
 interface SettingsScreenProps {
   habitService?: HabitService;
   syncService?: SyncService;
+  notificationService?: NotificationService;
 }
 
 const defaultHabitService = new HabitService(database);
 const defaultSyncService = new SyncService(defaultHabitService);
+const defaultNotificationService = new NotificationService();
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({
   habitService,
   syncService,
+  notificationService,
 }) => {
   const hService = habitService ?? defaultHabitService;
   const sService = syncService ?? defaultSyncService;
+  const nService = notificationService ?? defaultNotificationService;
 
   const [habits, setHabits] = useState<Habit[]>([]);
   const [reminderEnabled, setReminderEnabled] = useState(false);
@@ -107,16 +112,33 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     [hService],
   );
 
-  const handleReminderToggle = useCallback(async (value: boolean) => {
-    setReminderEnabled(value);
-    await AsyncStorage.setItem(REMINDER_ENABLED_KEY, String(value));
-  }, []);
+  const handleReminderToggle = useCallback(
+    async (value: boolean) => {
+      const hour = parseInt(reminderTime.split(':')[0], 10);
+      const minute = parseInt(reminderTime.split(':')[1], 10);
+      const granted = await nService.onNotificationToggle(value, hour, minute);
 
-  const handleTimeChange = useCallback(async (hour: number) => {
-    const timeStr = `${String(hour).padStart(2, '0')}:00`;
-    setReminderTime(timeStr);
-    await AsyncStorage.setItem(REMINDER_TIME_KEY, timeStr);
-  }, []);
+      // If user tried to enable but permission was denied, keep toggle off
+      const finalValue = value ? granted : false;
+      setReminderEnabled(finalValue);
+      await AsyncStorage.setItem(REMINDER_ENABLED_KEY, String(finalValue));
+    },
+    [nService, reminderTime],
+  );
+
+  const handleTimeChange = useCallback(
+    async (hour: number) => {
+      const timeStr = `${String(hour).padStart(2, '0')}:00`;
+      setReminderTime(timeStr);
+      await AsyncStorage.setItem(REMINDER_TIME_KEY, timeStr);
+
+      // If reminders are enabled, reschedule with the new time
+      if (reminderEnabled) {
+        await nService.scheduleDailyReminder(hour, 0);
+      }
+    },
+    [nService, reminderEnabled],
+  );
 
   const handleSyncNow = useCallback(async () => {
     setSyncing(true);
