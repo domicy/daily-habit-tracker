@@ -42,6 +42,7 @@
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
     "@types/detox": "^17.14.3",
+    "@types/jest": "^30.0.0",
     "@types/react": "^19.0.0",
     "@types/react-test-renderer": "^19.0.0",
     "detox": "^20.47.0",

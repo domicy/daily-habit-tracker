@@ -33,12 +33,12 @@ const AppNavigator: React.FC = () => (
     <Tab.Screen
       name="Home"
       component={HomeStackScreen}
-      options={{tabBarTestID: 'tab-home'}}
+      options={{tabBarButtonTestID: 'tab-home'}}
     />
     <Tab.Screen
       name="Settings"
       component={SettingsStackScreen}
-      options={{tabBarTestID: 'tab-settings'}}
+      options={{tabBarButtonTestID: 'tab-settings'}}
     />
   </Tab.Navigator>
 );

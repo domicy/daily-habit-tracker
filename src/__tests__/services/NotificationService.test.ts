@@ -20,7 +20,13 @@ jest.mock('@notifee/react-native', () => ({
   RepeatFrequency: {DAILY: 3},
 }));
 
-const mockNotifee = jest.mocked(notifee);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockNotifee = notifee as any as {
+  requestPermission: jest.Mock;
+  createChannel: jest.Mock;
+  createTriggerNotification: jest.Mock;
+  cancelTriggerNotification: jest.Mock;
+};
 
 // Mock Alert
 jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -110,7 +116,7 @@ describe('NotificationService', () => {
       jest.useRealTimers();
 
       const triggerArg =
-        mockNotifee.createTriggerNotification.mock.calls[0][1];
+        mockNotifee.createTriggerNotification.mock.calls[0][1] as {timestamp: number};
 
       // Should be tomorrow at 8:00 AM
       const expected = new Date(2026, 2, 8, 8, 0, 0, 0).getTime();

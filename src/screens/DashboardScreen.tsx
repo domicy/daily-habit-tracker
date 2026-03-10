@@ -18,7 +18,7 @@ import HabitService from '../services/HabitService';
 import database from '../models';
 
 interface DashboardScreenProps {
-  navigation?: {navigate: (screen: string) => void};
+  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
   habitService?: HabitService;
 }
 
