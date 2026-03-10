@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, fireEvent, waitFor, act} from '@testing-library/react-native';
+import {render, fireEvent, act} from '@testing-library/react-native';
 import CreateHabitModal from '../../screens/CreateHabitModal';
 import HabitService from '../../services/HabitService';
 

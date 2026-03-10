@@ -9,6 +9,20 @@ import {of} from 'rxjs';
 // Mock the database import to avoid SQLite initialization in tests
 jest.mock('../../models', () => ({}));
 
+// Mock @notifee/react-native (imported transitively via NotificationService)
+jest.mock('@notifee/react-native', () => ({
+  __esModule: true,
+  default: {
+    requestPermission: jest.fn().mockResolvedValue({authorizationStatus: 1}),
+    createChannel: jest.fn().mockResolvedValue(''),
+    createTriggerNotification: jest.fn().mockResolvedValue(''),
+    cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
+  },
+  AuthorizationStatus: {DENIED: 0, AUTHORIZED: 1, PROVISIONAL: 2, NOT_DETERMINED: -1},
+  TriggerType: {TIMESTAMP: 0},
+  RepeatFrequency: {DAILY: 3},
+}));
+
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
@@ -72,7 +86,7 @@ function createMockHabitService(
   } as unknown as jest.Mocked<HabitService>;
 }
 
-function createMockSyncService() {
+function createMockSyncService(pendingCount = 0) {
   return {
     pushUnsyncedLogs: jest.fn().mockResolvedValue({pushed: 0, failed: 0}),
     authenticate: jest.fn().mockResolvedValue(undefined),
@@ -81,6 +95,8 @@ function createMockSyncService() {
     debouncedSync: jest.fn(),
     getAuthToken: jest.fn().mockResolvedValue(null),
     isAuthenticated: jest.fn().mockResolvedValue(false),
+    getSyncStatus: jest.fn().mockResolvedValue({status: 'online', pendingCount}),
+    clearAuthFailedFlag: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<SyncService>;
 }
 
@@ -138,22 +154,18 @@ describe('SettingsScreen', () => {
 
   it('displays correct unsynced logs count', async () => {
     const service = createMockHabitService([], 5);
-    const syncService = createMockSyncService();
+    const syncService = createMockSyncService(5);
 
-    const {getByTestId} = render(
+    const {getByTestId, getByText} = render(
       <SettingsScreen habitService={service} syncService={syncService} />,
     );
 
     await waitFor(() => {
-      expect(getByTestId('sync-status')).toBeTruthy();
+      expect(getByTestId('pending-sync-count')).toBeTruthy();
     });
 
-    expect(getByTestId('sync-status').props.children).toEqual([
-      5,
-      ' ',
-      'logs',
-      ' pending sync',
-    ]);
+    expect(getByTestId('pending-sync-count').props.children).toBe(5);
+    expect(getByText(/5.*logs.*pending sync/)).toBeTruthy();
   });
 
   it('displays app version and server URL', async () => {
@@ -195,21 +207,17 @@ describe('SettingsScreen', () => {
 
   it('displays "1 log pending sync" for singular count', async () => {
     const service = createMockHabitService([], 1);
-    const syncService = createMockSyncService();
+    const syncService = createMockSyncService(1);
 
-    const {getByTestId} = render(
+    const {getByTestId, getByText} = render(
       <SettingsScreen habitService={service} syncService={syncService} />,
     );
 
     await waitFor(() => {
-      expect(getByTestId('sync-status')).toBeTruthy();
+      expect(getByTestId('pending-sync-count')).toBeTruthy();
     });
 
-    expect(getByTestId('sync-status').props.children).toEqual([
-      1,
-      ' ',
-      'log',
-      ' pending sync',
-    ]);
+    expect(getByTestId('pending-sync-count').props.children).toBe(1);
+    expect(getByText(/1.*log.*pending sync/)).toBeTruthy();
   });
 });

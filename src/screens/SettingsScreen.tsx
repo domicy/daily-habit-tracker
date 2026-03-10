@@ -151,7 +151,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     } finally {
       setSyncing(false);
     }
-  }, [sService, hService]);
+  }, [sService]);
 
   const renderHabitRow = useCallback(
     ({item}: {item: Habit}) => (

@@ -9,4 +9,12 @@ module.exports = {
   rules: {
     'no-console': 'warn',
   },
+  overrides: [
+    {
+      files: ['metro.config.js'],
+      rules: {
+        '@typescript-eslint/no-var-requires': 'off',
+      },
+    },
+  ],
 };

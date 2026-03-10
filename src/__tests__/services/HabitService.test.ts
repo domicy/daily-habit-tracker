@@ -337,7 +337,9 @@ describe('HabitService', () => {
       const habits = await new Promise<Habit[]>(resolve => {
         const sub = observable.subscribe(value => {
           resolve(value);
-          sub.unsubscribe();
+          // Defer unsubscribe to next microtask since WatermelonDB
+          // emits synchronously before subscribe() returns
+          Promise.resolve().then(() => sub.unsubscribe());
         });
       });
 

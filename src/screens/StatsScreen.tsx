@@ -33,7 +33,6 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
   const habitId = route?.params?.habitId ?? '';
 
   const [habitName, setHabitName] = useState('');
-  const [habitCreatedAt, setHabitCreatedAt] = useState<number | null>(null);
   const [streak, setStreak] = useState(0);
   const [completedDates, setCompletedDates] = useState<Set<string>>(new Set());
   const [calendarYear, setCalendarYear] = useState(
@@ -70,7 +69,6 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
     (async () => {
       const habit = await service.getHabitById(habitId);
       setHabitName(habit.name);
-      setHabitCreatedAt(habit.createdAt);
       const today = getTodayString();
       const currentStreak = await service.calculateStreak(habitId, today);
       setStreak(currentStreak);

@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, fireEvent, waitFor, act} from '@testing-library/react-native';
+import {render, fireEvent, waitFor} from '@testing-library/react-native';
 import StatsScreen from '../../screens/StatsScreen';
 import MonthCalendar from '../../components/MonthCalendar';
 import HabitService from '../../services/HabitService';
@@ -10,7 +10,6 @@ jest.mock('../../models', () => ({}));
 // Mock Animated to make animations synchronous in tests
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
-  const originalTiming = RN.Animated.timing;
   RN.Animated.timing = (value: {setValue: (v: number) => void}, config: {toValue: number; duration?: number; useNativeDriver?: boolean}) => ({
     start: (cb?: () => void) => {
       value.setValue(config.toValue);
@@ -367,12 +366,6 @@ describe('MonthCalendar', () => {
   // ─── Progress bar percentage ──────────────────────────────────────
 
   it('shows correct summary for 10 completions in January', async () => {
-    const completedDates = new Set(
-      Array.from({length: 10}, (_, i) =>
-        `2025-01-${String(i + 1).padStart(2, '0')}`,
-      ),
-    );
-
     const logs = Array.from({length: 10}, (_, i) => ({
       completedDate: `2025-01-${String(i + 1).padStart(2, '0')}`,
       habitId: 'habit-1',
@@ -380,7 +373,7 @@ describe('MonthCalendar', () => {
 
     const service = createMockHabitService({logs});
 
-    const {getByTestId, getByText} = render(
+    const {getByTestId} = render(
       <StatsScreen route={defaultRoute} habitService={service} />,
     );
 

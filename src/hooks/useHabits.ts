@@ -70,7 +70,7 @@ export function useHabits(habitService: HabitService) {
     });
 
     return () => subscription.unsubscribe();
-  }, [habitService, computeDisplayData]);
+  }, [habitService, computeDisplayData, isMounted]);
 
   // Midnight rollover: when the app comes to the foreground, check if the
   // date has changed. If so, invalidate the streak cache and recompute

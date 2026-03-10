@@ -1,4 +1,4 @@
-import {useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 
 /**
  * Development-mode hook that tracks component mount state and logs a warning
@@ -26,12 +26,10 @@ export function useSubscriptionLeakDetector(
     };
   }, []);
 
-  if (!__DEV__) {
-    // In production, always return true — zero overhead
-    return () => true;
-  }
-
-  return () => {
+  return useCallback(() => {
+    if (!__DEV__) {
+      return true;
+    }
     if (!mountedRef.current) {
       console.warn(
         `[SubscriptionLeakDetector] A subscription fired after ` +
@@ -42,5 +40,5 @@ export function useSubscriptionLeakDetector(
       return false;
     }
     return true;
-  };
+  }, [componentName]);
 }
