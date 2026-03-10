@@ -24,6 +24,13 @@ export interface SyncResult {
   errors?: string[];
 }
 
+interface SyncError {
+  code?: string;
+  message?: string;
+  response?: {status: number; data?: {detail?: string}};
+  request?: unknown;
+}
+
 function decodeJwtPayload(token: string): {exp?: number} {
   try {
     const parts = token.split('.');
@@ -37,7 +44,7 @@ function decodeJwtPayload(token: string): {exp?: number} {
   }
 }
 
-function isNetworkError(error: any): boolean {
+function isNetworkError(error: SyncError): boolean {
   if (!error) {
     return false;
   }
@@ -53,11 +60,11 @@ function isNetworkError(error: any): boolean {
   return false;
 }
 
-function is5xxError(error: any): boolean {
-  return error?.response?.status >= 500;
+function is5xxError(error: SyncError): boolean {
+  return (error?.response?.status ?? 0) >= 500;
 }
 
-function is401Error(error: any): boolean {
+function is401Error(error: SyncError): boolean {
   return error?.response?.status === 401;
 }
 
@@ -81,9 +88,10 @@ export default class SyncService {
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, access_token);
       await AsyncStorage.setItem(SYNC_SECRET_KEY, secret);
       await AsyncStorage.removeItem(SYNC_AUTH_FAILED_KEY);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const syncErr = error as SyncError;
       const message =
-        error.response?.data?.detail || error.message || 'Authentication failed';
+        syncErr.response?.data?.detail || syncErr.message || 'Authentication failed';
       throw new AuthenticationError(message);
     }
   }
@@ -122,21 +130,22 @@ export default class SyncService {
     let response;
     try {
       response = await apiClient.post('/logs/sync', payload);
-    } catch (error: any) {
-      if (is401Error(error)) {
+    } catch (error: unknown) {
+      const syncErr = error as SyncError;
+      if (is401Error(syncErr)) {
         const reauthed = await this.attemptReauth();
         if (reauthed) {
           // Retry once after re-auth
           try {
             response = await apiClient.post('/logs/sync', payload);
-          } catch (retryError: any) {
-            return this.handleSyncError(retryError);
+          } catch (retryError: unknown) {
+            return this.handleSyncError(retryError as SyncError);
           }
         } else {
           return {pushed: 0, failed: 0};
         }
       } else {
-        return this.handleSyncError(error);
+        return this.handleSyncError(syncErr);
       }
     }
 
@@ -198,7 +207,7 @@ export default class SyncService {
     };
   }
 
-  private handleSyncError(error: any): SyncResult {
+  private handleSyncError(error: SyncError): SyncResult {
     if (isNetworkError(error) || is5xxError(error)) {
       console.warn('Sync failed (will retry later):', error.message || 'Unknown error');
       return {pushed: 0, failed: 0};

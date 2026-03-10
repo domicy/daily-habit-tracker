@@ -1,32 +1,26 @@
 import {Alert} from 'react-native';
+import notifee from '@notifee/react-native';
 import NotificationService from '../../services/NotificationService';
 
-// Mock @notifee/react-native
-const mockNotifee = {
-  requestPermission: jest.fn(),
-  createChannel: jest.fn().mockResolvedValue(''),
-  createTriggerNotification: jest.fn().mockResolvedValue(''),
-  cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
-};
-
-jest.mock('@notifee/react-native', () => {
-  const AuthorizationStatus = {
+jest.mock('@notifee/react-native', () => ({
+  __esModule: true,
+  default: {
+    requestPermission: jest.fn(),
+    createChannel: jest.fn().mockResolvedValue(''),
+    createTriggerNotification: jest.fn().mockResolvedValue(''),
+    cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
+  },
+  AuthorizationStatus: {
     DENIED: 0,
     AUTHORIZED: 1,
     PROVISIONAL: 2,
     NOT_DETERMINED: -1,
-  };
-  const TriggerType = {TIMESTAMP: 0};
-  const RepeatFrequency = {DAILY: 3};
+  },
+  TriggerType: {TIMESTAMP: 0},
+  RepeatFrequency: {DAILY: 3},
+}));
 
-  return {
-    __esModule: true,
-    default: mockNotifee,
-    AuthorizationStatus,
-    TriggerType,
-    RepeatFrequency,
-  };
-});
+const mockNotifee = jest.mocked(notifee);
 
 // Mock Alert
 jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -78,9 +72,9 @@ describe('NotificationService', () => {
 
       // cancelTriggerNotification should be called before createTriggerNotification
       const cancelOrder =
-        mockNotifee.cancelTriggerNotification.mock.invocationOrder[0];
+        mockNotifee.cancelTriggerNotification.mock.invocationCallOrder[0];
       const createOrder =
-        mockNotifee.createTriggerNotification.mock.invocationOrder[0];
+        mockNotifee.createTriggerNotification.mock.invocationCallOrder[0];
       expect(cancelOrder).toBeLessThan(createOrder);
 
       expect(mockNotifee.cancelTriggerNotification).toHaveBeenCalledWith(
@@ -107,10 +101,13 @@ describe('NotificationService', () => {
     it('sets trigger timestamp to tomorrow if time has passed today', async () => {
       // Mock Date to a fixed time: 2026-03-07 at 15:00
       const fixedNow = new Date(2026, 2, 7, 15, 0, 0, 0);
-      jest.spyOn(Date, 'now').mockReturnValue(fixedNow.getTime());
+      jest.useFakeTimers();
+      jest.setSystemTime(fixedNow);
 
       // Schedule for 8:00 AM (already passed)
       await service.scheduleDailyReminder(8, 0);
+
+      jest.useRealTimers();
 
       const triggerArg =
         mockNotifee.createTriggerNotification.mock.calls[0][1];

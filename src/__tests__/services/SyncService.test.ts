@@ -1,3 +1,4 @@
+import {AppState} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient, {AUTH_TOKEN_KEY} from '../../services/api';
 import SyncService, {AuthenticationError} from '../../services/SyncService';
@@ -189,8 +190,7 @@ describe('SyncService', () => {
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
 
-      const networkError = new Error('Network Error');
-      (networkError as any).code = 'ERR_NETWORK';
+      const networkError = Object.assign(new Error('Network Error'), {code: 'ERR_NETWORK'});
 
       (apiClient.post as jest.Mock).mockRejectedValueOnce(networkError);
 
@@ -369,7 +369,6 @@ describe('SyncService', () => {
 
   describe('startBackgroundSync', () => {
     it('registers an AppState listener', () => {
-      const {AppState} = require('react-native');
       const habitService = createMockHabitService();
       const syncService = new SyncService(habitService);
 
@@ -382,7 +381,6 @@ describe('SyncService', () => {
     });
 
     it('calls pushUnsyncedLogs when app comes to foreground', async () => {
-      const {AppState} = require('react-native');
       const logs = [createMockLog('habit-1', '2025-01-01')];
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);

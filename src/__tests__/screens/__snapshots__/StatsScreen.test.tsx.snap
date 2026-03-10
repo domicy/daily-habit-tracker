@@ -2661,10 +2661,7 @@ exports[`StatsScreen matches snapshot 1`] = `
                   "width": 36,
                 },
                 false,
-                {
-                  "borderColor": "#F56600",
-                  "borderWidth": 2,
-                },
+                false,
               ]
             }
             testID="calendar-day-7"
@@ -2805,7 +2802,10 @@ exports[`StatsScreen matches snapshot 1`] = `
                   "width": 36,
                 },
                 false,
-                false,
+                {
+                  "borderColor": "#F56600",
+                  "borderWidth": 2,
+                },
               ]
             }
             testID="calendar-day-10"
@@ -3993,7 +3993,7 @@ exports[`StatsScreen matches snapshot 1`] = `
       >
         0
          / 
-        7
+        10
          days completed
       </Text>
       <View

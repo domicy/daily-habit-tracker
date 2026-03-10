@@ -50,12 +50,6 @@ function createMockHabitService(logs: ReturnType<typeof createMockLog>[] = []) {
   } as unknown as HabitService;
 }
 
-function createTestJwt(exp: number): string {
-  const header = btoa(JSON.stringify({alg: 'HS256', typ: 'JWT'}));
-  const payload = btoa(JSON.stringify({sub: 'user', exp}));
-  return `${header}.${payload}.fake-signature`;
-}
-
 describe('SyncService Hardening', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -90,8 +84,7 @@ describe('SyncService Hardening', () => {
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
 
-      const networkError = new Error('Network Error');
-      (networkError as any).code = 'ERR_NETWORK';
+      const networkError = Object.assign(new Error('Network Error'), {code: 'ERR_NETWORK'});
       (apiClient.post as jest.Mock).mockRejectedValueOnce(networkError);
 
       // Should NOT throw — app is local-first
@@ -104,8 +97,7 @@ describe('SyncService Hardening', () => {
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
 
-      const networkError = new Error('Network Error');
-      (networkError as any).code = 'ERR_NETWORK';
+      const networkError = Object.assign(new Error('Network Error'), {code: 'ERR_NETWORK'});
       (apiClient.post as jest.Mock).mockRejectedValueOnce(networkError);
 
       await syncService.pushUnsyncedLogs();
@@ -137,8 +129,7 @@ describe('SyncService Hardening', () => {
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
 
-      const timeoutError = new Error('timeout of 10000ms exceeded');
-      (timeoutError as any).code = 'ECONNABORTED';
+      const timeoutError = Object.assign(new Error('timeout of 10000ms exceeded'), {code: 'ECONNABORTED'});
       (apiClient.post as jest.Mock).mockRejectedValueOnce(timeoutError);
 
       const result = await syncService.pushUnsyncedLogs();
@@ -541,7 +532,7 @@ describe('SyncService Hardening', () => {
       const syncService = new SyncService(habitService);
 
       const batchSizes: number[] = [];
-      (apiClient.post as jest.Mock).mockImplementation((_url: string, payload: any) => {
+      (apiClient.post as jest.Mock).mockImplementation((_url: string, payload: {logs: {habit_id: string; completed_date: string}[]}) => {
         batchSizes.push(payload.logs.length);
         return Promise.resolve({
           data: {synced: payload.logs.length, errors: []},
@@ -566,7 +557,7 @@ describe('SyncService Hardening', () => {
       const syncService = new SyncService(habitService);
 
       let callCount = 0;
-      (apiClient.post as jest.Mock).mockImplementation((_url: string, payload: any) => {
+      (apiClient.post as jest.Mock).mockImplementation((_url: string, payload: {logs: {habit_id: string; completed_date: string}[]}) => {
         callCount++;
         if (callCount === 2) {
           return Promise.resolve({
@@ -620,7 +611,7 @@ describe('SyncService Hardening', () => {
 
     it('re-marking an already-synced log does not cause errors', async () => {
       const log = createMockLog('habit-1', '2025-01-01');
-      log.synced = true as any; // Already synced locally, but service layer still returned it
+      Object.assign(log, {synced: true}); // Already synced locally, but service layer still returned it
       const habitService = createMockHabitService([log]);
       const syncService = new SyncService(habitService);
 
@@ -717,8 +708,7 @@ describe('SyncService Hardening', () => {
       const syncService = new SyncService(habitService);
 
       // Simulate: request sent but response never arrives (network error)
-      const networkError = new Error('Network Error');
-      (networkError as any).code = 'ERR_NETWORK';
+      const networkError = Object.assign(new Error('Network Error'), {code: 'ERR_NETWORK'});
       (apiClient.post as jest.Mock).mockRejectedValueOnce(networkError);
 
       await syncService.pushUnsyncedLogs();
@@ -728,14 +718,12 @@ describe('SyncService Hardening', () => {
     });
 
     it('verifies re-send on next launch works correctly after simulated kill', async () => {
-      const {AppState} = require('react-native');
       const log = createMockLog('habit-1', '2025-01-01');
       const habitService = createMockHabitService([log]);
       const syncService = new SyncService(habitService);
 
       // First attempt: "killed" (network error)
-      const networkError = new Error('Network Error');
-      (networkError as any).code = 'ERR_NETWORK';
+      const networkError = Object.assign(new Error('Network Error'), {code: 'ERR_NETWORK'});
       (apiClient.post as jest.Mock)
         .mockRejectedValueOnce(networkError)
         .mockResolvedValueOnce({

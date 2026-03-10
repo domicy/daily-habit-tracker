@@ -27,17 +27,14 @@ const MonthCalendar: React.FC<MonthCalendarProps> = ({
   completedDates,
   onMonthChange,
 }) => {
-  const today = new Date();
   const todayStr = getTodayString();
 
-  const isCurrentMonth =
-    today.getFullYear() === year && today.getMonth() === month;
-
   const canGoForward = useMemo(() => {
+    const now = new Date();
     const nextMonth = new Date(year, month + 1, 1);
-    const currentMonthStart = startOfMonth(today);
+    const currentMonthStart = startOfMonth(now);
     return !isAfter(nextMonth, currentMonthStart);
-  }, [year, month, today]);
+  }, [year, month]);
 
   const daysInMonth = getDaysInMonth(new Date(year, month));
   const firstDayOfWeek = getDay(startOfMonth(new Date(year, month)));
