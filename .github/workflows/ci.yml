@@ -89,6 +89,11 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Install applesimutils
+        run: |
+          brew tap wix/brew
+          brew install applesimutils
+
       - name: Install dependencies
         run: npm ci
 
