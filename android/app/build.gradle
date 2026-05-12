@@ -82,8 +82,8 @@ android {
         applicationId "com.darling.dailyhabittracker"
         minSdkVersion 24
         targetSdkVersion 35
-        versionCode (System.getenv("VERSION_CODE") ?: "1") as Integer
-        versionName System.getenv("VERSION_NAME") ?: "dev"
+        versionCode Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
+        versionName(System.getenv("VERSION_NAME") ?: "dev")
     }
     signingConfigs {
         debug {
