@@ -28,6 +28,19 @@ yarn-error.log
 # CocoaPods
 ios/Pods/
 
+# Android/IntelliJ
+android/build/
+android/app/build/
+android/.gradle/
+android/.idea
+android/local.properties
+*.iml
+*.hprof
+android/.cxx/
+*.keystore
+!debug.keystore
+android/.kotlin/
+
 # Bundle artifacts
 *.jsbundle
 
