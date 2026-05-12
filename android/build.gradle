@@ -5,7 +5,8 @@ buildscript {
         compileSdkVersion = 35
         targetSdkVersion = 35
         ndkVersion = "27.1.12297006"
-        kotlinVersion = "2.0.21"
+        // async-storage v3 requires Kotlin 2.1.0+.
+        kotlinVersion = "2.1.0"
     }
     repositories {
         google()
@@ -19,3 +20,13 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+allprojects {
+    repositories {
+        // async-storage v3 ships its own native artifact in a local maven repo.
+        // Required per https://react-native-async-storage.github.io/async-storage migration docs.
+        maven {
+            url = uri("${rootDir}/../node_modules/@react-native-async-storage/async-storage/android/local_repo")
+        }
+    }
+}
