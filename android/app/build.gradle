@@ -75,15 +75,15 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
-    compileSdk rootProject.ext.compileSdkVersion
+    compileSdk 35
 
     namespace "com.dailyhabittracker"
     defaultConfig {
-        applicationId "com.dailyhabittracker"
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        applicationId "com.darling.dailyhabittracker"
+        minSdkVersion 24
+        targetSdkVersion 35
+        versionCode (System.getenv("VERSION_CODE") ?: "1") as Integer
+        versionName System.getenv("VERSION_NAME") ?: "dev"
     }
     signingConfigs {
         debug {
