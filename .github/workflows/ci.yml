@@ -77,6 +77,28 @@ jobs:
       - name: Run pytest with coverage
         run: pytest --cov=app --cov-report=term-missing --cov-fail-under=85
 
+  android-build:
+    name: Android Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Assemble release APK
+        run: cd android && ./gradlew assembleRelease
+
   e2e-tests:
     name: E2E Tests
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
