@@ -5,8 +5,10 @@ buildscript {
         compileSdkVersion = 35
         targetSdkVersion = 35
         ndkVersion = "27.1.12297006"
-        // async-storage v3 requires Kotlin 2.1.0+.
-        kotlinVersion = "2.1.0"
+        // RN 0.78's gradle plugin classpath is pinned to Kotlin 2.0.21,
+        // so keep this aligned. async-storage v3's KSP version is overridden
+        // in gradle.properties to a 2.0.21-compatible build.
+        kotlinVersion = "2.0.21"
     }
     repositories {
         google()
