@@ -125,6 +125,6 @@ dependencies {
     } else {
         implementation jscFlavor
     }
-}
 
-apply from: '../../node_modules/@nozbe/watermelondb/native/android-jsi/build.gradle'
+    implementation project(':watermelondb-jsi')
+}
