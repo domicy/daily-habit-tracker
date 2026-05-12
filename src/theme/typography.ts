@@ -1,11 +1,9 @@
-import {Platform} from 'react-native';
-
 export const fontFamily = {
   heading: 'TradeGothicNextLT-Bold',
-  headingFallback: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  headingFallback: 'sans-serif',
   body: 'Biotif-Regular',
-  bodyFallback: Platform.OS === 'ios' ? 'San Francisco' : 'sans-serif',
-  mono: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  bodyFallback: 'sans-serif',
+  mono: 'monospace',
 } as const;
 
 export const typeScale = {

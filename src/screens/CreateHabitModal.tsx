@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import {colors} from '../theme/colors';
 import {fontFamily, typeScale} from '../theme/typography';
@@ -54,7 +53,7 @@ const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior="height"
       testID="create-habit-modal">
       <View style={styles.container}>
         <Text style={styles.title}>New Habit</Text>
