@@ -98,7 +98,33 @@ After the one-time phone setup, the steady-state developer loop is: push to `mai
 - `minSdkVersion 24`, `targetSdkVersion 35`, `compileSdkVersion 35`
 - `versionCode` reads env `VERSION_CODE` (default `1` for local builds)
 - `versionName` reads env `VERSION_NAME` (default `"dev"` for local builds)
-- Release signing config sources from `android/keystore.properties` (gitignored). CI writes that file at build time from GitHub secrets.
+- **Signing config with debug fallback**: `signingConfigs.release` is populated from `android/keystore.properties` only if that file exists. `buildTypes.release.signingConfig` is set conditionally — real keystore if present, else falls back to `signingConfigs.debug`. This is the critical pattern that lets the CI gate's `android-build` job run `./gradlew assembleRelease` without ever decoding the real keystore (gate uses debug signing), while the `release` job — which does write `keystore.properties` from secrets — gets real signing.
+
+```groovy
+signingConfigs {
+    release {
+        def keystorePropsFile = rootProject.file('keystore.properties')
+        if (keystorePropsFile.exists()) {
+            def props = new Properties()
+            keystorePropsFile.withInputStream { props.load(it) }
+            storeFile rootProject.file(props['storeFile'])
+            storePassword props['storePassword']
+            keyAlias props['keyAlias']
+            keyPassword props['keyPassword']
+        }
+    }
+}
+
+buildTypes {
+    release {
+        def keystorePropsFile = rootProject.file('keystore.properties')
+        signingConfig keystorePropsFile.exists() ? signingConfigs.release : signingConfigs.debug
+        // standard RN release flags: minifyEnabled, proguardFiles, etc.
+    }
+}
+```
+
+The release APK signed with debug is not shippable (debug signature can't replace a release-signed install on her phone), but the gate is only verifying that the build *compiles + bundles*, not that the artifact is publishable. The real `release` job re-builds with the decoded keystore.
 
 ### `android/app/src/main/AndroidManifest.xml`
 
@@ -178,6 +204,7 @@ After the first CI release build, CI runs `apksigner verify --verbose app-releas
 ```yaml
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -226,7 +253,7 @@ jobs:
 
   release:
     needs: [lint-and-typecheck, unit-tests, backend-tests, android-build]
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: production   # manual approval gate (requires reviewers configured in repo settings)
     permissions:
@@ -250,7 +277,7 @@ jobs:
           echo "version_name=v${VERSION}-r${RUN_COUNT}" >> $GITHUB_OUTPUT
       - name: Decode keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
+          printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
           cat > android/keystore.properties <<EOF
           storeFile=release.keystore
           storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -284,7 +311,7 @@ Removed: `e2e-tests` job and all macOS runner usage.
 
 Key properties:
 - All four gate jobs must pass before `release` is even scheduled (`needs:`). A failing gate aborts the release path entirely.
-- `workflow_dispatch:` lets you dry-run the signing path without merging. The approval gate still fires; the gate jobs still run; nothing about the safety chain is bypassed.
+- `workflow_dispatch:` from `main` lets you dry-run the signing path without merging. The release `if:` requires `main` regardless of event type, so a dispatch from a feature branch won't publish — it'll skip the release job entirely. The approval gate still fires when dispatched from `main`; gate jobs still run; nothing about the safety chain is bypassed.
 - `fetch-depth: 0` is required for `git rev-list --count HEAD` to return the real commit count (default shallow clone returns 1).
 - `VERSION_NAME` is derived once from `package.json` + commit count, used everywhere (Gradle env, release tag, release title via auto-notes). No literal version string anywhere in the YAML.
 - `versionCode = git rev-list --count HEAD` survives workflow rename, file move, or workflow recreation — unlike `github.run_number`, which is per-workflow-file and resets on rename.
@@ -428,18 +455,20 @@ Remove `e2e-tests` job. Add `android-build` and `release` jobs per Section 4. Si
 - Verify `./gradlew assembleDebug` works locally and in a new `android-build` CI job (debug signing only at this stage).
 - iOS still works; nothing else deleted yet.
 
-### PR 2 — Delete iOS
+### PR 2 — Remove the `e2e-tests` CI job
+
+- Remove the `e2e-tests` job from `.github/workflows/ci.yml`.
+- Remove all `macos-latest` runner references from the workflow.
+- `android-build` is already present from PR 1; **this PR does not add it**, only removes the iOS Detox job.
+- Done before PR 3 so that deleting `e2e/` in the next PR doesn't leave CI red.
+
+### PR 3 — Delete iOS
 
 - Remove `ios/`, `e2e/`, `.detoxrc.js`.
-- Drop iOS scripts and iOS-specific devDependencies from `package.json`.
+- Drop iOS scripts and iOS-specific devDependencies from `package.json` (and conditionally `jest-circus` — see Section 7).
 - Simplify all `Platform.OS === 'ios'` branches per Section 7.
 - Update README per Section 7.
-
-### PR 3 — Rewrite CI gate jobs
-
-- Replace `e2e-tests` job with `android-build` job in `ci.yml`.
-- Remove macOS runner references.
-- Release job is NOT added yet; this PR only handles pre-merge gates.
+- CI stays green because PR 2 already removed the job that referenced this code.
 
 ### PR 4 — Set up release signing
 
@@ -482,6 +511,8 @@ These are decisions deferred from spec to implementation because they depend on 
 
 - [ ] RN 0.78 init command — confirm against `react-native.dev` docs.
 - [ ] `react-native init` output script name (`android: react-native run-android` vs `npx react-native run-android`) — match what's emitted.
+- [ ] Notifee `MainApplication.kt` registration syntax — confirm against the current `@notifee/react-native` Android setup docs at PR 1 scaffold time. Registration has shifted across versions.
 - [ ] Obtainium package name — `adb shell pm list packages | grep obtainium` before writing the `pm grant` line into docs.
 - [ ] Re-grep `src/App.tsx`, `src/services/api.ts`, `src/__tests__/services/SyncService.test.ts` for `Platform.OS` and `'ios'` to confirm no real branches were missed in initial scan.
+- [ ] `jest-circus` removal safety — after dropping Detox, run `npm test` without `jest-circus` in `devDependencies` and confirm it still passes (it ships transitively with Jest 27+).
 - [ ] `apksigner verify --verbose` output — confirm v2 + v3 present on first CI release build.
