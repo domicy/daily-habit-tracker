@@ -5,9 +5,6 @@ buildscript {
         compileSdkVersion = 35
         targetSdkVersion = 35
         ndkVersion = "27.1.12297006"
-        // RN 0.78's gradle plugin classpath is pinned to Kotlin 2.0.21,
-        // so keep this aligned. async-storage v3's KSP version is overridden
-        // in gradle.properties to a 2.0.21-compatible build.
         kotlinVersion = "2.0.21"
     }
     repositories {
@@ -22,13 +19,3 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
-
-allprojects {
-    repositories {
-        // async-storage v3 ships its own native artifact in a local maven repo.
-        // Required per https://react-native-async-storage.github.io/async-storage migration docs.
-        maven {
-            url = uri("${rootDir}/../node_modules/@react-native-async-storage/async-storage/android/local_repo")
-        }
-    }
-}

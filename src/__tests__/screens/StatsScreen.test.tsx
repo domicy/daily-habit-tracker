@@ -146,20 +146,28 @@ describe('StatsScreen', () => {
   // ─── Snapshot test ─────────────────────────────────────────────────
 
   it('matches snapshot', async () => {
-    const service = createMockHabitService({
-      name: 'Exercise',
-      streak: 7,
-    });
+    // Pin "today" so the calendar header renders March 2026 deterministically.
+    jest.useFakeTimers({doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'requestAnimationFrame', 'cancelAnimationFrame']});
+    jest.setSystemTime(new Date('2026-03-10T12:00:00'));
 
-    const {toJSON, getByTestId} = render(
-      <StatsScreen route={defaultRoute} habitService={service} />,
-    );
+    try {
+      const service = createMockHabitService({
+        name: 'Exercise',
+        streak: 7,
+      });
 
-    await waitFor(() => {
-      expect(getByTestId('habit-name').props.children).toBe('Exercise');
-    });
+      const {toJSON, getByTestId} = render(
+        <StatsScreen route={defaultRoute} habitService={service} />,
+      );
 
-    expect(toJSON()).toMatchSnapshot();
+      await waitFor(() => {
+        expect(getByTestId('habit-name').props.children).toBe('Exercise');
+      });
+
+      expect(toJSON()).toMatchSnapshot();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
