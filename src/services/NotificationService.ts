@@ -1,16 +1,4 @@
-// NotificationService.ts
-//
-// Library choice: @notifee/react-native over react-native-push-notification.
-// Justification (as of 2025):
-// - @notifee is maintained by Invertase (the Firebase/React Native Firebase team)
-//   and sees regular releases, while react-native-push-notification has been
-//   largely unmaintained since 2023.
-// - @notifee has first-class iOS support with proper UNUserNotificationCenter
-//   integration, Notification Service Extensions, and full TypeScript types.
-// - @notifee supports the New Architecture (TurboModules / Fabric) which
-//   react-native-push-notification does not.
-// - @notifee provides a cleaner, Promise-based API with granular permission
-//   status reporting.
+// NotificationService: scheduled daily habit reminders via @notifee/react-native.
 
 import notifee, {
   AuthorizationStatus,
@@ -18,17 +6,16 @@ import notifee, {
   TimestampTrigger,
   TriggerType,
 } from '@notifee/react-native';
-import {Alert, Platform} from 'react-native';
+import {Alert} from 'react-native';
 
 const NOTIFICATION_ID = 'daily-habit-reminder';
 const CHANNEL_ID = 'daily-reminders';
 
 class NotificationService {
   /**
-   * Request iOS notification permission.
-   * Returns true if granted, false if denied.
-   * On Android, returns true (permissions granted at install on < Android 13,
-   * or via notifee's built-in handling on Android 13+).
+   * Request notification permission.
+   * On Android 13+ this maps to the runtime POST_NOTIFICATIONS prompt.
+   * On older Android this is a no-op (granted at install).
    */
   async requestPermission(): Promise<boolean> {
     const settings = await notifee.requestPermission();
@@ -45,13 +32,11 @@ class NotificationService {
   async scheduleDailyReminder(hour: number, minute: number): Promise<void> {
     await this.cancelDailyReminder();
 
-    // Ensure Android notification channel exists (no-op on iOS)
-    if (Platform.OS === 'android') {
-      await notifee.createChannel({
-        id: CHANNEL_ID,
-        name: 'Daily Reminders',
-      });
-    }
+    // Ensure notification channel exists.
+    await notifee.createChannel({
+      id: CHANNEL_ID,
+      name: 'Daily Reminders',
+    });
 
     // Build a timestamp trigger for the next occurrence of the given time
     const now = new Date();
@@ -98,7 +83,7 @@ class NotificationService {
 
     const granted = await this.requestPermission();
     if (!granted) {
-      // User previously denied — direct them to iOS Settings
+      // User previously denied — direct them to device Settings
       Alert.alert(
         'Notifications Disabled',
         'Please enable notifications for Daily Habit Tracker in your device Settings.',
