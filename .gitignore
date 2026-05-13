@@ -41,6 +41,9 @@ android/.cxx/
 !debug.keystore
 android/.kotlin/
 
+# Android signing properties (real values; example template is checked in)
+android/keystore.properties
+
 # Bundle artifacts
 *.jsbundle
 
