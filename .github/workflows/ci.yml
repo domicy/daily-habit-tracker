@@ -98,3 +98,63 @@ jobs:
 
       - name: Assemble release APK
         run: cd android && ./gradlew assembleRelease
+
+  release:
+    name: Release
+    needs: [lint-and-type-check, unit-tests, backend-tests, android-build]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Derive version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          RUN_COUNT=$(git rev-list --count HEAD)
+          echo "VERSION_CODE=$RUN_COUNT" >> $GITHUB_ENV
+          echo "VERSION_NAME=v${VERSION}-r${RUN_COUNT}" >> $GITHUB_ENV
+          echo "version_name=v${VERSION}-r${RUN_COUNT}" >> $GITHUB_OUTPUT
+
+      - name: Decode keystore
+        run: |
+          printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
+          cat > android/keystore.properties <<EOF
+          storeFile=release.keystore
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+
+      - name: Assemble signed release APK
+        run: cd android && ./gradlew assembleRelease
+
+      - name: Verify signing
+        run: $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.version_name }}" \
+            android/app/build/outputs/apk/release/app-release.apk \
+            --generate-notes \
+            --target ${{ github.sha }}
