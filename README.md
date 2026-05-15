@@ -86,6 +86,10 @@ This project uses GitHub Actions for continuous integration. The workflow is def
 - **Frontend (Jest):** 55% minimum for branches; 80% minimum for lines and functions (enforced in `jest.config.js`).
 - **Backend (pytest):** 85% minimum line coverage (enforced via `--cov-fail-under=85`).
 
+## Distribution
+
+Releases are produced automatically on every push to `main` and published as GitHub Releases with the signed APK attached. The target phone receives silent over-the-air updates via Obtainium. See `docs/android-setup.md` for the one-time phone setup and troubleshooting.
+
 ## Troubleshooting
 
 - **Gradle build fails with Kotlin metadata version error**: Confirm `@react-native-async-storage/async-storage` is pinned to `^2.x` (not `^3.x`); v3 requires Kotlin 2.2+ but RN 0.78 ships Kotlin 2.0.x.
