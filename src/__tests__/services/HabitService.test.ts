@@ -25,12 +25,14 @@ function formatDate(date: Date): string {
 async function createTestHabit(
   database: Database,
   name: string = 'Exercise',
+  synced: boolean = true,
 ): Promise<Habit> {
   return database.write(async () => {
     return database.get<Habit>('habits').create(h => {
       h.name = name;
       h.createdAt = Date.now();
       h.isActive = true;
+      h.synced = synced;
     });
   });
 }
@@ -86,6 +88,11 @@ describe('HabitService', () => {
       const habit = await service.createHabit(name);
       expect(habit.name).toBe(name);
       expect(habit.isActive).toBe(true);
+    });
+
+    it('marks newly created habit as unsynced', async () => {
+      const habit = await service.createHabit('New habit');
+      expect(habit.synced).toBe(false);
     });
 
     it('trims whitespace from name', async () => {
@@ -322,6 +329,33 @@ describe('HabitService', () => {
       const unsynced = await service.getUnsyncedLogs();
       expect(unsynced).toHaveLength(2);
       unsynced.forEach(log => expect(log.synced).toBe(false));
+    });
+  });
+
+  // ─── getUnsyncedHabits ─────────────────────────────────────────────
+
+  describe('getUnsyncedHabits', () => {
+    it('returns only unsynced habits', async () => {
+      await createTestHabit(database, 'synced', true);
+      await createTestHabit(database, 'unsynced', false);
+
+      const unsynced = await service.getUnsyncedHabits();
+      expect(unsynced).toHaveLength(1);
+      expect(unsynced[0].name).toBe('unsynced');
+    });
+
+    it('returns newly-created habits before they are pushed', async () => {
+      await service.createHabit('Brand new');
+      const unsynced = await service.getUnsyncedHabits();
+      expect(unsynced).toHaveLength(1);
+      expect(unsynced[0].name).toBe('Brand new');
+    });
+
+    it('toggleHabitActive marks the habit unsynced', async () => {
+      const habit = await createTestHabit(database, 'h', true);
+      await service.toggleHabitActive(habit.id);
+      const unsynced = await service.getUnsyncedHabits();
+      expect(unsynced.map(h => h.id)).toContain(habit.id);
     });
   });
 

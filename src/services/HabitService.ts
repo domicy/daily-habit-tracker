@@ -31,6 +31,7 @@ export default class HabitService {
     await this.database.write(async () => {
       await habit.update(h => {
         h.isActive = !h.isActive;
+        h.synced = false;
       });
     });
   }
@@ -51,6 +52,7 @@ export default class HabitService {
         habit.name = trimmed;
         habit.createdAt = Date.now();
         habit.isActive = true;
+        habit.synced = false;
       });
     });
   }
@@ -102,6 +104,13 @@ export default class HabitService {
   async getUnsyncedLogs(): Promise<HabitLog[]> {
     return this.database
       .get<HabitLog>('habit_logs')
+      .query(Q.where('synced', false))
+      .fetch();
+  }
+
+  async getUnsyncedHabits(): Promise<Habit[]> {
+    return this.database
+      .get<Habit>('habits')
       .query(Q.where('synced', false))
       .fetch();
   }

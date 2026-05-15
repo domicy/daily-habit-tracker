@@ -41,9 +41,24 @@ function createMockLog(habitId: string, completedDate: string) {
   };
 }
 
-function createMockHabitService(logs: ReturnType<typeof createMockLog>[] = []) {
+function createMockHabit(id: string, name: string = 'Habit') {
+  return {
+    id,
+    name,
+    createdAt: 1_700_000_000_000,
+    isActive: true,
+    synced: false,
+    markSynced: jest.fn().mockResolvedValue(undefined),
+  };
+}
+
+function createMockHabitService(
+  logs: ReturnType<typeof createMockLog>[] = [],
+  habits: ReturnType<typeof createMockHabit>[] = [],
+) {
   return {
     getUnsyncedLogs: jest.fn().mockResolvedValue(logs),
+    getUnsyncedHabits: jest.fn().mockResolvedValue(habits),
   } as unknown as HabitService;
 }
 
@@ -126,6 +141,54 @@ describe('SyncService', () => {
       const result = await syncService.pushUnsyncedLogs();
       expect(result).toEqual({pushed: 0, failed: 0});
       expect(logs[0].markSynced).not.toHaveBeenCalled();
+    });
+
+    it('pushes unsynced habits before logs and marks them synced', async () => {
+      const habits = [createMockHabit('habit-1', 'Drink water')];
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs, habits);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock)
+        .mockResolvedValueOnce({data: {synced_ids: ['habit-1']}})
+        .mockResolvedValueOnce({data: {synced: 1, errors: []}});
+
+      await syncService.pushUnsyncedLogs();
+
+      expect(apiClient.post).toHaveBeenNthCalledWith(1, '/habits/sync', {
+        habits: [
+          {
+            id: 'habit-1',
+            name: 'Drink water',
+            created_at_ms: 1_700_000_000_000,
+            is_active: true,
+          },
+        ],
+      });
+      expect(apiClient.post).toHaveBeenNthCalledWith(2, '/logs/sync', {
+        logs: [{habit_id: 'habit-1', completed_date: '2025-01-01'}],
+      });
+      expect(habits[0].markSynced).toHaveBeenCalled();
+      expect(logs[0].markSynced).toHaveBeenCalled();
+    });
+
+    it('skips log push when habit push fails (network error)', async () => {
+      const habits = [createMockHabit('habit-1')];
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs, habits);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock).mockRejectedValueOnce(
+        Object.assign(new Error('Network Error'), {code: 'ERR_NETWORK'}),
+      );
+
+      const result = await syncService.pushUnsyncedLogs();
+
+      expect(apiClient.post).toHaveBeenCalledTimes(1);
+      expect(apiClient.post).toHaveBeenCalledWith('/habits/sync', expect.anything());
+      expect(habits[0].markSynced).not.toHaveBeenCalled();
+      expect(logs[0].markSynced).not.toHaveBeenCalled();
+      expect(result).toEqual({pushed: 0, failed: 0});
     });
 
     it('does not mark failed logs as synced when server returns partial errors', async () => {
@@ -236,8 +299,12 @@ describe('SyncService', () => {
       // Advance past the 2-second debounce
       jest.advanceTimersByTime(2000);
 
-      // Flush async microtasks (pushUnsyncedLogs checks AsyncStorage)
-      await Promise.resolve();
+      // Flush async microtasks. pushUnsyncedLogs awaits AsyncStorage,
+      // then getUnsyncedHabits, then getUnsyncedLogs — so several flushes
+      // are needed before the log-side mock is reached.
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
 
       // Only 1 sync attempt should have been triggered
       expect(habitService.getUnsyncedLogs).toHaveBeenCalledTimes(1);
