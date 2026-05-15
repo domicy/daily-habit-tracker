@@ -103,9 +103,20 @@ export default class SyncService {
       return {pushed: 0, failed: 0};
     }
 
+    // Push habits first so the server knows about every habit referenced by
+    // a log. Otherwise the log push returns "Habit not found" for every log
+    // of a locally-created habit, and those logs accumulate forever.
+    const habitsPushed = await this.pushUnsyncedHabits();
+
     const unsyncedLogs = await this.habitService.getUnsyncedLogs();
 
     if (unsyncedLogs.length === 0) {
+      return {pushed: 0, failed: 0};
+    }
+
+    // If habit push failed (auth or network), skip the log push so we don't
+    // burn through the batch only to have every entry rejected.
+    if (!habitsPushed) {
       return {pushed: 0, failed: 0};
     }
 
@@ -115,6 +126,60 @@ export default class SyncService {
     }
 
     return this.pushBatch(unsyncedLogs);
+  }
+
+  /**
+   * Pushes locally-created/updated habits to the backend.
+   * Returns true if the push succeeded (or there was nothing to push) and the
+   * subsequent log push should proceed; false if the caller should skip the
+   * log push (e.g. unauthenticated, network failure).
+   */
+  private async pushUnsyncedHabits(): Promise<boolean> {
+    const unsyncedHabits = await this.habitService.getUnsyncedHabits();
+    if (unsyncedHabits.length === 0) {
+      return true;
+    }
+
+    const payload = {
+      habits: unsyncedHabits.map(habit => ({
+        id: habit.id,
+        name: habit.name,
+        created_at_ms: habit.createdAt,
+        is_active: habit.isActive,
+      })),
+    };
+
+    let response;
+    try {
+      response = await apiClient.post('/habits/sync', payload);
+    } catch (error: unknown) {
+      const syncErr = error as SyncError;
+      if (is401Error(syncErr)) {
+        const reauthed = await this.attemptReauth();
+        if (!reauthed) {
+          return false;
+        }
+        try {
+          response = await apiClient.post('/habits/sync', payload);
+        } catch {
+          return false;
+        }
+      } else {
+        // Network or 5xx — give up for this cycle, retry later.
+        return false;
+      }
+    }
+
+    const syncedIds: string[] = response!.data?.synced_ids ?? [];
+    const syncedSet = new Set(syncedIds);
+    for (const habit of unsyncedHabits) {
+      if (syncedSet.has(habit.id)) {
+        await habit.markSynced();
+      }
+    }
+    // Only proceed to logs if every habit was accepted; otherwise some logs
+    // would still hit "Habit not found".
+    return syncedSet.size === unsyncedHabits.length;
   }
 
   private async pushBatch(
@@ -238,17 +303,23 @@ export default class SyncService {
   }
 
   async isOffline(): Promise<boolean> {
-    const unsyncedLogs = await this.habitService.getUnsyncedLogs();
+    const [unsyncedLogs, unsyncedHabits] = await Promise.all([
+      this.habitService.getUnsyncedLogs(),
+      this.habitService.getUnsyncedHabits(),
+    ]);
     const isAuth = await this.isAuthenticated();
-    return unsyncedLogs.length > 0 && !isAuth;
+    return unsyncedLogs.length + unsyncedHabits.length > 0 && !isAuth;
   }
 
   async getSyncStatus(): Promise<{
     status: 'online' | 'offline' | 'auth_failed';
     pendingCount: number;
   }> {
-    const unsyncedLogs = await this.habitService.getUnsyncedLogs();
-    const pendingCount = unsyncedLogs.length;
+    const [unsyncedLogs, unsyncedHabits] = await Promise.all([
+      this.habitService.getUnsyncedLogs(),
+      this.habitService.getUnsyncedHabits(),
+    ]);
+    const pendingCount = unsyncedLogs.length + unsyncedHabits.length;
 
     const authFailed = await AsyncStorage.getItem(SYNC_AUTH_FAILED_KEY);
     if (authFailed === 'true') {

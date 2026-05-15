@@ -48,6 +48,10 @@ function createMockLog(habitId: string, completedDate: string) {
 function createMockHabitService(logs: ReturnType<typeof createMockLog>[] = []) {
   return {
     getUnsyncedLogs: jest.fn().mockResolvedValue(logs),
+    // The hardening tests focus on log-sync paths and assume habits are
+    // already synced; an empty unsynced-habits result keeps the new
+    // habit-push step a no-op so existing assertions still hold.
+    getUnsyncedHabits: jest.fn().mockResolvedValue([]),
   } as unknown as HabitService;
 }
 

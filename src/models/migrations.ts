@@ -8,6 +8,13 @@ export const migrations = schemaMigrations({
     {
       toVersion: 2,
       steps: [
+        // Existing habits predate the sync feature and have never been pushed
+        // to the backend, so they must be marked unsynced so the next sync
+        // pushes them before any of their logs.
+        addColumns({
+          table: 'habits',
+          columns: [{name: 'synced', type: 'boolean', isIndexed: true}],
+        }),
         addColumns({
           table: 'habit_logs',
           columns: [{name: 'deleted_at', type: 'number', isOptional: true}],

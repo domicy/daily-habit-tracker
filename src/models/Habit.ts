@@ -13,6 +13,7 @@ export default class Habit extends Model {
   @field('name') name!: string;
   @field('created_at') createdAt!: number;
   @field('is_active') isActive!: boolean;
+  @field('synced') synced!: boolean;
 
   @children('habit_logs') habitLogs!: Query<HabitLog>;
 
@@ -21,6 +22,13 @@ export default class Habit extends Model {
   @writer async markInactive(): Promise<void> {
     await this.update(habit => {
       habit.isActive = false;
+      habit.synced = false;
+    });
+  }
+
+  @writer async markSynced(): Promise<void> {
+    await this.update(habit => {
+      habit.synced = true;
     });
   }
 }

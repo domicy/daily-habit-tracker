@@ -9,6 +9,7 @@ export const schema = appSchema({
         {name: 'name', type: 'string'},
         {name: 'created_at', type: 'number'},
         {name: 'is_active', type: 'boolean'},
+        {name: 'synced', type: 'boolean', isIndexed: true},
       ],
     }),
     tableSchema({
