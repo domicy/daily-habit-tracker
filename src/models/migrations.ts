@@ -1,4 +1,7 @@
-import {schemaMigrations, addColumns} from '@nozbe/watermelondb/Schema/migrations';
+import {
+  schemaMigrations,
+  addColumns,
+} from '@nozbe/watermelondb/Schema/migrations';
 
 export const migrations = schemaMigrations({
   migrations: [
@@ -11,6 +14,10 @@ export const migrations = schemaMigrations({
         addColumns({
           table: 'habits',
           columns: [{name: 'synced', type: 'boolean', isIndexed: true}],
+        }),
+        addColumns({
+          table: 'habit_logs',
+          columns: [{name: 'deleted_at', type: 'number', isOptional: true}],
         }),
       ],
     },

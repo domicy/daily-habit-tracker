@@ -40,6 +40,7 @@ function createMockLog(habitId: string, completedDate: string) {
     habitId,
     completedDate,
     synced: false,
+    deletedAt: null as number | null,
     markSynced: jest.fn().mockResolvedValue(undefined),
   };
 }

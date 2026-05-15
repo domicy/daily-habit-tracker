@@ -42,12 +42,15 @@ async def sync_logs(body: SyncRequest, db: AsyncSession = Depends(get_db)):
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
 
+        now = datetime.now(timezone.utc)
         if existing:
-            existing.synced_at = datetime.now(timezone.utc)
+            existing.synced_at = now
+            existing.deleted_at = now if entry.deleted else None
         else:
             log = HabitLog(
                 habit_id=entry.habit_id,
                 completed_date=entry.completed_date,
+                deleted_at=now if entry.deleted else None,
             )
             db.add(log)
 
@@ -75,6 +78,7 @@ async def get_logs(
             HabitLog.habit_id == habit_id,
             HabitLog.completed_date >= start,
             HabitLog.completed_date <= end,
+            HabitLog.deleted_at.is_(None),
         )
         .order_by(HabitLog.completed_date)
     )

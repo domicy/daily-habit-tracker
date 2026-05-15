@@ -32,11 +32,16 @@ jest.mock('react-native', () => ({
   },
 }));
 
-function createMockLog(habitId: string, completedDate: string) {
+function createMockLog(
+  habitId: string,
+  completedDate: string,
+  deletedAt: number | null = null,
+) {
   return {
     habitId,
     completedDate,
     synced: false,
+    deletedAt,
     markSynced: jest.fn().mockResolvedValue(undefined),
   };
 }
@@ -91,8 +96,30 @@ describe('SyncService', () => {
 
       expect(apiClient.post).toHaveBeenCalledWith('/logs/sync', {
         logs: [
-          {habit_id: 'habit-1', completed_date: '2025-01-01'},
-          {habit_id: 'habit-2', completed_date: '2025-01-02'},
+          {habit_id: 'habit-1', completed_date: '2025-01-01', deleted: false},
+          {habit_id: 'habit-2', completed_date: '2025-01-02', deleted: false},
+        ],
+      });
+    });
+
+    it('flags tombstoned logs as deleted in the payload', async () => {
+      const logs = [
+        createMockLog('habit-1', '2025-01-01'),
+        createMockLog('habit-2', '2025-01-02', Date.now()),
+      ];
+      const habitService = createMockHabitService(logs);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock).mockResolvedValueOnce({
+        data: {synced: 2, errors: []},
+      });
+
+      await syncService.pushUnsyncedLogs();
+
+      expect(apiClient.post).toHaveBeenCalledWith('/logs/sync', {
+        logs: [
+          {habit_id: 'habit-1', completed_date: '2025-01-01', deleted: false},
+          {habit_id: 'habit-2', completed_date: '2025-01-02', deleted: true},
         ],
       });
     });
@@ -166,7 +193,7 @@ describe('SyncService', () => {
         ],
       });
       expect(apiClient.post).toHaveBeenNthCalledWith(2, '/logs/sync', {
-        logs: [{habit_id: 'habit-1', completed_date: '2025-01-01'}],
+        logs: [{habit_id: 'habit-1', completed_date: '2025-01-01', deleted: false}],
       });
       expect(habits[0].markSynced).toHaveBeenCalled();
       expect(logs[0].markSynced).toHaveBeenCalled();

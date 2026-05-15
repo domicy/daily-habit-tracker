@@ -117,6 +117,76 @@ async def test_sync_logs_all_invalid(client: AsyncClient, auth_header: dict):
 
 
 @pytest.mark.asyncio
+async def test_sync_logs_deletion_removes_log_from_get(
+    client: AsyncClient, auth_header: dict
+):
+    """Client pushes a tombstone -> server soft-deletes -> GET /logs hides it."""
+    habit_id = await _create_habit(client, auth_header)
+
+    # Create then delete the same log
+    await client.post(
+        "/logs/sync",
+        json={"logs": [{"habit_id": habit_id, "completed_date": "2026-05-01"}]},
+        headers=auth_header,
+    )
+    resp = await client.post(
+        "/logs/sync",
+        json={
+            "logs": [
+                {
+                    "habit_id": habit_id,
+                    "completed_date": "2026-05-01",
+                    "deleted": True,
+                }
+            ]
+        },
+        headers=auth_header,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["synced"] == 1
+
+    # GET should not return the tombstoned log
+    resp = await client.get(
+        f"/logs/{habit_id}?start=2026-05-01&end=2026-05-01", headers=auth_header
+    )
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_sync_logs_revive_after_deletion(
+    client: AsyncClient, auth_header: dict
+):
+    """Tombstone then re-create the same date -> log is visible again."""
+    habit_id = await _create_habit(client, auth_header)
+
+    await client.post(
+        "/logs/sync",
+        json={
+            "logs": [
+                {
+                    "habit_id": habit_id,
+                    "completed_date": "2026-05-02",
+                    "deleted": True,
+                }
+            ]
+        },
+        headers=auth_header,
+    )
+    await client.post(
+        "/logs/sync",
+        json={"logs": [{"habit_id": habit_id, "completed_date": "2026-05-02"}]},
+        headers=auth_header,
+    )
+
+    resp = await client.get(
+        f"/logs/{habit_id}?start=2026-05-02&end=2026-05-02", headers=auth_header
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+
+@pytest.mark.asyncio
 async def test_sync_logs_concurrent_overlapping(client: AsyncClient, auth_header: dict):
     """Simulate two sync requests with overlapping logs — verify no integrity errors."""
     habit_id = await _create_habit(client, auth_header)
