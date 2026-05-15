@@ -3,9 +3,11 @@ import {field, relation, writer} from '@nozbe/watermelondb/decorators';
 import type {Relation} from '@nozbe/watermelondb';
 import type Habit from './Habit';
 
-// NOTE: The pair (habit_id, completed_date) should be treated as logically
-// unique. Enforce this in the service layer since WatermelonDB does not
-// support compound unique constraints natively.
+// NOTE: The pair (habit_id, completed_date) is logically unique among
+// non-tombstoned rows. Tombstones (deletedAt != null) are kept after a
+// log is "uncompleted" so the deletion can be pushed to the server;
+// without them, an offline un-toggle of a previously-synced day would
+// leave the server permanently out of sync with the client.
 
 export default class HabitLog extends Model {
   static table = 'habit_logs';
@@ -18,6 +20,7 @@ export default class HabitLog extends Model {
   // Plain string in "YYYY-MM-DD" format to avoid timezone issues.
   @field('completed_date') completedDate!: string;
   @field('synced') synced!: boolean;
+  @field('deleted_at') deletedAt!: number | null;
 
   @relation('habits', 'habit_id') habit!: Relation<Habit>;
 

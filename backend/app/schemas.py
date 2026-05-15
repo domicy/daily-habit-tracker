@@ -46,6 +46,7 @@ class HabitRead(BaseModel):
 class HabitLogCreate(BaseModel):
     habit_id: str
     completed_date: date
+    deleted: bool = False
 
 
 class HabitLogRead(BaseModel):

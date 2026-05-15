@@ -40,5 +40,11 @@ class HabitLog(Base):
     synced_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
+    # Tombstone timestamp. Null = active log; non-null = deleted by the
+    # client. Deletions are pushed via /logs/sync so the server can stay
+    # in sync after an offline un-toggle of a previously-synced day.
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, default=None
+    )
 
     habit: Mapped["Habit"] = relationship(back_populates="logs")

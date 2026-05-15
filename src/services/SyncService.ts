@@ -124,6 +124,7 @@ export default class SyncService {
       logs: logs.map(log => ({
         habit_id: log.habitId,
         completed_date: log.completedDate,
+        deleted: log.deletedAt != null,
       })),
     };
 
