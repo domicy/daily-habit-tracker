@@ -155,6 +155,39 @@ describe('HabitService', () => {
         .fetch();
       expect(logs).toHaveLength(0);
     });
+
+    it('toggle off of a synced log leaves a tombstone for sync', async () => {
+      const habit = await createTestHabit(database);
+      const date = '2026-03-07';
+      await createTestLog(database, habit.id, date, true);
+
+      await service.toggleHabitCompletion(habit.id, date);
+
+      const logs = await database
+        .get<HabitLog>('habit_logs')
+        .query()
+        .fetch();
+      expect(logs).toHaveLength(1);
+      expect(logs[0].deletedAt).not.toBeNull();
+      expect(logs[0].synced).toBe(false);
+    });
+
+    it('re-toggling a tombstoned day revives the log and marks it unsynced', async () => {
+      const habit = await createTestHabit(database);
+      const date = '2026-03-07';
+      await createTestLog(database, habit.id, date, true);
+
+      await service.toggleHabitCompletion(habit.id, date); // tombstone
+      await service.toggleHabitCompletion(habit.id, date); // revive
+
+      const logs = await database
+        .get<HabitLog>('habit_logs')
+        .query()
+        .fetch();
+      expect(logs).toHaveLength(1);
+      expect(logs[0].deletedAt).toBeNull();
+      expect(logs[0].synced).toBe(false);
+    });
   });
 
   // ─── Streak calculation tests ──────────────────────────────────────
@@ -273,6 +306,19 @@ describe('HabitService', () => {
 
       const streak = await service.calculateStreak(habit.id, '2026-01-01');
       expect(streak).toBe(3);
+    });
+
+    it('does not count tombstoned days', async () => {
+      const habit = await createTestHabit(database);
+      await createTestLog(database, habit.id, '2026-03-05', true);
+      await createTestLog(database, habit.id, '2026-03-06', true);
+      await createTestLog(database, habit.id, '2026-03-07', true);
+
+      // Tombstone the middle day via the service
+      await service.toggleHabitCompletion(habit.id, '2026-03-06');
+
+      const streak = await service.calculateStreak(habit.id, '2026-03-07');
+      expect(streak).toBe(1);
     });
   });
 

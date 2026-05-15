@@ -68,15 +68,40 @@ export default class HabitService {
         )
         .fetch();
 
-      if (existing.length > 0) {
-        await existing[0].destroyPermanently();
-      } else {
-        await this.database.get<HabitLog>('habit_logs').create(log => {
-          log.habitId = habitId;
-          log.completedDate = date;
+      const active = existing.find(l => l.deletedAt == null);
+      if (active) {
+        if (active.synced) {
+          // Server has this log — leave a tombstone so the deletion gets
+          // pushed on the next sync. Without this, an offline un-toggle
+          // would silently desync from the server forever.
+          await active.update(log => {
+            log.deletedAt = Date.now();
+            log.synced = false;
+          });
+        } else {
+          // Never reached the server — safe to drop the row entirely.
+          await active.destroyPermanently();
+        }
+        return;
+      }
+
+      const tombstone = existing.find(l => l.deletedAt != null);
+      if (tombstone) {
+        // Re-toggling on a previously-deleted day: revive the row and
+        // mark it for re-sync so the server clears its deleted_at.
+        await tombstone.update(log => {
+          log.deletedAt = null;
           log.synced = false;
         });
+        return;
       }
+
+      await this.database.get<HabitLog>('habit_logs').create(log => {
+        log.habitId = habitId;
+        log.completedDate = date;
+        log.synced = false;
+        log.deletedAt = null;
+      });
     });
   }
 
@@ -95,6 +120,7 @@ export default class HabitService {
         Q.where('habit_id', habitId),
         Q.where('completed_date', Q.gte(startDate)),
         Q.where('completed_date', Q.lte(endDate)),
+        Q.where('deleted_at', null),
       )
       .fetch();
   }
@@ -127,6 +153,7 @@ export default class HabitService {
         Q.where('habit_id', habitId),
         Q.where('completed_date', Q.gte(cutoffDate)),
         Q.where('completed_date', Q.lte(asOfDate)),
+        Q.where('deleted_at', null),
       )
       .fetch();
 
