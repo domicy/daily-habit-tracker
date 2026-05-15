@@ -1,7 +1,7 @@
 # Android-Only Pivot — Design
 
 **Date:** 2026-05-12
-**Status:** Approved (pending user review)
+**Status:** Implemented with two deviations (see "Deviations from spec" at the end)
 **Author:** Patrick Darling, with Claude
 
 ## Motivation
@@ -516,3 +516,42 @@ These are decisions deferred from spec to implementation because they depend on 
 - [ ] Re-grep `src/App.tsx`, `src/services/api.ts`, `src/__tests__/services/SyncService.test.ts` for `Platform.OS` and `'ios'` to confirm no real branches were missed in initial scan.
 - [ ] `jest-circus` removal safety — after dropping Detox, run `npm test` without `jest-circus` in `devDependencies` and confirm it still passes (it ships transitively with Jest 27+).
 - [ ] `apksigner verify --verbose` output — confirm v2 + v3 present on first CI release build.
+
+---
+
+## Deviations from spec (added 2026-05-15)
+
+Two real-world constraints required deviating from the design as written. The pivot is functional and shipping, but in slightly different shape than originally specced.
+
+### 1. No manual approval gate at release time
+
+**Spec said:** `environment: production` with a required reviewer in repo Settings → Environments would pause the release job for one-click approval before publishing.
+
+**What actually happened:** GitHub free-tier *private* repos cannot enforce environment protection rules (Required reviewers, deployment branches) — that feature requires GitHub Team or above. The `environment: production` block in `ci.yml` still runs, but it no-ops without protection rules. Every push to `main` ships immediately.
+
+**Resolution:** The repo was subsequently made public (see deviation #2 below), so environment protection rules *are* now available on this repo. To re-enable the approval gate: Settings → Environments → `production` → Required reviewers → add self. This was not done as part of the original implementation; it's available to turn on at any time without code changes.
+
+**Risk accepted in the meantime:** A bad merge silently ships to the phone. Mitigation: commit-revert quickly to ship a fix-forward release, or pause Obtainium on the phone before a risky merge.
+
+### 2. Tap-to-update instead of silent install
+
+**Spec said:** Obtainium → Install silently → on, backed by `adb shell pm grant <obtainium-package> android.permission.INSTALL_PACKAGES`. The plan included the ADB grant as a one-time step.
+
+**What actually happened:** On modern Android (verified on Pixel 6 Pro; same applies to Pixel 10a), `INSTALL_PACKAGES` is a signature-protected permission and cannot be granted to a normal app via `pm grant`. The command rejects with `SecurityException: Permission android.permission.INSTALL_PACKAGES requested by package <X> is not a changeable permission type`. Obtainium's documentation appears to predate this Android hardening. Silent install via Obtainium on a non-rooted Pixel now requires either Shizuku (brittle across phone reboots), root (non-starter), or device-owner setup (requires factory reset).
+
+**Resolution:** Dropped to **tap-to-update**: Obtainium polls, posts a notification when a new release is available, user taps notification → taps Install → done. Two taps per update. Reliable across reboots. Documented in `docs/android-setup.md`.
+
+**Upgrade path:** If two taps per update becomes annoying, the user can install Shizuku and flip Obtainium → "Use Shizuku" → on. Documented in `docs/android-setup.md` under "Upgrade path: real silent install."
+
+### 3. Repo visibility flipped to public
+
+**Spec implied:** repo stays private; Obtainium uses the repo URL directly.
+
+**What actually happened:** Obtainium queries the GitHub REST API unauthenticated by default, which returns 404 on private repos. The repo was made public to resolve this. The Obtainium PAT alternative was offered but not chosen due to PAT rotation overhead.
+
+**Side benefits:**
+- Unlimited Actions minutes (vs 2000/month on private free).
+- Environment protection rules unlocked (see deviation #1).
+
+**Side risks:** All committed config uses placeholders (`<TUNNEL_UUID>`, `change-me`, `api.example.com`, `habit-tracker.tunnel.example.com`); GitHub Actions secrets are never exposed regardless of repo visibility; personal info in git history is the email on commit authors and references to the wife / Pixel 10a context in design docs. Audit was clean before the flip.
+
