@@ -1,7 +1,15 @@
+import asyncio
 import uuid
 
 import pytest
-from httpx import AsyncClient
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
+
+from app.database import get_db
+from app.main import app
+from app.models import Base
 
 
 # ── Helper ──────────────────────────────────────────────
@@ -225,6 +233,84 @@ async def test_sync_logs_concurrent_overlapping(client: AsyncClient, auth_header
     dates = [log["completed_date"] for log in logs]
     assert len(dates) == 3
     assert sorted(dates) == ["2026-04-01", "2026-04-02", "2026-04-03"]
+
+
+# ── POST /logs/sync truly concurrent ────────────────────
+
+
+@pytest_asyncio.fixture
+async def concurrent_client():
+    """Client whose get_db yields a fresh session per request against a
+    shared in-memory SQLite engine, enabling real concurrent requests."""
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    session_factory = async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    async def _override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = _override_get_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.clear()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_sync_logs_truly_concurrent_overlapping(
+    concurrent_client: AsyncClient, auth_header: dict
+):
+    """Two simultaneous sync requests with an overlapping (habit_id,
+    completed_date) must both succeed without raising uq_habit_date.
+
+    Note: SQLite serializes writes on a shared connection, so this test
+    cannot fully reproduce the MVCC interleaving that triggers the race
+    on MySQL/Postgres. It still acts as a behavioral contract: dispatch
+    two overlapping requests via asyncio.gather and demand 200s + no
+    duplicate rows. The real correctness guarantee comes from using a
+    dialect-native atomic upsert in the route handler."""
+    habit_id = await _create_habit(concurrent_client, auth_header)
+
+    payload1 = {
+        "logs": [
+            {"habit_id": habit_id, "completed_date": "2026-04-01"},
+            {"habit_id": habit_id, "completed_date": "2026-04-02"},
+        ]
+    }
+    payload2 = {
+        "logs": [
+            {"habit_id": habit_id, "completed_date": "2026-04-02"},
+            {"habit_id": habit_id, "completed_date": "2026-04-03"},
+        ]
+    }
+
+    resp1, resp2 = await asyncio.gather(
+        concurrent_client.post("/logs/sync", json=payload1, headers=auth_header),
+        concurrent_client.post("/logs/sync", json=payload2, headers=auth_header),
+    )
+
+    assert resp1.status_code == 200, resp1.text
+    assert resp2.status_code == 200, resp2.text
+    assert resp1.json()["synced"] == 2
+    assert resp2.json()["synced"] == 2
+
+    resp = await concurrent_client.get(
+        f"/logs/{habit_id}?start=2026-04-01&end=2026-04-03", headers=auth_header
+    )
+    assert resp.status_code == 200
+    dates = sorted(log["completed_date"] for log in resp.json())
+    assert dates == ["2026-04-01", "2026-04-02", "2026-04-03"]
 
 
 # ── GET /logs/{habit_id} ────────────────────────────────
