@@ -451,6 +451,47 @@ describe('HabitService', () => {
     });
   });
 
+  // ─── observeUnsyncedCount ──────────────────────────────────────────
+
+  describe('observeUnsyncedCount', () => {
+    it('emits the combined count of unsynced logs and habits and reacts to changes', async () => {
+      const habit = await createTestHabit(database, 'h', true);
+
+      const observable = service.observeUnsyncedCount();
+      const emissions: number[] = [];
+      const sub = observable.subscribe(v => emissions.push(v));
+
+      const waitForCount = (target: number) =>
+        new Promise<void>((resolve, reject) => {
+          const start = Date.now();
+          const check = () => {
+            if (emissions[emissions.length - 1] === target) {
+              resolve();
+            } else if (Date.now() - start > 2000) {
+              reject(
+                new Error(
+                  `timeout waiting for count ${target}; emissions=${JSON.stringify(emissions)}`,
+                ),
+              );
+            } else {
+              setTimeout(check, 10);
+            }
+          };
+          check();
+        });
+
+      await waitForCount(0);
+
+      await createTestLog(database, habit.id, '2026-03-01', false);
+      await waitForCount(1);
+
+      await service.toggleHabitActive(habit.id);
+      await waitForCount(2);
+
+      sub.unsubscribe();
+    });
+  });
+
   // ─── getActiveHabits ───────────────────────────────────────────────
 
   describe('getActiveHabits', () => {
