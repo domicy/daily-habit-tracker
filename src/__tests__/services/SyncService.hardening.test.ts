@@ -656,9 +656,9 @@ describe('SyncService Hardening', () => {
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
 
-      (apiClient.post as jest.Mock).mockImplementation(() =>
+      (apiClient.post as jest.Mock).mockImplementation((_url: string, payload: {logs: {habit_id: string; completed_date: string}[]}) =>
         Promise.resolve({
-          data: {synced: 100, errors: []},
+          data: {synced: payload.logs.length, errors: []},
         }),
       );
 
@@ -666,7 +666,7 @@ describe('SyncService Hardening', () => {
 
       // 6 API calls (550 / 100 = 5 full + 1 partial)
       expect(apiClient.post).toHaveBeenCalledTimes(6);
-      expect(result.pushed).toBe(600); // 6 * 100 from mock
+      expect(result.pushed).toBe(550);
     }, 30000);
 
     it('each batch contains at most 100 logs', async () => {
