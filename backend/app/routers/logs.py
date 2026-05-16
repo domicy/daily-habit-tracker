@@ -19,21 +19,21 @@ router = APIRouter(
 )
 
 
-def _upsert_habit_log_stmt(dialect_name: str, values: dict[str, Any]):
-    """Build a dialect-native atomic upsert for habit_logs.
+def _upsert_habit_log_stmt(dialect_name: str, values: list[dict[str, Any]]):
+    """Build a dialect-native atomic bulk upsert for habit_logs.
 
     Required because two concurrent /logs/sync requests racing on the same
     (habit_id, completed_date) both pass a SELECT existence check and then
     both INSERT, violating uq_habit_date on the second commit.
     """
     if dialect_name in ("mysql", "mariadb"):
-        stmt = mysql.insert(HabitLog).values(**values)
+        stmt = mysql.insert(HabitLog).values(values)
         return stmt.on_duplicate_key_update(
             synced_at=stmt.inserted.synced_at,
             deleted_at=stmt.inserted.deleted_at,
         )
     if dialect_name == "postgresql":
-        stmt = postgresql.insert(HabitLog).values(**values)
+        stmt = postgresql.insert(HabitLog).values(values)
         return stmt.on_conflict_do_update(
             constraint="uq_habit_date",
             set_={
@@ -42,7 +42,7 @@ def _upsert_habit_log_stmt(dialect_name: str, values: dict[str, Any]):
             },
         )
     if dialect_name == "sqlite":
-        stmt = sqlite.insert(HabitLog).values(**values)
+        stmt = sqlite.insert(HabitLog).values(values)
         return stmt.on_conflict_do_update(
             index_elements=["habit_id", "completed_date"],
             set_={
@@ -55,13 +55,25 @@ def _upsert_habit_log_stmt(dialect_name: str, values: dict[str, Any]):
 
 @router.post("/sync", response_model=SyncResponse)
 async def sync_logs(body: SyncRequest, db: AsyncSession = Depends(get_db)):
-    synced = 0
     errors: list[SyncError] = []
-    dialect_name = db.bind.dialect.name
 
+    if not body.logs:
+        return SyncResponse(synced=0, errors=errors)
+
+    habit_ids = {entry.habit_id for entry in body.logs}
+    existing_habits = set(
+        (
+            await db.execute(select(Habit.id).where(Habit.id.in_(habit_ids)))
+        ).scalars()
+    )
+
+    now = datetime.now(timezone.utc)
+    # Postgres rejects multi-row ON CONFLICT DO UPDATE that targets the same
+    # constraint twice in one statement, so dedupe within the batch keeping
+    # the last entry per (habit_id, completed_date).
+    deduped: dict[tuple[str, date], dict[str, Any]] = {}
     for entry in body.logs:
-        habit = await db.get(Habit, entry.habit_id)
-        if not habit:
+        if entry.habit_id not in existing_habits:
             errors.append(
                 SyncError(
                     habit_id=entry.habit_id,
@@ -70,17 +82,21 @@ async def sync_logs(body: SyncRequest, db: AsyncSession = Depends(get_db)):
                 )
             )
             continue
-
-        now = datetime.now(timezone.utc)
-        values = {
+        deduped[(entry.habit_id, entry.completed_date)] = {
             "id": str(uuid.uuid4()),
             "habit_id": entry.habit_id,
             "completed_date": entry.completed_date,
             "synced_at": now,
             "deleted_at": now if entry.deleted else None,
         }
-        await db.execute(_upsert_habit_log_stmt(dialect_name, values))
-        synced += 1
+
+    synced = sum(
+        1 for entry in body.logs if entry.habit_id in existing_habits
+    )
+    if deduped:
+        await db.execute(
+            _upsert_habit_log_stmt(db.bind.dialect.name, list(deduped.values()))
+        )
 
     await db.commit()
     return SyncResponse(synced=synced, errors=errors)
