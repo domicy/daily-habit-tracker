@@ -21,6 +21,8 @@ export default class HabitLog extends Model {
   @field('completed_date') completedDate!: string;
   @field('synced') synced!: boolean;
   @field('deleted_at') deletedAt!: number | null;
+  @field('retry_count') retryCount!: number;
+  @field('last_attempt_at') lastAttemptAt!: number | null;
 
   @relation('habits', 'habit_id') habit!: Relation<Habit>;
 

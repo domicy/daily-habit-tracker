@@ -59,6 +59,7 @@ function createMockHabitService(logs: ReturnType<typeof createMockLog>[] = []) {
           await log.markSynced();
         }
       }),
+    markLogsRetryFailed: jest.fn().mockResolvedValue(undefined),
     markHabitsSynced: jest
       .fn()
       .mockImplementation(async (batch: {markSynced: () => Promise<void>}[]) => {
@@ -227,6 +228,68 @@ describe('SyncService Hardening', () => {
 
       await syncService.pushUnsyncedLogs();
       expect(failedLog.markSynced).toHaveBeenCalled();
+    });
+
+    it('records retry failures so the persistent backlog gets bounded', async () => {
+      const log = createMockLog('habit-1', '2025-01-01');
+      const habitService = createMockHabitService([log]);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock).mockResolvedValueOnce({
+        data: {
+          synced: 0,
+          errors: [
+            {habit_id: 'habit-1', completed_date: '2025-01-01', reason: 'Habit not found'},
+          ],
+        },
+      });
+
+      await syncService.pushUnsyncedLogs();
+
+      expect(habitService.markLogsRetryFailed).toHaveBeenCalledTimes(1);
+      const failedBatch = (habitService.markLogsRetryFailed as jest.Mock).mock.calls[0][0];
+      expect(failedBatch).toHaveLength(1);
+      expect(failedBatch[0].habitId).toBe('habit-1');
+      // Successful logs are never passed to markLogsRetryFailed.
+      expect(log.markSynced).not.toHaveBeenCalled();
+    });
+
+    it('only records the rejected logs as retry-failed, not the successful ones', async () => {
+      const ok = createMockLog('habit-1', '2025-01-01');
+      const bad = createMockLog('habit-2', '2025-01-02');
+      const habitService = createMockHabitService([ok, bad]);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock).mockResolvedValueOnce({
+        data: {
+          synced: 1,
+          errors: [
+            {habit_id: 'habit-2', completed_date: '2025-01-02', reason: 'Habit not found'},
+          ],
+        },
+      });
+
+      await syncService.pushUnsyncedLogs();
+
+      expect(ok.markSynced).toHaveBeenCalled();
+      const failedBatch = (habitService.markLogsRetryFailed as jest.Mock).mock.calls[0][0];
+      expect(failedBatch.map((l: {habitId: string}) => l.habitId)).toEqual(['habit-2']);
+    });
+
+    it('does NOT call markLogsRetryFailed on network/5xx failures (whole-batch retry)', async () => {
+      const log = createMockLog('habit-1', '2025-01-01');
+      const habitService = createMockHabitService([log]);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock).mockRejectedValueOnce(
+        Object.assign(new Error('Network Error'), {code: 'ERR_NETWORK'}),
+      );
+
+      await syncService.pushUnsyncedLogs();
+
+      // On a transport-level failure the whole batch is retried next cycle —
+      // no per-log retry counter should advance.
+      expect(habitService.markLogsRetryFailed).not.toHaveBeenCalled();
     });
 
     it('handles all logs failing in the errors array', async () => {

@@ -237,8 +237,16 @@ export default class SyncService {
     const succeeded = logs.filter(
       log => !errorSet.has(`${log.habitId}:${log.completedDate}`),
     );
+    const failed = logs.filter(log =>
+      errorSet.has(`${log.habitId}:${log.completedDate}`),
+    );
 
     await this.habitService.markLogsSynced(succeeded);
+    // Record per-log rejections so HabitService.getUnsyncedLogs can apply
+    // exponential backoff and eventually exclude permanently-failing rows
+    // from the scan. Without this, "Habit not found" rejections grow the
+    // unsynced backlog forever and every sync re-fetches them all.
+    await this.habitService.markLogsRetryFailed(failed);
 
     const errorMessages = (syncErrors || []).map(
       (e: {habit_id: string; completed_date: string; reason: string}) =>

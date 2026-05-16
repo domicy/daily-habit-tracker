@@ -71,6 +71,7 @@ function createMockHabitService(
           await log.markSynced();
         }
       }),
+    markLogsRetryFailed: jest.fn().mockResolvedValue(undefined),
     markHabitsSynced: jest
       .fn()
       .mockImplementation(async (batch: {markSynced: () => Promise<void>}[]) => {

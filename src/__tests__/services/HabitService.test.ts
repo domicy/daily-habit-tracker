@@ -3,7 +3,10 @@ import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs';
 import {schema} from '../../models/schema';
 import Habit from '../../models/Habit';
 import HabitLog from '../../models/HabitLog';
-import HabitService from '../../services/HabitService';
+import HabitService, {
+  MAX_LOG_RETRIES,
+  backoffMsFor,
+} from '../../services/HabitService';
 import {format, subDays} from 'date-fns';
 
 function createTestDatabase(): Database {
@@ -375,6 +378,155 @@ describe('HabitService', () => {
       const unsynced = await service.getUnsyncedLogs();
       expect(unsynced).toHaveLength(2);
       unsynced.forEach(log => expect(log.synced).toBe(false));
+    });
+
+    it('excludes logs that have hit the permanent-failure cap', async () => {
+      const habit = await createTestHabit(database);
+      const log1 = await createTestLog(database, habit.id, '2026-03-01', false);
+      const log2 = await createTestLog(database, habit.id, '2026-03-02', false);
+
+      // Simulate log1 hitting the retry cap (e.g. habit-not-found loop).
+      await database.write(async () => {
+        await log1.update(l => {
+          l.retryCount = MAX_LOG_RETRIES;
+          l.lastAttemptAt = Date.now() - 24 * 60 * 60 * 1000;
+        });
+      });
+
+      const unsynced = await service.getUnsyncedLogs();
+      expect(unsynced.map(l => l.id)).toEqual([log2.id]);
+    });
+
+    it('skips logs that are inside their exponential-backoff window', async () => {
+      const habit = await createTestHabit(database);
+      const fresh = await createTestLog(database, habit.id, '2026-03-01', false);
+      const backoff = await createTestLog(database, habit.id, '2026-03-02', false);
+
+      // backoff has retry_count=1 (1 minute backoff) and was just attempted.
+      await database.write(async () => {
+        await backoff.update(l => {
+          l.retryCount = 1;
+          l.lastAttemptAt = Date.now();
+        });
+      });
+
+      const unsynced = await service.getUnsyncedLogs();
+      expect(unsynced.map(l => l.id)).toEqual([fresh.id]);
+    });
+
+    it('includes logs whose backoff window has elapsed', async () => {
+      const habit = await createTestHabit(database);
+      const log = await createTestLog(database, habit.id, '2026-03-02', false);
+
+      await database.write(async () => {
+        await log.update(l => {
+          l.retryCount = 1;
+          // 10 minutes ago — well past the 1-minute backoff for retry_count=1.
+          l.lastAttemptAt = Date.now() - 10 * 60 * 1000;
+        });
+      });
+
+      const unsynced = await service.getUnsyncedLogs();
+      expect(unsynced.map(l => l.id)).toEqual([log.id]);
+    });
+  });
+
+  describe('markLogsRetryFailed', () => {
+    it('increments retry_count and stamps last_attempt_at', async () => {
+      const habit = await createTestHabit(database);
+      const log = await createTestLog(database, habit.id, '2026-03-01', false);
+
+      const before = Date.now();
+      await service.markLogsRetryFailed([log]);
+      const after = Date.now();
+
+      const reloaded = await database.get<HabitLog>('habit_logs').find(log.id);
+      expect(reloaded.retryCount).toBe(1);
+      expect(reloaded.lastAttemptAt).not.toBeNull();
+      expect(reloaded.lastAttemptAt!).toBeGreaterThanOrEqual(before);
+      expect(reloaded.lastAttemptAt!).toBeLessThanOrEqual(after);
+    });
+
+    it('is a no-op for an empty batch', async () => {
+      await expect(service.markLogsRetryFailed([])).resolves.toBeUndefined();
+    });
+
+    it('a log capped at MAX_LOG_RETRIES is no longer returned by getUnsyncedLogs', async () => {
+      const habit = await createTestHabit(database);
+      const log = await createTestLog(database, habit.id, '2026-03-01', false);
+
+      for (let i = 0; i < MAX_LOG_RETRIES; i++) {
+        await service.markLogsRetryFailed([log]);
+      }
+
+      const unsynced = await service.getUnsyncedLogs();
+      expect(unsynced.map(l => l.id)).not.toContain(log.id);
+    });
+
+    it('observeUnsyncedCount also excludes capped logs', async () => {
+      const habit = await createTestHabit(database, 'h', true);
+      const log = await createTestLog(database, habit.id, '2026-03-01', false);
+      await database.write(async () => {
+        await log.update(l => {
+          l.retryCount = MAX_LOG_RETRIES;
+          l.lastAttemptAt = Date.now();
+        });
+      });
+
+      const observable = service.observeUnsyncedCount();
+      const count = await new Promise<number>(resolve => {
+        const sub = observable.subscribe(v => {
+          resolve(v);
+          Promise.resolve().then(() => sub.unsubscribe());
+        });
+      });
+      expect(count).toBe(0);
+    });
+  });
+
+  describe('backoffMsFor', () => {
+    it('returns 0 for retry_count=0', () => {
+      expect(backoffMsFor(0)).toBe(0);
+    });
+
+    it('grows exponentially up to a cap', () => {
+      expect(backoffMsFor(1)).toBe(60_000);
+      expect(backoffMsFor(2)).toBe(120_000);
+      expect(backoffMsFor(3)).toBe(240_000);
+      // Cap at 6 hours.
+      expect(backoffMsFor(100)).toBe(6 * 60 * 60 * 1000);
+    });
+  });
+
+  describe('markHabitsSynced resets per-log retry state', () => {
+    it('clears retry_count for unsynced logs of newly-synced habits', async () => {
+      const habit = await createTestHabit(database, 'h', false);
+      const log = await createTestLog(database, habit.id, '2026-03-01', false);
+      await service.markLogsRetryFailed([log]);
+
+      let reloaded = await database.get<HabitLog>('habit_logs').find(log.id);
+      expect(reloaded.retryCount).toBe(1);
+
+      await service.markHabitsSynced([habit]);
+
+      reloaded = await database.get<HabitLog>('habit_logs').find(log.id);
+      expect(reloaded.retryCount).toBe(0);
+      expect(reloaded.lastAttemptAt).toBeNull();
+    });
+
+    it('does not touch logs of other habits', async () => {
+      const habitA = await createTestHabit(database, 'A', false);
+      const habitB = await createTestHabit(database, 'B', false);
+      const logA = await createTestLog(database, habitA.id, '2026-03-01', false);
+      const logB = await createTestLog(database, habitB.id, '2026-03-01', false);
+      await service.markLogsRetryFailed([logA, logB]);
+
+      await service.markHabitsSynced([habitA]);
+
+      const reloadedA = await database.get<HabitLog>('habit_logs').find(logA.id);
+      const reloadedB = await database.get<HabitLog>('habit_logs').find(logB.id);
+      expect(reloadedA.retryCount).toBe(0);
+      expect(reloadedB.retryCount).toBe(1);
     });
   });
 

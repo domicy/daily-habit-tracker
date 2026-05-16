@@ -6,6 +6,25 @@ import {subDays, format} from 'date-fns';
 import type Habit from '../models/Habit';
 import type HabitLog from '../models/HabitLog';
 
+// After this many server-rejected attempts a log is treated as permanently
+// dead and excluded from the sync queue. Prevents per-log failures like
+// "Habit not found" from forcing a growing full-table scan on every sync.
+export const MAX_LOG_RETRIES = 10;
+
+// Exponential backoff between server-rejected retries: 1m, 2m, 4m, ...
+// capped at 6 hours. Multiplied against retry_count so a single per-log
+// error doesn't get retried every minute alongside healthy traffic.
+const BACKOFF_BASE_MS = 60_000;
+const BACKOFF_CAP_MS = 6 * 60 * 60 * 1000;
+
+export function backoffMsFor(retryCount: number): number {
+  if (retryCount <= 0) {
+    return 0;
+  }
+  const exp = Math.min(retryCount - 1, 30);
+  return Math.min(BACKOFF_BASE_MS * 2 ** exp, BACKOFF_CAP_MS);
+}
+
 export default class HabitService {
   private database: Database;
 
@@ -80,6 +99,10 @@ export default class HabitService {
           await active.update(log => {
             log.deletedAt = Date.now();
             log.synced = false;
+            // Fresh user action — clear prior retry backoff so the deletion
+            // is attempted on the very next sync.
+            log.retryCount = 0;
+            log.lastAttemptAt = null;
           });
         } else {
           // Never reached the server — safe to drop the row entirely.
@@ -95,6 +118,8 @@ export default class HabitService {
         await tombstone.update(log => {
           log.deletedAt = null;
           log.synced = false;
+          log.retryCount = 0;
+          log.lastAttemptAt = null;
         });
         return;
       }
@@ -104,6 +129,8 @@ export default class HabitService {
         log.completedDate = date;
         log.synced = false;
         log.deletedAt = null;
+        log.retryCount = 0;
+        log.lastAttemptAt = null;
       });
     });
   }
@@ -129,10 +156,28 @@ export default class HabitService {
   }
 
   async getUnsyncedLogs(): Promise<HabitLog[]> {
-    return this.database
+    // SQL-level filter: skip logs that have hit the permanent-failure cap.
+    // Without this, dead-end logs (e.g. ones whose habit doesn't exist on
+    // the server) get rescanned on every sync, growing the work per cycle
+    // without bound.
+    const eligible = await this.database
       .get<HabitLog>('habit_logs')
-      .query(Q.where('synced', false))
+      .query(
+        Q.where('synced', false),
+        Q.where('retry_count', Q.lt(MAX_LOG_RETRIES)),
+      )
       .fetch();
+
+    // Application-level filter: enforce exponential backoff between
+    // server-rejected attempts. Logs in backoff stay in the table but are
+    // skipped this cycle.
+    const now = Date.now();
+    return eligible.filter(log => {
+      if (log.retryCount === 0 || log.lastAttemptAt == null) {
+        return true;
+      }
+      return now - log.lastAttemptAt >= backoffMsFor(log.retryCount);
+    });
   }
 
   async getUnsyncedHabits(): Promise<Habit[]> {
@@ -151,6 +196,30 @@ export default class HabitService {
         ...logs.map(log =>
           log.prepareUpdate(l => {
             l.synced = true;
+            // Clear retry tracking so a future tombstone/revive on this
+            // row starts from a clean slate.
+            l.retryCount = 0;
+            l.lastAttemptAt = null;
+          }),
+        ),
+      );
+    });
+  }
+
+  // Called when the server returned per-log errors (e.g. "Habit not found").
+  // Records the rejection so getUnsyncedLogs can apply backoff and so logs
+  // that hit MAX_LOG_RETRIES are excluded from future scans entirely.
+  async markLogsRetryFailed(logs: HabitLog[]): Promise<void> {
+    if (logs.length === 0) {
+      return;
+    }
+    const now = Date.now();
+    await this.database.write(async () => {
+      await this.database.batch(
+        ...logs.map(log =>
+          log.prepareUpdate(l => {
+            l.retryCount = (l.retryCount ?? 0) + 1;
+            l.lastAttemptAt = now;
           }),
         ),
       );
@@ -161,6 +230,7 @@ export default class HabitService {
     if (habits.length === 0) {
       return;
     }
+    const habitIds = habits.map(h => h.id);
     await this.database.write(async () => {
       await this.database.batch(
         ...habits.map(habit =>
@@ -170,12 +240,44 @@ export default class HabitService {
         ),
       );
     });
+
+    // The most common cause of per-log "Habit not found" is that the habit
+    // hadn't been pushed yet. Now that the habit is on the server, give its
+    // backlog of logs a fresh chance — reset retry tracking so they aren't
+    // stuck in backoff (or worse, capped out) when they would now succeed.
+    if (habitIds.length > 0) {
+      const candidates = await this.database
+        .get<HabitLog>('habit_logs')
+        .query(
+          Q.where('habit_id', Q.oneOf(habitIds)),
+          Q.where('synced', false),
+          Q.where('retry_count', Q.gt(0)),
+        )
+        .fetch();
+      if (candidates.length > 0) {
+        await this.database.write(async () => {
+          await this.database.batch(
+            ...candidates.map(log =>
+              log.prepareUpdate(l => {
+                l.retryCount = 0;
+                l.lastAttemptAt = null;
+              }),
+            ),
+          );
+        });
+      }
+    }
   }
 
   observeUnsyncedCount(): Observable<number> {
+    // Match getUnsyncedLogs: exclude rows past the permanent-failure cap so
+    // the UI doesn't show a forever-growing "N pending" for dead-end logs.
     const logs$ = this.database
       .get<HabitLog>('habit_logs')
-      .query(Q.where('synced', false))
+      .query(
+        Q.where('synced', false),
+        Q.where('retry_count', Q.lt(MAX_LOG_RETRIES)),
+      )
       .observe();
     const habits$ = this.database
       .get<Habit>('habits')
