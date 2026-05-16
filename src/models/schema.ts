@@ -1,7 +1,7 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 2,
+  version: 3,
   tables: [
     tableSchema({
       name: 'habits',
@@ -28,6 +28,16 @@ export const schema = appSchema({
         // to the server, after which they remain as "synced deletions"
         // so that any concurrent revival can be detected and pushed.
         {name: 'deleted_at', type: 'number', isOptional: true},
+        // Number of server-rejected sync attempts (per-log errors like
+        // "Habit not found"). Indexed so the unsynced-logs query can filter
+        // out dead-end rows at the SQL layer rather than scanning them
+        // every cycle. Once it reaches MAX_LOG_RETRIES the row is treated
+        // as permanently rejected and excluded from sync entirely.
+        {name: 'retry_count', type: 'number', isIndexed: true},
+        // Timestamp (ms) of the last server-rejected attempt. Used by the
+        // service layer to apply exponential backoff between retries so
+        // a transient per-log error doesn't get retried every minute.
+        {name: 'last_attempt_at', type: 'number', isOptional: true},
       ],
     }),
   ],

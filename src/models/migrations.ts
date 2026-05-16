@@ -21,5 +21,20 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 3,
+      steps: [
+        // Per-log retry tracking. Existing rows default to retry_count=0 and
+        // last_attempt_at=null, so they retry immediately on the next sync —
+        // identical to the pre-migration behavior.
+        addColumns({
+          table: 'habit_logs',
+          columns: [
+            {name: 'retry_count', type: 'number', isIndexed: true},
+            {name: 'last_attempt_at', type: 'number', isOptional: true},
+          ],
+        }),
+      ],
+    },
   ],
 });
