@@ -139,15 +139,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const handleSyncNow = useCallback(async () => {
     setSyncing(true);
     try {
-      const result = await sService.pushUnsyncedLogs();
-      if (result.pushed > 0) {
+      await sService.pushUnsyncedLogs();
+      const status = await sService.getSyncStatus();
+      setUnsyncedCount(status.pendingCount);
+      setSyncStatus(status.status);
+      if (status.status !== 'offline' && status.status !== 'auth_failed') {
         const now = new Date().toISOString();
         await AsyncStorage.setItem(LAST_SYNC_KEY, now);
         setLastSyncTime(now);
       }
-      const status = await sService.getSyncStatus();
-      setUnsyncedCount(status.pendingCount);
-      setSyncStatus(status.status);
     } finally {
       setSyncing(false);
     }
