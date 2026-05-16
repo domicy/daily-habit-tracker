@@ -1,6 +1,7 @@
 import {AppState} from 'react-native';
 import type {AppStateStatus} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type {AxiosResponse} from 'axios';
 import apiClient, {AUTH_TOKEN_KEY} from './api';
 import type HabitService from './HabitService';
 
@@ -157,7 +158,7 @@ export default class SyncService {
       })),
     };
 
-    let response;
+    let response: AxiosResponse | undefined;
     try {
       response = await apiClient.post('/habits/sync', payload);
     } catch (error: unknown) {
@@ -178,7 +179,11 @@ export default class SyncService {
       }
     }
 
-    const syncedIds: string[] = response!.data?.synced_ids ?? [];
+    if (!response) {
+      return false;
+    }
+
+    const syncedIds: string[] = response.data?.synced_ids ?? [];
     const syncedSet = new Set(syncedIds);
     const syncedHabits = unsyncedHabits.filter(habit => syncedSet.has(habit.id));
     await this.habitService.markHabitsSynced(syncedHabits);
@@ -280,12 +285,14 @@ export default class SyncService {
   }
 
   private handleSyncError(error: SyncError): SyncResult {
-    if (isNetworkError(error) || is5xxError(error)) {
-      console.warn('Sync failed (will retry later):', error.message || 'Unknown error');
-      return {pushed: 0, failed: 0};
+    if (__DEV__) {
+      if (isNetworkError(error) || is5xxError(error)) {
+        console.warn('Sync failed (will retry later):', error.message || 'Unknown error');
+      } else {
+        // For unexpected errors, also fail silently
+        console.warn('Sync failed with unexpected error:', error.message || 'Unknown error');
+      }
     }
-    // For unexpected errors, also fail silently
-    console.warn('Sync failed with unexpected error:', error.message || 'Unknown error');
     return {pushed: 0, failed: 0};
   }
 
