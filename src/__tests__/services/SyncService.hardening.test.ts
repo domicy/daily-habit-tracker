@@ -396,6 +396,69 @@ describe('SyncService Hardening', () => {
       expect(logs[0].markSynced).not.toHaveBeenCalled();
     });
 
+    it('does NOT set auth_failed flag when re-auth fails with a network error', async () => {
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs);
+      const syncService = new SyncService(habitService);
+
+      const authError = {
+        response: {status: 401, data: {detail: 'Token expired'}},
+        message: 'Unauthorized',
+      };
+      const networkError = {message: 'Network Error'};
+      (apiClient.post as jest.Mock)
+        .mockRejectedValueOnce(authError)
+        .mockRejectedValueOnce(networkError);
+
+      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+        if (key === SYNC_SECRET_KEY) {
+          return Promise.resolve('my-secret');
+        }
+        if (key === SYNC_AUTH_FAILED_KEY) {
+          return Promise.resolve(null);
+        }
+        return Promise.resolve(null);
+      });
+
+      const result = await syncService.pushUnsyncedLogs();
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
+      expect(result).toEqual({pushed: 0, failed: 0});
+    });
+
+    it('does NOT set auth_failed flag when re-auth fails with a 5xx error', async () => {
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs);
+      const syncService = new SyncService(habitService);
+
+      const authError = {
+        response: {status: 401, data: {detail: 'Token expired'}},
+        message: 'Unauthorized',
+      };
+      const serverError = {
+        response: {status: 502, data: {detail: 'Bad Gateway'}},
+        message: 'Server Error',
+      };
+      (apiClient.post as jest.Mock)
+        .mockRejectedValueOnce(authError)
+        .mockRejectedValueOnce(serverError);
+
+      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+        if (key === SYNC_SECRET_KEY) {
+          return Promise.resolve('my-secret');
+        }
+        if (key === SYNC_AUTH_FAILED_KEY) {
+          return Promise.resolve(null);
+        }
+        return Promise.resolve(null);
+      });
+
+      const result = await syncService.pushUnsyncedLogs();
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
+      expect(result).toEqual({pushed: 0, failed: 0});
+    });
+
     it('sets auth_failed flag when no stored secret exists for re-auth', async () => {
       const logs = [createMockLog('habit-1', '2025-01-01')];
       const habitService = createMockHabitService(logs);

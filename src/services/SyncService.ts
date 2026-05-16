@@ -298,8 +298,10 @@ export default class SyncService {
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, access_token);
       await AsyncStorage.removeItem(SYNC_AUTH_FAILED_KEY);
       return true;
-    } catch {
-      await AsyncStorage.setItem(SYNC_AUTH_FAILED_KEY, 'true');
+    } catch (e) {
+      if (is401Error(e as SyncError)) {
+        await AsyncStorage.setItem(SYNC_AUTH_FAILED_KEY, 'true');
+      }
       return false;
     }
   }
