@@ -52,6 +52,20 @@ function createMockHabitService(logs: ReturnType<typeof createMockLog>[] = []) {
     // already synced; an empty unsynced-habits result keeps the new
     // habit-push step a no-op so existing assertions still hold.
     getUnsyncedHabits: jest.fn().mockResolvedValue([]),
+    markLogsSynced: jest
+      .fn()
+      .mockImplementation(async (batch: {markSynced: () => Promise<void>}[]) => {
+        for (const log of batch) {
+          await log.markSynced();
+        }
+      }),
+    markHabitsSynced: jest
+      .fn()
+      .mockImplementation(async (batch: {markSynced: () => Promise<void>}[]) => {
+        for (const habit of batch) {
+          await habit.markSynced();
+        }
+      }),
   } as unknown as HabitService;
 }
 
