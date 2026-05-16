@@ -8,28 +8,16 @@ import type {Observable} from 'rxjs';
  *
  * @param observable$ - An RxJS observable (e.g. from WatermelonDB .observe())
  * @param initialValue - The initial value before the first emission
+ * @param componentName - Caller name used in dev-mode leak warnings
  * @returns The latest emitted value
  */
 export function useHabitObservable<T>(
   observable$: Observable<T> | null | undefined,
   initialValue: T,
+  componentName: string,
 ): T {
   const [value, setValue] = useState<T>(initialValue);
   const mountedRef = useRef(true);
-  const componentNameRef = useRef<string>('');
-
-  // Capture the component name for dev-mode warnings (via stack trace)
-  useEffect(() => {
-    if (__DEV__) {
-      try {
-        throw new Error('useHabitObservable caller');
-      } catch (e: unknown) {
-        const stack = (e as Error).stack ?? '';
-        const callerLine = stack.split('\n')[2] ?? '';
-        componentNameRef.current = callerLine.trim();
-      }
-    }
-  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -46,7 +34,7 @@ export function useHabitObservable<T>(
           console.warn(
             '[useHabitObservable] Subscription fired after unmount. ' +
               'This indicates a potential memory leak. ' +
-              `Source: ${componentNameRef.current}`,
+              `Source: ${componentName}`,
           );
         }
       },
@@ -56,7 +44,7 @@ export function useHabitObservable<T>(
       mountedRef.current = false;
       subscription.unsubscribe();
     };
-  }, [observable$]);
+  }, [observable$, componentName]);
 
   return value;
 }
