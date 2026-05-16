@@ -90,7 +90,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     [hService],
   );
 
-  const handleDelete = useCallback(
+  const handleDeactivate = useCallback(
     (habitId: string, habitName: string) => {
       Alert.alert(
         'Deactivate Habit',
@@ -159,7 +159,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       <TouchableOpacity
         style={styles.habitRow}
         testID={`habit-row-${item.id}`}
-        onLongPress={() => handleDelete(item.id, item.name)}
+        onLongPress={() => handleDeactivate(item.id, item.name)}
         accessibilityLabel={`${item.name} habit`}>
         <View style={styles.habitInfo}>
           <Text style={styles.habitName}>{item.name}</Text>
@@ -176,7 +176,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         />
       </TouchableOpacity>
     ),
-    [handleToggleActive, handleDelete],
+    [handleToggleActive, handleDeactivate],
   );
 
   const hours = Array.from({length: 24}, (_, i) => i);

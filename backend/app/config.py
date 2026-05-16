@@ -2,8 +2,10 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_url: str = "mysql+asyncmy://root:secret@db:3306/habits"
-    jwt_secret: str = "change-me"
+    # No defaults for secrets: missing env vars should fail loudly at
+    # startup rather than silently fall back to a hardcoded credential.
+    database_url: str
+    jwt_secret: str
     jwt_algorithm: str = "HS256"
     jwt_expiry_hours: int = 720
 
