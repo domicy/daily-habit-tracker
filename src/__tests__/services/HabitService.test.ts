@@ -405,6 +405,93 @@ describe('HabitService', () => {
     });
   });
 
+  // ─── markLogsSynced / markHabitsSynced ─────────────────────────────
+
+  describe('markLogsSynced', () => {
+    it('flips synced=true on every log in the batch', async () => {
+      const habit = await createTestHabit(database, 'h', true);
+      const log1 = await createTestLog(database, habit.id, '2025-01-01', false);
+      const log2 = await createTestLog(database, habit.id, '2025-01-02', false);
+
+      await service.markLogsSynced([log1, log2]);
+
+      const remaining = await service.getUnsyncedLogs();
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('is a no-op for an empty batch', async () => {
+      await expect(service.markLogsSynced([])).resolves.toBeUndefined();
+    });
+
+    it('only marks the logs that were passed in', async () => {
+      const habit = await createTestHabit(database, 'h', true);
+      const log1 = await createTestLog(database, habit.id, '2025-01-01', false);
+      await createTestLog(database, habit.id, '2025-01-02', false);
+
+      await service.markLogsSynced([log1]);
+
+      const remaining = await service.getUnsyncedLogs();
+      expect(remaining.map(l => l.completedDate)).toEqual(['2025-01-02']);
+    });
+  });
+
+  describe('markHabitsSynced', () => {
+    it('flips synced=true on every habit in the batch', async () => {
+      const h1 = await createTestHabit(database, 'a', false);
+      const h2 = await createTestHabit(database, 'b', false);
+
+      await service.markHabitsSynced([h1, h2]);
+
+      const remaining = await service.getUnsyncedHabits();
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('is a no-op for an empty batch', async () => {
+      await expect(service.markHabitsSynced([])).resolves.toBeUndefined();
+    });
+  });
+
+  // ─── observeUnsyncedCount ──────────────────────────────────────────
+
+  describe('observeUnsyncedCount', () => {
+    it('emits the combined count of unsynced logs and habits and reacts to changes', async () => {
+      const habit = await createTestHabit(database, 'h', true);
+
+      const observable = service.observeUnsyncedCount();
+      const emissions: number[] = [];
+      const sub = observable.subscribe(v => emissions.push(v));
+
+      const waitForCount = (target: number) =>
+        new Promise<void>((resolve, reject) => {
+          const start = Date.now();
+          const check = () => {
+            if (emissions[emissions.length - 1] === target) {
+              resolve();
+            } else if (Date.now() - start > 2000) {
+              reject(
+                new Error(
+                  `timeout waiting for count ${target}; emissions=${JSON.stringify(emissions)}`,
+                ),
+              );
+            } else {
+              setTimeout(check, 10);
+            }
+          };
+          check();
+        });
+
+      await waitForCount(0);
+
+      await createTestLog(database, habit.id, '2026-03-01', false);
+      await waitForCount(1);
+
+      await service.toggleHabitActive(habit.id);
+      await waitForCount(2);
+
+      sub.unsubscribe();
+    });
+  });
+
   // ─── getActiveHabits ───────────────────────────────────────────────
 
   describe('getActiveHabits', () => {

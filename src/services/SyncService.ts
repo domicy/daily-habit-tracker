@@ -174,11 +174,8 @@ export default class SyncService {
 
     const syncedIds: string[] = response!.data?.synced_ids ?? [];
     const syncedSet = new Set(syncedIds);
-    for (const habit of unsyncedHabits) {
-      if (syncedSet.has(habit.id)) {
-        await habit.markSynced();
-      }
-    }
+    const syncedHabits = unsyncedHabits.filter(habit => syncedSet.has(habit.id));
+    await this.habitService.markHabitsSynced(syncedHabits);
     // Only proceed to logs if every habit was accepted; otherwise some logs
     // would still hit "Habit not found".
     return syncedSet.size === unsyncedHabits.length;
@@ -230,9 +227,7 @@ export default class SyncService {
       log => !errorSet.has(`${log.habitId}:${log.completedDate}`),
     );
 
-    for (const log of succeeded) {
-      await log.markSynced();
-    }
+    await this.habitService.markLogsSynced(succeeded);
 
     const errorMessages = (syncErrors || []).map(
       (e: {habit_id: string; completed_date: string; reason: string}) =>
@@ -298,8 +293,10 @@ export default class SyncService {
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, access_token);
       await AsyncStorage.removeItem(SYNC_AUTH_FAILED_KEY);
       return true;
-    } catch {
-      await AsyncStorage.setItem(SYNC_AUTH_FAILED_KEY, 'true');
+    } catch (e) {
+      if (is401Error(e as SyncError)) {
+        await AsyncStorage.setItem(SYNC_AUTH_FAILED_KEY, 'true');
+      }
       return false;
     }
   }

@@ -49,9 +49,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const allHabits$ = useMemo(() => hService.getAllHabits(), [hService]);
   const habits = useHabitObservable<Habit[]>(allHabits$, []);
+  const unsyncedCount$ = useMemo(() => hService.observeUnsyncedCount(), [hService]);
+  const unsyncedCount = useHabitObservable<number>(unsyncedCount$, 0);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('08:00');
-  const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [syncStatus, setSyncStatus] = useState<'online' | 'offline' | 'auth_failed'>('online');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -70,16 +71,17 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     })();
   }, []);
 
-  // Load sync info
+  // Load sync info (status + last-sync timestamp). The pending count is
+  // sourced from observeUnsyncedCount above so it updates live as the user
+  // edits habits on other tabs without remounting this screen.
   useEffect(() => {
     (async () => {
       const status = await sService.getSyncStatus();
-      setUnsyncedCount(status.pendingCount);
       setSyncStatus(status.status);
       const ts = await AsyncStorage.getItem(LAST_SYNC_KEY);
       setLastSyncTime(ts);
     })();
-  }, [hService, sService]);
+  }, [sService]);
 
   const handleToggleActive = useCallback(
     async (habitId: string) => {
@@ -141,7 +143,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     try {
       await sService.pushUnsyncedLogs();
       const status = await sService.getSyncStatus();
-      setUnsyncedCount(status.pendingCount);
       setSyncStatus(status.status);
       if (status.status !== 'offline' && status.status !== 'auth_failed') {
         const now = new Date().toISOString();
