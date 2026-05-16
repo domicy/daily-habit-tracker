@@ -64,6 +64,20 @@ function createMockHabitService(
   return {
     getUnsyncedLogs: jest.fn().mockResolvedValue(logs),
     getUnsyncedHabits: jest.fn().mockResolvedValue(habits),
+    markLogsSynced: jest
+      .fn()
+      .mockImplementation(async (batch: {markSynced: () => Promise<void>}[]) => {
+        for (const log of batch) {
+          await log.markSynced();
+        }
+      }),
+    markHabitsSynced: jest
+      .fn()
+      .mockImplementation(async (batch: {markSynced: () => Promise<void>}[]) => {
+        for (const habit of batch) {
+          await habit.markSynced();
+        }
+      }),
   } as unknown as HabitService;
 }
 

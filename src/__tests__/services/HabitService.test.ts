@@ -405,6 +405,52 @@ describe('HabitService', () => {
     });
   });
 
+  // ─── markLogsSynced / markHabitsSynced ─────────────────────────────
+
+  describe('markLogsSynced', () => {
+    it('flips synced=true on every log in the batch', async () => {
+      const habit = await createTestHabit(database, 'h', true);
+      const log1 = await createTestLog(database, habit.id, '2025-01-01', false);
+      const log2 = await createTestLog(database, habit.id, '2025-01-02', false);
+
+      await service.markLogsSynced([log1, log2]);
+
+      const remaining = await service.getUnsyncedLogs();
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('is a no-op for an empty batch', async () => {
+      await expect(service.markLogsSynced([])).resolves.toBeUndefined();
+    });
+
+    it('only marks the logs that were passed in', async () => {
+      const habit = await createTestHabit(database, 'h', true);
+      const log1 = await createTestLog(database, habit.id, '2025-01-01', false);
+      await createTestLog(database, habit.id, '2025-01-02', false);
+
+      await service.markLogsSynced([log1]);
+
+      const remaining = await service.getUnsyncedLogs();
+      expect(remaining.map(l => l.completedDate)).toEqual(['2025-01-02']);
+    });
+  });
+
+  describe('markHabitsSynced', () => {
+    it('flips synced=true on every habit in the batch', async () => {
+      const h1 = await createTestHabit(database, 'a', false);
+      const h2 = await createTestHabit(database, 'b', false);
+
+      await service.markHabitsSynced([h1, h2]);
+
+      const remaining = await service.getUnsyncedHabits();
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('is a no-op for an empty batch', async () => {
+      await expect(service.markHabitsSynced([])).resolves.toBeUndefined();
+    });
+  });
+
   // ─── getActiveHabits ───────────────────────────────────────────────
 
   describe('getActiveHabits', () => {

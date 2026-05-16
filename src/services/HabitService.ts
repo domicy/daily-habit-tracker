@@ -141,6 +141,36 @@ export default class HabitService {
       .fetch();
   }
 
+  async markLogsSynced(logs: HabitLog[]): Promise<void> {
+    if (logs.length === 0) {
+      return;
+    }
+    await this.database.write(async () => {
+      await this.database.batch(
+        ...logs.map(log =>
+          log.prepareUpdate(l => {
+            l.synced = true;
+          }),
+        ),
+      );
+    });
+  }
+
+  async markHabitsSynced(habits: Habit[]): Promise<void> {
+    if (habits.length === 0) {
+      return;
+    }
+    await this.database.write(async () => {
+      await this.database.batch(
+        ...habits.map(habit =>
+          habit.prepareUpdate(h => {
+            h.synced = true;
+          }),
+        ),
+      );
+    });
+  }
+
   async calculateStreak(
     habitId: string,
     asOfDate: string,
