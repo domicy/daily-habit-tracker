@@ -42,6 +42,8 @@ const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
       await service.createHabit(trimmedName);
       navigation?.goBack();
     } catch {
+      // ignore; user can retry
+    } finally {
       setCreating(false);
     }
   }, [isValid, creating, service, trimmedName, navigation]);
