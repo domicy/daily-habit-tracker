@@ -78,6 +78,7 @@ function createMockHabitService(
     getActiveHabits: jest.fn().mockReturnValue(of([])),
     toggleHabitActive: jest.fn().mockResolvedValue(undefined),
     getUnsyncedLogs: jest.fn().mockResolvedValue(unsyncedLogs),
+    observeUnsyncedCount: jest.fn().mockReturnValue(of(unsyncedCount)),
     createHabit: jest.fn().mockResolvedValue(undefined),
     toggleHabitCompletion: jest.fn().mockResolvedValue(undefined),
     calculateStreak: jest.fn().mockResolvedValue(0),

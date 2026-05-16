@@ -1,6 +1,7 @@
 import {Q} from '@nozbe/watermelondb';
 import type {Database} from '@nozbe/watermelondb';
-import type {Observable} from 'rxjs';
+import {combineLatest, type Observable} from 'rxjs';
+import {map} from 'rxjs/operators';
 import {subDays, format} from 'date-fns';
 import type Habit from '../models/Habit';
 import type HabitLog from '../models/HabitLog';
@@ -169,6 +170,20 @@ export default class HabitService {
         ),
       );
     });
+  }
+
+  observeUnsyncedCount(): Observable<number> {
+    const logs$ = this.database
+      .get<HabitLog>('habit_logs')
+      .query(Q.where('synced', false))
+      .observe();
+    const habits$ = this.database
+      .get<Habit>('habits')
+      .query(Q.where('synced', false))
+      .observe();
+    return combineLatest([logs$, habits$]).pipe(
+      map(([logs, habits]) => logs.length + habits.length),
+    );
   }
 
   async calculateStreak(
