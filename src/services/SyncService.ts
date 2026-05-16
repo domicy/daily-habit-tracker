@@ -78,6 +78,7 @@ export default class SyncService {
   private habitService: HabitService;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+  private inFlight = false;
 
   constructor(habitService: HabitService) {
     this.habitService = habitService;
@@ -99,35 +100,45 @@ export default class SyncService {
   }
 
   async pushUnsyncedLogs(): Promise<SyncResult> {
-    // If auth previously failed permanently, don't retry
-    const authFailed = await AsyncStorage.getItem(SYNC_AUTH_FAILED_KEY);
-    if (authFailed === 'true') {
+    // Concurrent callers would both read the same unsynced rows and race on
+    // markSynced — the loser hits a WatermelonDB "record was deleted" error.
+    if (this.inFlight) {
       return {pushed: 0, failed: 0};
     }
+    this.inFlight = true;
+    try {
+      // If auth previously failed permanently, don't retry
+      const authFailed = await AsyncStorage.getItem(SYNC_AUTH_FAILED_KEY);
+      if (authFailed === 'true') {
+        return {pushed: 0, failed: 0};
+      }
 
-    // Push habits first so the server knows about every habit referenced by
-    // a log. Otherwise the log push returns "Habit not found" for every log
-    // of a locally-created habit, and those logs accumulate forever.
-    const habitsPushed = await this.pushUnsyncedHabits();
+      // Push habits first so the server knows about every habit referenced by
+      // a log. Otherwise the log push returns "Habit not found" for every log
+      // of a locally-created habit, and those logs accumulate forever.
+      const habitsPushed = await this.pushUnsyncedHabits();
 
-    const unsyncedLogs = await this.habitService.getUnsyncedLogs();
+      const unsyncedLogs = await this.habitService.getUnsyncedLogs();
 
-    if (unsyncedLogs.length === 0) {
-      return {pushed: 0, failed: 0};
+      if (unsyncedLogs.length === 0) {
+        return {pushed: 0, failed: 0};
+      }
+
+      // If habit push failed (auth or network), skip the log push so we don't
+      // burn through the batch only to have every entry rejected.
+      if (!habitsPushed) {
+        return {pushed: 0, failed: 0};
+      }
+
+      // If more than MAX_UNBATCHED logs, chunk into batches
+      if (unsyncedLogs.length > MAX_UNBATCHED) {
+        return await this.pushInBatches(unsyncedLogs);
+      }
+
+      return await this.pushBatch(unsyncedLogs);
+    } finally {
+      this.inFlight = false;
     }
-
-    // If habit push failed (auth or network), skip the log push so we don't
-    // burn through the batch only to have every entry rejected.
-    if (!habitsPushed) {
-      return {pushed: 0, failed: 0};
-    }
-
-    // If more than MAX_UNBATCHED logs, chunk into batches
-    if (unsyncedLogs.length > MAX_UNBATCHED) {
-      return this.pushInBatches(unsyncedLogs);
-    }
-
-    return this.pushBatch(unsyncedLogs);
   }
 
   /**

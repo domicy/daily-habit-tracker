@@ -232,6 +232,71 @@ describe('SyncService', () => {
       expect(result).toEqual({pushed: 0, failed: 0});
     });
 
+    it('coalesces concurrent invocations so the second caller is a no-op', async () => {
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs);
+      const syncService = new SyncService(habitService);
+
+      let resolveFirst: (value: unknown) => void = () => {};
+      (apiClient.post as jest.Mock).mockImplementationOnce(
+        () => new Promise(resolve => {
+          resolveFirst = resolve;
+        }),
+      );
+
+      const first = syncService.pushUnsyncedLogs();
+      // Let the first call advance past its initial AsyncStorage/getUnsyncedLogs awaits
+      // and reach the in-flight POST.
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+      const second = await syncService.pushUnsyncedLogs();
+
+      expect(second).toEqual({pushed: 0, failed: 0});
+      expect(apiClient.post).toHaveBeenCalledTimes(1);
+
+      resolveFirst({data: {synced: 1, errors: []}});
+      await first;
+
+      expect(logs[0].markSynced).toHaveBeenCalledTimes(1);
+    });
+
+    it('releases the in-flight guard after completion so later calls proceed', async () => {
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock)
+        .mockResolvedValueOnce({data: {synced: 1, errors: []}})
+        .mockResolvedValueOnce({data: {synced: 1, errors: []}});
+
+      await syncService.pushUnsyncedLogs();
+      await syncService.pushUnsyncedLogs();
+
+      expect(apiClient.post).toHaveBeenCalledTimes(2);
+    });
+
+    it('releases the in-flight guard even when an inner call throws', async () => {
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs);
+      // First invocation: getUnsyncedLogs throws after we are already inside
+      // the try block, so finally must still clear the in-flight flag.
+      (habitService.getUnsyncedLogs as jest.Mock)
+        .mockRejectedValueOnce(new Error('db unavailable'))
+        .mockResolvedValueOnce(logs);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock).mockResolvedValueOnce({
+        data: {synced: 1, errors: []},
+      });
+
+      await expect(syncService.pushUnsyncedLogs()).rejects.toThrow('db unavailable');
+
+      // If finally didn't run, this second call would early-return {0, 0}.
+      const result = await syncService.pushUnsyncedLogs();
+      expect(result.pushed).toBe(1);
+    });
+
     it('does not mark failed logs as synced when server returns partial errors', async () => {
       const logs = [
         createMockLog('habit-1', '2025-01-01'),
