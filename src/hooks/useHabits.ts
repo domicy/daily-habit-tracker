@@ -20,6 +20,7 @@ export function useHabits(habitService: HabitService) {
   const todayRef = useRef(getTodayString());
   const [, setDateVersion] = useState(0);
   const rawHabitsRef = useRef<Habit[]>([]);
+  const toggleChainRef = useRef<Map<string, Promise<void>>>(new Map());
   const isMounted = useSubscriptionLeakDetector('useHabits');
 
   const computeDisplayData = useCallback(
@@ -98,58 +99,75 @@ export function useHabits(habitService: HabitService) {
   }, [computeDisplayData]);
 
   const toggleHabit = useCallback(
-    async (habitId: string) => {
+    (habitId: string) => {
       const today = todayRef.current;
       const cache = streakCacheRef.current;
+      const chain = toggleChainRef.current;
 
-      // Optimistic update
-      setHabits(prev =>
-        prev.map(h => {
-          if (h.id !== habitId) {
-            return h;
-          }
-          const nowCompleted = !h.completedToday;
-          const newStreak = nowCompleted ? h.streak + 1 : Math.max(h.streak - 1, 0);
-          cache.set(habitId, newStreak);
-          return {
-            ...h,
-            completedToday: nowCompleted,
-            streak: newStreak,
-          };
-        }),
-      );
-
-      try {
-        await habitService.toggleHabitCompletion(habitId, today);
-        // Recalculate actual streak after successful write
-        const actualStreak = await habitService.calculateStreak(habitId, today);
-        cache.set(habitId, actualStreak);
-        setHabits(prev =>
-          prev.map(h =>
-            h.id === habitId ? {...h, streak: actualStreak} : h,
-          ),
-        );
-      } catch {
-        // Revert optimistic update
+      const run = async () => {
+        // Optimistic update
         setHabits(prev =>
           prev.map(h => {
             if (h.id !== habitId) {
               return h;
             }
-            const reverted = !h.completedToday;
-            const revertedStreak = reverted
+            const nowCompleted = !h.completedToday;
+            const newStreak = nowCompleted
               ? h.streak + 1
               : Math.max(h.streak - 1, 0);
-            cache.set(habitId, revertedStreak);
+            cache.set(habitId, newStreak);
             return {
               ...h,
-              completedToday: reverted,
-              streak: revertedStreak,
+              completedToday: nowCompleted,
+              streak: newStreak,
             };
           }),
         );
-        throw new Error('Could not save. Please try again.');
-      }
+
+        try {
+          await habitService.toggleHabitCompletion(habitId, today);
+          const actualStreak = await habitService.calculateStreak(
+            habitId,
+            today,
+          );
+          cache.set(habitId, actualStreak);
+          setHabits(prev =>
+            prev.map(h =>
+              h.id === habitId ? {...h, streak: actualStreak} : h,
+            ),
+          );
+        } catch {
+          setHabits(prev =>
+            prev.map(h => {
+              if (h.id !== habitId) {
+                return h;
+              }
+              const reverted = !h.completedToday;
+              const revertedStreak = reverted
+                ? h.streak + 1
+                : Math.max(h.streak - 1, 0);
+              cache.set(habitId, revertedStreak);
+              return {
+                ...h,
+                completedToday: reverted,
+                streak: revertedStreak,
+              };
+            }),
+          );
+          throw new Error('Could not save. Please try again.');
+        }
+      };
+
+      const previous = chain.get(habitId) ?? Promise.resolve();
+      const next = previous.catch(() => {}).then(run);
+      chain.set(habitId, next);
+      const cleanup = () => {
+        if (chain.get(habitId) === next) {
+          chain.delete(habitId);
+        }
+      };
+      next.then(cleanup, cleanup);
+      return next;
     },
     [habitService],
   );
