@@ -8,7 +8,6 @@ export const SYNC_SECRET_KEY = 'sync_secret';
 export const SYNC_AUTH_FAILED_KEY = 'sync_auth_failed';
 
 const BATCH_SIZE = 100;
-const BATCH_PAUSE_MS = 1000;
 const MAX_UNBATCHED = 500;
 
 export class AuthenticationError extends Error {
@@ -68,10 +67,6 @@ function is5xxError(error: SyncError): boolean {
 
 function is401Error(error: SyncError): boolean {
   return error?.response?.status === 401;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export default class SyncService {
@@ -274,11 +269,6 @@ export default class SyncService {
       totalFailed += result.failed;
       if (result.errors) {
         allErrors.push(...result.errors);
-      }
-
-      // Pause between batches (skip after last batch)
-      if (i + BATCH_SIZE < allLogs.length) {
-        await sleep(BATCH_PAUSE_MS);
       }
     }
 
