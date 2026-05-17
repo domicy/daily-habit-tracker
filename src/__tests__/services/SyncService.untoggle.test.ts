@@ -27,6 +27,15 @@ jest.mock('../../services/api', () => {
     request: {use: jest.fn(), eject: jest.fn()},
     response: {use: jest.fn(), eject: jest.fn()},
   };
+  // SyncService.handleSyncError does `error instanceof CircuitOpenError`,
+  // so the mock has to expose the class or the runtime check throws
+  // "Right-hand side of 'instanceof' is not an object".
+  class CircuitOpenError extends Error {
+    constructor(message: string = 'Circuit breaker open') {
+      super(message);
+      this.name = 'CircuitOpenError';
+    }
+  }
   return {
     __esModule: true,
     default: {
@@ -34,6 +43,7 @@ jest.mock('../../services/api', () => {
       interceptors: mockInterceptors,
     },
     AUTH_TOKEN_KEY: 'auth_token',
+    CircuitOpenError,
   };
 });
 
