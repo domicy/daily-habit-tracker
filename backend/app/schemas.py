@@ -87,7 +87,9 @@ class HabitLogRead(BaseModel):
 
 
 class SyncRequest(BaseModel):
-    logs: list[HabitLogCreate]
+    # Caps the request to prevent memory exhaustion from oversized batches.
+    # The client batches at 100 — 1000 is a generous safety ceiling.
+    logs: list[HabitLogCreate] = Field(..., max_length=1000)
 
 
 class SyncError(BaseModel):

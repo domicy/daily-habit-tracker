@@ -1,4 +1,10 @@
+import os
 from datetime import datetime, timedelta, timezone
+
+# Set required env vars before importing app.config (which has no defaults
+# for these). Real deployments must supply them via .env or the process env.
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite://")
+os.environ.setdefault("JWT_SECRET", "test-secret")
 
 import pytest
 import pytest_asyncio
