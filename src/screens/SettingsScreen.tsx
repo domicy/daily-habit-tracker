@@ -19,7 +19,7 @@ import HabitService from '../services/HabitService';
 import SyncService from '../services/SyncService';
 import NotificationService from '../services/NotificationService';
 import {API_BASE_URL} from '../services/api';
-import database from '../models';
+import {useServices} from '../services/ServicesContext';
 import type Habit from '../models/Habit';
 import {useHabitObservable} from '../hooks/useHabitObservable';
 
@@ -34,18 +34,20 @@ interface SettingsScreenProps {
   notificationService?: NotificationService;
 }
 
-const defaultHabitService = new HabitService(database);
-const defaultSyncService = new SyncService(defaultHabitService);
-const defaultNotificationService = new NotificationService();
-
 const SettingsScreen: React.FC<SettingsScreenProps> = ({
   habitService,
   syncService,
   notificationService,
 }) => {
-  const hService = habitService ?? defaultHabitService;
-  const sService = syncService ?? defaultSyncService;
-  const nService = notificationService ?? defaultNotificationService;
+  const ctxServices = useServices();
+  const hService = habitService ?? ctxServices?.habitService;
+  const sService = syncService ?? ctxServices?.syncService;
+  const nService = notificationService ?? ctxServices?.notificationService;
+  if (!hService || !sService || !nService) {
+    throw new Error(
+      'SettingsScreen requires services via props or <ServicesProvider>',
+    );
+  }
 
   const allHabits$ = useMemo(() => hService.getAllHabits(), [hService]);
   const habits = useHabitObservable<Habit[]>(allHabits$, []);
@@ -90,7 +92,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     [hService],
   );
 
-  const handleDeactivate = useCallback(
+  const handleLongPressDeactivate = useCallback(
     (habitId: string, habitName: string) => {
       Alert.alert(
         'Deactivate Habit',
@@ -149,6 +151,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         await AsyncStorage.setItem(LAST_SYNC_KEY, now);
         setLastSyncTime(now);
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      Alert.alert('Sync Failed', message);
     } finally {
       setSyncing(false);
     }
@@ -159,7 +164,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       <TouchableOpacity
         style={styles.habitRow}
         testID={`habit-row-${item.id}`}
-        onLongPress={() => handleDeactivate(item.id, item.name)}
+        onLongPress={() => handleLongPressDeactivate(item.id, item.name)}
         accessibilityLabel={`${item.name} habit`}>
         <View style={styles.habitInfo}>
           <Text style={styles.habitName}>{item.name}</Text>
@@ -176,7 +181,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         />
       </TouchableOpacity>
     ),
-    [handleToggleActive, handleDeactivate],
+    [handleToggleActive, handleLongPressDeactivate],
   );
 
   const hours = Array.from({length: 24}, (_, i) => i);

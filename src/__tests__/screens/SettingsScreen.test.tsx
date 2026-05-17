@@ -3,6 +3,7 @@ import {render, fireEvent, waitFor, act} from '@testing-library/react-native';
 import SettingsScreen from '../../screens/SettingsScreen';
 import HabitService from '../../services/HabitService';
 import SyncService from '../../services/SyncService';
+import NotificationService from '../../services/NotificationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {of} from 'rxjs';
 
@@ -87,6 +88,15 @@ function createMockHabitService(
   } as unknown as jest.Mocked<HabitService>;
 }
 
+function createMockNotificationService() {
+  return {
+    requestPermission: jest.fn().mockResolvedValue(true),
+    scheduleDailyReminder: jest.fn().mockResolvedValue(undefined),
+    cancelDailyReminder: jest.fn().mockResolvedValue(undefined),
+    onNotificationToggle: jest.fn().mockResolvedValue(true),
+  } as unknown as jest.Mocked<NotificationService>;
+}
+
 function createMockSyncService(pendingCount = 0) {
   return {
     pushUnsyncedLogs: jest.fn().mockResolvedValue({pushed: 0, failed: 0}),
@@ -115,9 +125,10 @@ describe('SettingsScreen', () => {
     ];
     const service = createMockHabitService(habits);
     const syncService = createMockSyncService();
+    const notificationService = createMockNotificationService();
 
     const {getByText, getByTestId} = render(
-      <SettingsScreen habitService={service} syncService={syncService} />,
+      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
     );
 
     await waitFor(() => {
@@ -137,9 +148,10 @@ describe('SettingsScreen', () => {
     ];
     const service = createMockHabitService(habits);
     const syncService = createMockSyncService();
+    const notificationService = createMockNotificationService();
 
     const {getByTestId} = render(
-      <SettingsScreen habitService={service} syncService={syncService} />,
+      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
     );
 
     await waitFor(() => {
@@ -156,9 +168,10 @@ describe('SettingsScreen', () => {
   it('displays correct unsynced logs count', async () => {
     const service = createMockHabitService([], 5);
     const syncService = createMockSyncService(5);
+    const notificationService = createMockNotificationService();
 
     const {getByTestId, getByText} = render(
-      <SettingsScreen habitService={service} syncService={syncService} />,
+      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
     );
 
     await waitFor(() => {
@@ -172,9 +185,10 @@ describe('SettingsScreen', () => {
   it('displays app version and server URL', async () => {
     const service = createMockHabitService([]);
     const syncService = createMockSyncService();
+    const notificationService = createMockNotificationService();
 
     const {getByTestId} = render(
-      <SettingsScreen habitService={service} syncService={syncService} />,
+      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
     );
 
     await waitFor(() => {
@@ -190,9 +204,10 @@ describe('SettingsScreen', () => {
   it('calls pushUnsyncedLogs when Sync Now is pressed', async () => {
     const service = createMockHabitService([]);
     const syncService = createMockSyncService();
+    const notificationService = createMockNotificationService();
 
     const {getByTestId} = render(
-      <SettingsScreen habitService={service} syncService={syncService} />,
+      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
     );
 
     await waitFor(() => {
@@ -209,9 +224,10 @@ describe('SettingsScreen', () => {
   it('displays "1 log pending sync" for singular count', async () => {
     const service = createMockHabitService([], 1);
     const syncService = createMockSyncService(1);
+    const notificationService = createMockNotificationService();
 
     const {getByTestId, getByText} = render(
-      <SettingsScreen habitService={service} syncService={syncService} />,
+      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
     );
 
     await waitFor(() => {
