@@ -105,23 +105,15 @@ export function useHabits(habitService: HabitService) {
       const chain = toggleChainRef.current;
 
       const run = async () => {
-        // Optimistic update
+        // Optimistically toggle completedToday only. The streak depends on
+        // whether yesterday (and earlier days) were completed, which we
+        // don't know here, so any local arithmetic on h.streak can show a
+        // wrong value for a frame. Leave streak unchanged until
+        // calculateStreak returns the authoritative value below.
         setHabits(prev =>
-          prev.map(h => {
-            if (h.id !== habitId) {
-              return h;
-            }
-            const nowCompleted = !h.completedToday;
-            const newStreak = nowCompleted
-              ? h.streak + 1
-              : Math.max(h.streak - 1, 0);
-            cache.set(habitId, newStreak);
-            return {
-              ...h,
-              completedToday: nowCompleted,
-              streak: newStreak,
-            };
-          }),
+          prev.map(h =>
+            h.id === habitId ? {...h, completedToday: !h.completedToday} : h,
+          ),
         );
 
         try {
@@ -138,21 +130,11 @@ export function useHabits(habitService: HabitService) {
           );
         } catch {
           setHabits(prev =>
-            prev.map(h => {
-              if (h.id !== habitId) {
-                return h;
-              }
-              const reverted = !h.completedToday;
-              const revertedStreak = reverted
-                ? h.streak + 1
-                : Math.max(h.streak - 1, 0);
-              cache.set(habitId, revertedStreak);
-              return {
-                ...h,
-                completedToday: reverted,
-                streak: revertedStreak,
-              };
-            }),
+            prev.map(h =>
+              h.id === habitId
+                ? {...h, completedToday: !h.completedToday}
+                : h,
+            ),
           );
           throw new Error('Could not save. Please try again.');
         }
