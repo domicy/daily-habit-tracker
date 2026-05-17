@@ -50,9 +50,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   }
 
   const allHabits$ = useMemo(() => hService.getAllHabits(), [hService]);
-  const habits = useHabitObservable<Habit[]>(allHabits$, []);
+  const habits = useHabitObservable<Habit[]>(allHabits$, [], 'SettingsScreen');
   const unsyncedCount$ = useMemo(() => hService.observeUnsyncedCount(), [hService]);
-  const unsyncedCount = useHabitObservable<number>(unsyncedCount$, 0);
+  const unsyncedCount = useHabitObservable<number>(unsyncedCount$, 0, 'SettingsScreen');
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('08:00');
   const [syncStatus, setSyncStatus] = useState<'online' | 'offline' | 'auth_failed'>('online');
