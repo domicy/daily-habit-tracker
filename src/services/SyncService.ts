@@ -2,7 +2,12 @@ import {AppState} from 'react-native';
 import type {AppStateStatus} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {AxiosResponse} from 'axios';
-import apiClient, {AUTH_TOKEN_KEY} from './api';
+import apiClient, {
+  AUTH_TOKEN_KEY,
+  CircuitOpenError,
+  isCircuitOpen,
+  setAuthToken,
+} from './api';
 import type HabitService from './HabitService';
 
 export const SYNC_SECRET_KEY = 'sync_secret';
@@ -84,7 +89,7 @@ export default class SyncService {
     try {
       const response = await apiClient.post('/auth/token', {secret});
       const {access_token} = response.data;
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, access_token);
+      await setAuthToken(access_token);
       await AsyncStorage.setItem(SYNC_SECRET_KEY, secret);
       await AsyncStorage.removeItem(SYNC_AUTH_FAILED_KEY);
     } catch (error: unknown) {
@@ -275,6 +280,11 @@ export default class SyncService {
       if (result.errors) {
         allErrors.push(...result.errors);
       }
+      // If repeated transient failures tripped the circuit breaker, stop now —
+      // every remaining batch would be rejected by the request interceptor.
+      if (isCircuitOpen()) {
+        break;
+      }
     }
 
     return {
@@ -286,7 +296,9 @@ export default class SyncService {
 
   private handleSyncError(error: SyncError): SyncResult {
     if (__DEV__) {
-      if (isNetworkError(error) || is5xxError(error)) {
+      if (error instanceof CircuitOpenError) {
+        console.warn('Sync skipped: circuit breaker open');
+      } else if (isNetworkError(error) || is5xxError(error)) {
         console.warn('Sync failed (will retry later):', error.message || 'Unknown error');
       } else {
         // For unexpected errors, also fail silently
@@ -306,7 +318,7 @@ export default class SyncService {
     try {
       const response = await apiClient.post('/auth/token', {secret});
       const {access_token} = response.data;
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, access_token);
+      await setAuthToken(access_token);
       await AsyncStorage.removeItem(SYNC_AUTH_FAILED_KEY);
       return true;
     } catch (e) {

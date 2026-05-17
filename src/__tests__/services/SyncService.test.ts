@@ -16,6 +16,14 @@ jest.mock('../../services/api', () => {
     request: {use: jest.fn(), eject: jest.fn()},
     response: {use: jest.fn(), eject: jest.fn()},
   };
+  class CircuitOpenError extends Error {
+    constructor() {
+      super('Circuit breaker open: skipping request');
+      this.name = 'CircuitOpenError';
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-shadow
+  const AsyncStorage = require('@react-native-async-storage/async-storage');
   return {
     __esModule: true,
     default: {
@@ -23,6 +31,15 @@ jest.mock('../../services/api', () => {
       interceptors: mockInterceptors,
     },
     AUTH_TOKEN_KEY: 'auth_token',
+    CircuitOpenError,
+    isCircuitOpen: jest.fn(() => false),
+    setAuthToken: jest.fn(async (token: string | null) => {
+      if (token === null) {
+        await AsyncStorage.removeItem('auth_token');
+      } else {
+        await AsyncStorage.setItem('auth_token', token);
+      }
+    }),
   };
 });
 
