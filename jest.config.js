@@ -1,7 +1,7 @@
 module.exports = {
   preset: 'react-native',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  setupFilesAfterSetup: [],
+  setupFilesAfterEnv: [],
   moduleNameMapper: {
     '^@nozbe/watermelondb$': '<rootDir>/node_modules/@nozbe/watermelondb',
     '^@nozbe/watermelondb/(.*)$': '<rootDir>/node_modules/@nozbe/watermelondb/$1',
