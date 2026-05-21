@@ -3,13 +3,16 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
 } from 'react-native';
 import {colors} from '../theme/colors';
-import {fontFamily, typeScale} from '../theme/typography';
+import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
+import {radii, borders, shadowOffsets} from '../theme/radii';
+import NBCard from '../components/atoms/NBCard';
+import NBButton from '../components/atoms/NBButton';
+import NBShadow from '../components/atoms/NBShadow';
 import HabitService from '../services/HabitService';
 import database from '../models';
 
@@ -57,48 +60,59 @@ const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
       style={styles.screen}
       behavior="height"
       testID="create-habit-modal">
-      <View style={styles.container}>
-        <Text style={styles.title}>New Habit</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="e.g., Drink Water, Read 10 Pages"
-          placeholderTextColor={colors.textSecondary}
-          value={name}
-          onChangeText={setName}
-          maxLength={MAX_LENGTH}
-          autoFocus
-          testID="habit-name-input"
-          accessibilityLabel="Habit name"
-        />
-
-        <Text style={styles.counter} testID="char-counter">
-          {name.length}/{MAX_LENGTH}
-        </Text>
-
-        <View style={styles.buttons}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={handleCancel}
-            testID="cancel-button">
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.createButton, !isValid && styles.createButtonDisabled]}
-            onPress={handleCreate}
-            disabled={!isValid || creating}
-            testID="create-button">
-            <Text
-              style={[
-                styles.createButtonText,
-                !isValid && styles.createButtonTextDisabled,
-              ]}>
-              Create
-            </Text>
-          </TouchableOpacity>
+      <NBCard style={styles.cardWrap}>
+        <View style={styles.strip}>
+          <Text style={styles.stripText}>NEW HABIT</Text>
+          <Text style={styles.stripText}>
+            {name.length}/{MAX_LENGTH}
+          </Text>
         </View>
-      </View>
+        <View style={styles.body}>
+          <Text style={styles.title}>NAME IT</Text>
+
+          <NBShadow
+            offsetX={shadowOffsets.xs}
+            offsetY={shadowOffsets.xs}
+            color={colors.shadow}
+            borderRadius={radii.inner}
+            style={styles.inputShadow}>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Drink Water, Read 10 Pages"
+              placeholderTextColor={colors.textSoft}
+              value={name}
+              onChangeText={setName}
+              maxLength={MAX_LENGTH}
+              autoFocus
+              testID="habit-name-input"
+              accessibilityLabel="Habit name"
+            />
+          </NBShadow>
+
+          <Text style={styles.counter} testID="char-counter">
+            {name.length}/{MAX_LENGTH}
+          </Text>
+
+          <View style={styles.buttons}>
+            <NBButton
+              variant="secondary"
+              testID="cancel-button"
+              onPress={handleCancel}
+              style={styles.button}>
+              CANCEL
+            </NBButton>
+            <NBButton
+              variant="primary"
+              testID="create-button"
+              onPress={handleCreate}
+              disabled={!isValid || creating}
+              loading={creating}
+              style={styles.button}>
+              CREATE
+            </NBButton>
+          </View>
+        </View>
+      </NBCard>
     </KeyboardAvoidingView>
   );
 };
@@ -106,37 +120,56 @@ const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.paper,
     justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
   },
-  container: {
-    marginHorizontal: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
+  cardWrap: {
+    alignSelf: 'stretch',
+  },
+  strip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: colors.darkBg,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  stripText: {
+    fontFamily: fontFamily.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.darkBgText,
+    letterSpacing: 0.7,
+  },
+  body: {
     padding: spacing.lg,
   },
   title: {
-    fontFamily: fontFamily.heading,
-    ...typeScale.h2,
-    color: colors.clemsonOrange,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
+    fontFamily: fontFamily.display,
+    fontSize: 42,
+    lineHeight: 38,
+    letterSpacing: -1.8,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  inputShadow: {
+    alignSelf: 'stretch',
   },
   input: {
     fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textPrimary,
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
+    fontSize: 16,
+    color: colors.text,
+    backgroundColor: colors.card,
+    borderRadius: radii.inner,
+    borderWidth: borders.thick,
+    borderColor: colors.line,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   counter: {
-    fontFamily: fontFamily.body,
-    ...typeScale.caption,
-    color: colors.textSecondary,
+    fontFamily: fontFamily.mono,
+    fontSize: 11,
+    color: colors.textSoft,
     textAlign: 'right',
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
@@ -144,39 +177,11 @@ const styles = StyleSheet.create({
   buttons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: spacing.md,
   },
-  cancelButton: {
+  button: {
     flex: 1,
-    marginRight: spacing.sm,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textSecondary,
-  },
-  createButton: {
-    flex: 1,
-    marginLeft: spacing.sm,
-    borderRadius: 8,
-    backgroundColor: colors.clemsonOrange,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  createButtonDisabled: {
-    backgroundColor: colors.border,
-  },
-  createButtonText: {
-    fontFamily: fontFamily.heading,
-    ...typeScale.body,
-    color: colors.textPrimary,
-  },
-  createButtonTextDisabled: {
-    color: colors.textSecondary,
+    alignSelf: 'stretch',
   },
 });
 

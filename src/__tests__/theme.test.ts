@@ -1,8 +1,34 @@
-import {theme, colors, fontFamily, typeScale, spacing} from '../theme';
+import {
+  theme,
+  colors,
+  fontFamily,
+  typeScale,
+  spacing,
+  radii,
+  borders,
+  shadowOffsets,
+} from '../theme';
 
 describe('theme design system', () => {
   describe('colors', () => {
     const expectedColorKeys = [
+      // Soft Clemson v3 canonical keys
+      'paper',
+      'card',
+      'text',
+      'textSoft',
+      'tiger',
+      'tigerSoft',
+      'tigerDeep',
+      'regalia',
+      'regaliaSoft',
+      'regaliaDeep',
+      'mute',
+      'line',
+      'shadow',
+      'darkBg',
+      'darkBgText',
+      // Legacy keys retained for backward compatibility
       'background',
       'surface',
       'clemsonOrange',
@@ -28,11 +54,12 @@ describe('theme design system', () => {
 
   describe('fontFamily', () => {
     const expectedFontKeys = [
+      'display',
+      'body',
+      'mono',
       'heading',
       'headingFallback',
-      'body',
       'bodyFallback',
-      'mono',
     ];
 
     it.each(expectedFontKeys)(
@@ -46,7 +73,17 @@ describe('theme design system', () => {
   });
 
   describe('typeScale', () => {
-    const expectedScaleKeys = ['h1', 'h2', 'body', 'caption', 'streak'];
+    const expectedScaleKeys = [
+      'display01',
+      'display02',
+      'display03',
+      'label',
+      'h1',
+      'h2',
+      'body',
+      'caption',
+      'streak',
+    ];
 
     it.each(expectedScaleKeys)(
       'has fontSize and lineHeight for "%s"',
@@ -82,12 +119,45 @@ describe('theme design system', () => {
     });
   });
 
+  describe('radii', () => {
+    it.each(['inner', 'card', 'xl', 'pill'])(
+      'has positive number for "%s"',
+      key => {
+        const value = radii[key as keyof typeof radii];
+        expect(typeof value).toBe('number');
+        expect(value).toBeGreaterThan(0);
+      },
+    );
+  });
+
+  describe('borders', () => {
+    it.each(['thin', 'base', 'thick'])(
+      'has positive number for "%s"',
+      key => {
+        const value = borders[key as keyof typeof borders];
+        expect(typeof value).toBe('number');
+        expect(value).toBeGreaterThan(0);
+      },
+    );
+  });
+
+  describe('shadowOffsets', () => {
+    it.each(['xs', 'md', 'lg'])('has positive number for "%s"', key => {
+      const value = shadowOffsets[key as keyof typeof shadowOffsets];
+      expect(typeof value).toBe('number');
+      expect(value).toBeGreaterThan(0);
+    });
+  });
+
   describe('theme combined object', () => {
-    it('exposes colors, fontFamily, typeScale, and spacing', () => {
+    it('exposes colors, fontFamily, typeScale, spacing, radii, borders, shadowOffsets', () => {
       expect(theme.colors).toBe(colors);
       expect(theme.fontFamily).toBe(fontFamily);
       expect(theme.typeScale).toBe(typeScale);
       expect(theme.spacing).toBe(spacing);
+      expect(theme.radii).toBe(radii);
+      expect(theme.borders).toBe(borders);
+      expect(theme.shadowOffsets).toBe(shadowOffsets);
     });
   });
 });
