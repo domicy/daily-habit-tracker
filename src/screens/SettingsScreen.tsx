@@ -20,7 +20,7 @@ import HabitService from '../services/HabitService';
 import SyncService, {AuthenticationError} from '../services/SyncService';
 import NotificationService from '../services/NotificationService';
 import {API_BASE_URL} from '../services/api';
-import database from '../models';
+import {useServices} from '../services/ServicesContext';
 import type Habit from '../models/Habit';
 import {useHabitObservable} from '../hooks/useHabitObservable';
 
@@ -35,24 +35,27 @@ interface SettingsScreenProps {
   notificationService?: NotificationService;
 }
 
-const defaultHabitService = new HabitService(database);
-const defaultSyncService = new SyncService(defaultHabitService);
-const defaultNotificationService = new NotificationService();
-
 const SettingsScreen: React.FC<SettingsScreenProps> = ({
   habitService,
   syncService,
   notificationService,
 }) => {
-  const hService = habitService ?? defaultHabitService;
-  const sService = syncService ?? defaultSyncService;
-  const nService = notificationService ?? defaultNotificationService;
+  const ctxServices = useServices();
+  const hService = habitService ?? ctxServices?.habitService;
+  const sService = syncService ?? ctxServices?.syncService;
+  const nService = notificationService ?? ctxServices?.notificationService;
+  if (!hService || !sService || !nService) {
+    throw new Error(
+      'SettingsScreen requires services via props or <ServicesProvider>',
+    );
+  }
 
   const allHabits$ = useMemo(() => hService.getAllHabits(), [hService]);
-  const habits = useHabitObservable<Habit[]>(allHabits$, []);
+  const habits = useHabitObservable<Habit[]>(allHabits$, [], 'SettingsScreen');
+  const unsyncedCount$ = useMemo(() => hService.observeUnsyncedCount(), [hService]);
+  const unsyncedCount = useHabitObservable<number>(unsyncedCount$, 0, 'SettingsScreen');
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('08:00');
-  const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [syncStatus, setSyncStatus] = useState<'online' | 'offline' | 'auth_failed'>('online');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -73,16 +76,17 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     })();
   }, []);
 
-  // Load sync info
+  // Load sync info (status + last-sync timestamp). The pending count is
+  // sourced from observeUnsyncedCount above so it updates live as the user
+  // edits habits on other tabs without remounting this screen.
   useEffect(() => {
     (async () => {
       const status = await sService.getSyncStatus();
-      setUnsyncedCount(status.pendingCount);
       setSyncStatus(status.status);
       const ts = await AsyncStorage.getItem(LAST_SYNC_KEY);
       setLastSyncTime(ts);
     })();
-  }, [hService, sService]);
+  }, [sService]);
 
   const handleToggleActive = useCallback(
     async (habitId: string) => {
@@ -91,7 +95,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     [hService],
   );
 
-  const handleDelete = useCallback(
+  const handleLongPressDeactivate = useCallback(
     (habitId: string, habitName: string) => {
       Alert.alert(
         'Deactivate Habit',
@@ -142,15 +146,17 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const handleSyncNow = useCallback(async () => {
     setSyncing(true);
     try {
-      const result = await sService.pushUnsyncedLogs();
-      if (result.pushed > 0) {
+      await sService.pushUnsyncedLogs();
+      const status = await sService.getSyncStatus();
+      setSyncStatus(status.status);
+      if (status.status !== 'offline' && status.status !== 'auth_failed') {
         const now = new Date().toISOString();
         await AsyncStorage.setItem(LAST_SYNC_KEY, now);
         setLastSyncTime(now);
       }
-      const status = await sService.getSyncStatus();
-      setUnsyncedCount(status.pendingCount);
-      setSyncStatus(status.status);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      Alert.alert('Sync Failed', message);
     } finally {
       setSyncing(false);
     }
@@ -165,9 +171,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     try {
       await sService.authenticate(secret);
       setSecretInput('');
+      // pendingCount is sourced from the observable; only refresh status here.
       const status = await sService.getSyncStatus();
       setSyncStatus(status.status);
-      setUnsyncedCount(status.pendingCount);
       Alert.alert('Connected', 'Sync is now enabled on this device.');
     } catch (err: unknown) {
       const message =
@@ -185,7 +191,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       <TouchableOpacity
         style={styles.habitRow}
         testID={`habit-row-${item.id}`}
-        onLongPress={() => handleDelete(item.id, item.name)}
+        onLongPress={() => handleLongPressDeactivate(item.id, item.name)}
         accessibilityLabel={`${item.name} habit`}>
         <View style={styles.habitInfo}>
           <Text style={styles.habitName}>{item.name}</Text>
@@ -202,7 +208,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         />
       </TouchableOpacity>
     ),
-    [handleToggleActive, handleDelete],
+    [handleToggleActive, handleLongPressDeactivate],
   );
 
   const hours = Array.from({length: 24}, (_, i) => i);

@@ -174,3 +174,124 @@ async def test_update_habit_empty_name(client: AsyncClient, auth_header: dict):
         f"/habits/{habit_id}", json={"name": ""}, headers=auth_header
     )
     assert resp.status_code == 422
+
+
+# ── POST /habits/sync ───────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_sync_habits_creates_new(client: AsyncClient, auth_header: dict):
+    habit_id = str(uuid.uuid4())
+    resp = await client.post(
+        "/habits/sync",
+        json={
+            "habits": [
+                {
+                    "id": habit_id,
+                    "name": "Drink water",
+                    "created_at_ms": 1_700_000_000_000,
+                    "is_active": True,
+                }
+            ]
+        },
+        headers=auth_header,
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"synced_ids": [habit_id]}
+
+    # Subsequent log sync for this habit succeeds
+    resp = await client.post(
+        "/logs/sync",
+        json={"logs": [{"habit_id": habit_id, "completed_date": "2026-03-07"}]},
+        headers=auth_header,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["synced"] == 1
+    assert resp.json()["errors"] == []
+
+
+@pytest.mark.asyncio
+async def test_sync_habits_is_idempotent(client: AsyncClient, auth_header: dict):
+    habit_id = str(uuid.uuid4())
+    payload = {
+        "habits": [
+            {
+                "id": habit_id,
+                "name": "Meditate",
+                "created_at_ms": 1_700_000_000_000,
+                "is_active": True,
+            }
+        ]
+    }
+    resp1 = await client.post("/habits/sync", json=payload, headers=auth_header)
+    resp2 = await client.post("/habits/sync", json=payload, headers=auth_header)
+    assert resp1.status_code == 200
+    assert resp2.status_code == 200
+    # Exactly one row exists
+    resp = await client.get("/habits/", headers=auth_header)
+    assert sum(1 for h in resp.json() if h["id"] == habit_id) == 1
+
+
+@pytest.mark.asyncio
+async def test_sync_habits_updates_existing(client: AsyncClient, auth_header: dict):
+    habit_id = str(uuid.uuid4())
+    await client.post(
+        "/habits/sync",
+        json={
+            "habits": [
+                {
+                    "id": habit_id,
+                    "name": "Old name",
+                    "created_at_ms": 1_700_000_000_000,
+                    "is_active": True,
+                }
+            ]
+        },
+        headers=auth_header,
+    )
+    resp = await client.post(
+        "/habits/sync",
+        json={
+            "habits": [
+                {
+                    "id": habit_id,
+                    "name": "New name",
+                    "created_at_ms": 1_700_000_000_000,
+                    "is_active": False,
+                }
+            ]
+        },
+        headers=auth_header,
+    )
+    assert resp.status_code == 200
+
+    resp = await client.get("/habits/", headers=auth_header)
+    matching = [h for h in resp.json() if h["id"] == habit_id]
+    assert len(matching) == 1
+    assert matching[0]["name"] == "New name"
+    assert matching[0]["is_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_sync_habits_no_token(client: AsyncClient):
+    resp = await client.post("/habits/sync", json={"habits": []})
+    assert resp.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_sync_habits_blank_name(client: AsyncClient, auth_header: dict):
+    resp = await client.post(
+        "/habits/sync",
+        json={
+            "habits": [
+                {
+                    "id": str(uuid.uuid4()),
+                    "name": "   ",
+                    "created_at_ms": 1_700_000_000_000,
+                    "is_active": True,
+                }
+            ]
+        },
+        headers=auth_header,
+    )
+    assert resp.status_code == 422

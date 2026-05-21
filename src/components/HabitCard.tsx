@@ -29,6 +29,7 @@ function areEqual(prev: HabitCardProps, next: HabitCardProps): boolean {
     prev.name === next.name &&
     prev.completedToday === next.completedToday &&
     prev.streak === next.streak &&
+    prev.onToggle === next.onToggle &&
     prev.onPress === next.onPress
   );
 }

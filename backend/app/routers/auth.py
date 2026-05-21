@@ -1,3 +1,4 @@
+import hmac
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, status
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/token", response_model=TokenResponse)
 async def issue_token(body: TokenRequest) -> TokenResponse:
-    if body.secret != settings.jwt_secret:
+    if not hmac.compare_digest(body.secret, settings.jwt_secret):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid secret",

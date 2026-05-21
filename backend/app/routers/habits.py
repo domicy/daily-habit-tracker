@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,7 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.middleware.auth import require_token
 from app.models import Habit
-from app.schemas import HabitCreate, HabitRead, HabitUpdate
+from app.schemas import (
+    HabitCreate,
+    HabitRead,
+    HabitSyncRequest,
+    HabitSyncResponse,
+    HabitUpdate,
+)
 
 router = APIRouter(
     prefix="/habits",
@@ -47,3 +55,31 @@ async def update_habit(
     await db.commit()
     await db.refresh(habit)
     return habit
+
+
+@router.post("/sync", response_model=HabitSyncResponse)
+async def sync_habits(body: HabitSyncRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Upsert habits using client-supplied IDs. The local-first client owns IDs
+    and pushes habit creates/updates here so subsequent log syncs can resolve
+    their habit_id references.
+    """
+    synced_ids: list[str] = []
+    for entry in body.habits:
+        existing = await db.get(Habit, entry.id)
+        created_at = datetime.fromtimestamp(entry.created_at_ms / 1000, tz=timezone.utc)
+        if existing:
+            existing.name = entry.name
+            existing.is_active = entry.is_active
+        else:
+            db.add(
+                Habit(
+                    id=entry.id,
+                    name=entry.name,
+                    created_at=created_at,
+                    is_active=entry.is_active,
+                )
+            )
+        synced_ids.append(entry.id)
+    await db.commit()
+    return HabitSyncResponse(synced_ids=synced_ids)

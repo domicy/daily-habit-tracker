@@ -87,12 +87,14 @@ const MonthCalendar: React.FC<MonthCalendarProps> = ({
     return days;
   }, [year, month, prevMonthDays.length, currentMonthDays.length]);
 
-  const allDays = [...prevMonthDays, ...currentMonthDays, ...nextMonthDays];
-
-  const weeks: typeof allDays[] = [];
-  for (let i = 0; i < allDays.length; i += 7) {
-    weeks.push(allDays.slice(i, i + 7));
-  }
+  const weeks = useMemo(() => {
+    const allDays = [...prevMonthDays, ...currentMonthDays, ...nextMonthDays];
+    const result: (typeof allDays)[] = [];
+    for (let i = 0; i < allDays.length; i += 7) {
+      result.push(allDays.slice(i, i + 7));
+    }
+    return result;
+  }, [prevMonthDays, currentMonthDays, nextMonthDays]);
 
   const handlePrevMonth = () => {
     if (month === 0) {

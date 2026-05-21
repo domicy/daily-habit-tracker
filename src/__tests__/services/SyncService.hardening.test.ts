@@ -19,6 +19,14 @@ jest.mock('../../services/api', () => {
     request: {use: jest.fn(), eject: jest.fn()},
     response: {use: jest.fn(), eject: jest.fn()},
   };
+  class CircuitOpenError extends Error {
+    constructor() {
+      super('Circuit breaker open: skipping request');
+      this.name = 'CircuitOpenError';
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-shadow
+  const AsyncStorage = require('@react-native-async-storage/async-storage');
   return {
     __esModule: true,
     default: {
@@ -26,6 +34,15 @@ jest.mock('../../services/api', () => {
       interceptors: mockInterceptors,
     },
     AUTH_TOKEN_KEY: 'auth_token',
+    CircuitOpenError,
+    isCircuitOpen: jest.fn(() => false),
+    setAuthToken: jest.fn(async (token: string | null) => {
+      if (token === null) {
+        await AsyncStorage.removeItem('auth_token');
+      } else {
+        await AsyncStorage.setItem('auth_token', token);
+      }
+    }),
   };
 });
 
@@ -40,6 +57,7 @@ function createMockLog(habitId: string, completedDate: string) {
     habitId,
     completedDate,
     synced: false,
+    deletedAt: null as number | null,
     markSynced: jest.fn().mockResolvedValue(undefined),
   };
 }
@@ -47,6 +65,25 @@ function createMockLog(habitId: string, completedDate: string) {
 function createMockHabitService(logs: ReturnType<typeof createMockLog>[] = []) {
   return {
     getUnsyncedLogs: jest.fn().mockResolvedValue(logs),
+    // The hardening tests focus on log-sync paths and assume habits are
+    // already synced; an empty unsynced-habits result keeps the new
+    // habit-push step a no-op so existing assertions still hold.
+    getUnsyncedHabits: jest.fn().mockResolvedValue([]),
+    markLogsSynced: jest
+      .fn()
+      .mockImplementation(async (batch: {markSynced: () => Promise<void>}[]) => {
+        for (const log of batch) {
+          await log.markSynced();
+        }
+      }),
+    markLogsRetryFailed: jest.fn().mockResolvedValue(undefined),
+    markHabitsSynced: jest
+      .fn()
+      .mockImplementation(async (batch: {markSynced: () => Promise<void>}[]) => {
+        for (const habit of batch) {
+          await habit.markSynced();
+        }
+      }),
   } as unknown as HabitService;
 }
 
@@ -208,6 +245,68 @@ describe('SyncService Hardening', () => {
 
       await syncService.pushUnsyncedLogs();
       expect(failedLog.markSynced).toHaveBeenCalled();
+    });
+
+    it('records retry failures so the persistent backlog gets bounded', async () => {
+      const log = createMockLog('habit-1', '2025-01-01');
+      const habitService = createMockHabitService([log]);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock).mockResolvedValueOnce({
+        data: {
+          synced: 0,
+          errors: [
+            {habit_id: 'habit-1', completed_date: '2025-01-01', reason: 'Habit not found'},
+          ],
+        },
+      });
+
+      await syncService.pushUnsyncedLogs();
+
+      expect(habitService.markLogsRetryFailed).toHaveBeenCalledTimes(1);
+      const failedBatch = (habitService.markLogsRetryFailed as jest.Mock).mock.calls[0][0];
+      expect(failedBatch).toHaveLength(1);
+      expect(failedBatch[0].habitId).toBe('habit-1');
+      // Successful logs are never passed to markLogsRetryFailed.
+      expect(log.markSynced).not.toHaveBeenCalled();
+    });
+
+    it('only records the rejected logs as retry-failed, not the successful ones', async () => {
+      const ok = createMockLog('habit-1', '2025-01-01');
+      const bad = createMockLog('habit-2', '2025-01-02');
+      const habitService = createMockHabitService([ok, bad]);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock).mockResolvedValueOnce({
+        data: {
+          synced: 1,
+          errors: [
+            {habit_id: 'habit-2', completed_date: '2025-01-02', reason: 'Habit not found'},
+          ],
+        },
+      });
+
+      await syncService.pushUnsyncedLogs();
+
+      expect(ok.markSynced).toHaveBeenCalled();
+      const failedBatch = (habitService.markLogsRetryFailed as jest.Mock).mock.calls[0][0];
+      expect(failedBatch.map((l: {habitId: string}) => l.habitId)).toEqual(['habit-2']);
+    });
+
+    it('does NOT call markLogsRetryFailed on network/5xx failures (whole-batch retry)', async () => {
+      const log = createMockLog('habit-1', '2025-01-01');
+      const habitService = createMockHabitService([log]);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock).mockRejectedValueOnce(
+        Object.assign(new Error('Network Error'), {code: 'ERR_NETWORK'}),
+      );
+
+      await syncService.pushUnsyncedLogs();
+
+      // On a transport-level failure the whole batch is retried next cycle —
+      // no per-log retry counter should advance.
+      expect(habitService.markLogsRetryFailed).not.toHaveBeenCalled();
     });
 
     it('handles all logs failing in the errors array', async () => {
@@ -391,6 +490,69 @@ describe('SyncService Hardening', () => {
       expect(logs[0].markSynced).not.toHaveBeenCalled();
     });
 
+    it('does NOT set auth_failed flag when re-auth fails with a network error', async () => {
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs);
+      const syncService = new SyncService(habitService);
+
+      const authError = {
+        response: {status: 401, data: {detail: 'Token expired'}},
+        message: 'Unauthorized',
+      };
+      const networkError = {message: 'Network Error'};
+      (apiClient.post as jest.Mock)
+        .mockRejectedValueOnce(authError)
+        .mockRejectedValueOnce(networkError);
+
+      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+        if (key === SYNC_SECRET_KEY) {
+          return Promise.resolve('my-secret');
+        }
+        if (key === SYNC_AUTH_FAILED_KEY) {
+          return Promise.resolve(null);
+        }
+        return Promise.resolve(null);
+      });
+
+      const result = await syncService.pushUnsyncedLogs();
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
+      expect(result).toEqual({pushed: 0, failed: 0});
+    });
+
+    it('does NOT set auth_failed flag when re-auth fails with a 5xx error', async () => {
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs);
+      const syncService = new SyncService(habitService);
+
+      const authError = {
+        response: {status: 401, data: {detail: 'Token expired'}},
+        message: 'Unauthorized',
+      };
+      const serverError = {
+        response: {status: 502, data: {detail: 'Bad Gateway'}},
+        message: 'Server Error',
+      };
+      (apiClient.post as jest.Mock)
+        .mockRejectedValueOnce(authError)
+        .mockRejectedValueOnce(serverError);
+
+      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+        if (key === SYNC_SECRET_KEY) {
+          return Promise.resolve('my-secret');
+        }
+        if (key === SYNC_AUTH_FAILED_KEY) {
+          return Promise.resolve(null);
+        }
+        return Promise.resolve(null);
+      });
+
+      const result = await syncService.pushUnsyncedLogs();
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
+      expect(result).toEqual({pushed: 0, failed: 0});
+    });
+
     it('sets auth_failed flag when no stored secret exists for re-auth', async () => {
       const logs = [createMockLog('habit-1', '2025-01-01')];
       const habitService = createMockHabitService(logs);
@@ -511,9 +673,9 @@ describe('SyncService Hardening', () => {
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
 
-      (apiClient.post as jest.Mock).mockImplementation(() =>
+      (apiClient.post as jest.Mock).mockImplementation((_url: string, payload: {logs: {habit_id: string; completed_date: string}[]}) =>
         Promise.resolve({
-          data: {synced: 100, errors: []},
+          data: {synced: payload.logs.length, errors: []},
         }),
       );
 
@@ -521,7 +683,7 @@ describe('SyncService Hardening', () => {
 
       // 6 API calls (550 / 100 = 5 full + 1 partial)
       expect(apiClient.post).toHaveBeenCalledTimes(6);
-      expect(result.pushed).toBe(600); // 6 * 100 from mock
+      expect(result.pushed).toBe(550);
     }, 30000);
 
     it('each batch contains at most 100 logs', async () => {

@@ -160,7 +160,7 @@ describe('DashboardScreen', () => {
     ];
     const service = createMockServiceWithStreaks(habits);
 
-    const {getByTestId, getByText} = render(
+    const {getByTestId, queryByTestId, getByText} = render(
       <DashboardScreen habitService={service} />,
     );
 
@@ -168,22 +168,27 @@ describe('DashboardScreen', () => {
       expect(getByTestId('habit-card-1')).toBeTruthy();
     });
 
-    // Initially streak is 0
     expect(getByText('🔥 0 days')).toBeTruthy();
+    expect(queryByTestId('checkmark-1')).toBeNull();
 
-    // Now make toggle hang so we can observe the optimistic state
+    // Make toggle hang so we can observe the optimistic state.
     service.toggleHabitCompletion = jest.fn(
-      () => new Promise(() => {}), // Never resolves
+      () => new Promise(() => {}),
     ) as unknown as typeof service.toggleHabitCompletion;
 
     await act(async () => {
       fireEvent.press(getByTestId('toggle-1'));
     });
 
-    // The toggle was called but hasn't resolved - yet UI should already show streak of 1
+    // completedToday flips immediately so the checkmark renders, but the
+    // streak is not optimistically incremented — the real value arrives
+    // from calculateStreak after the write resolves. Showing the old
+    // streak is preferable to flashing an arithmetic guess that ignores
+    // yesterday's completion state.
     await waitFor(() => {
-      expect(getByText('🔥 1 day')).toBeTruthy();
+      expect(getByTestId('checkmark-1')).toBeTruthy();
     });
+    expect(getByText('🔥 0 days')).toBeTruthy();
   });
 
   // ─── Streak display ────────────────────────────────────────────────

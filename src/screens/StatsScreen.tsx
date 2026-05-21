@@ -117,18 +117,7 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
     );
     const total = isCurrentMonth ? now.getDate() : daysInMonth;
 
-    let completed = 0;
-    completedDates.forEach(dateStr => {
-      const date = new Date(dateStr + 'T00:00:00');
-      if (
-        date.getFullYear() === calendarYear &&
-        date.getMonth() === calendarMonth
-      ) {
-        completed++;
-      }
-    });
-
-    return {completedCount: completed, totalDays: total};
+    return {completedCount: completedDates.size, totalDays: total};
   }, [completedDates, calendarYear, calendarMonth]);
 
   const progressPercent =

@@ -1,14 +1,19 @@
 import {AppState} from 'react-native';
 import type {AppStateStatus} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import apiClient, {AUTH_TOKEN_KEY} from './api';
+import type {AxiosResponse} from 'axios';
+import apiClient, {
+  AUTH_TOKEN_KEY,
+  CircuitOpenError,
+  isCircuitOpen,
+  setAuthToken,
+} from './api';
 import type HabitService from './HabitService';
 
 export const SYNC_SECRET_KEY = 'sync_secret';
 export const SYNC_AUTH_FAILED_KEY = 'sync_auth_failed';
 
 const BATCH_SIZE = 100;
-const BATCH_PAUSE_MS = 1000;
 const MAX_UNBATCHED = 500;
 
 export class AuthenticationError extends Error {
@@ -37,7 +42,9 @@ function decodeJwtPayload(token: string): {exp?: number} {
     if (parts.length !== 3) {
       return {};
     }
-    const payload = JSON.parse(atob(parts[1]));
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
     return payload;
   } catch {
     return {};
@@ -68,14 +75,11 @@ function is401Error(error: SyncError): boolean {
   return error?.response?.status === 401;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 export default class SyncService {
   private habitService: HabitService;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+  private inFlight = false;
 
   constructor(habitService: HabitService) {
     this.habitService = habitService;
@@ -85,7 +89,7 @@ export default class SyncService {
     try {
       const response = await apiClient.post('/auth/token', {secret});
       const {access_token} = response.data;
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, access_token);
+      await setAuthToken(access_token);
       await AsyncStorage.setItem(SYNC_SECRET_KEY, secret);
       await AsyncStorage.removeItem(SYNC_AUTH_FAILED_KEY);
     } catch (error: unknown) {
@@ -97,24 +101,100 @@ export default class SyncService {
   }
 
   async pushUnsyncedLogs(): Promise<SyncResult> {
-    // If auth previously failed permanently, don't retry
-    const authFailed = await AsyncStorage.getItem(SYNC_AUTH_FAILED_KEY);
-    if (authFailed === 'true') {
+    // Concurrent callers would both read the same unsynced rows and race on
+    // markSynced — the loser hits a WatermelonDB "record was deleted" error.
+    if (this.inFlight) {
       return {pushed: 0, failed: 0};
     }
+    this.inFlight = true;
+    try {
+      // If auth previously failed permanently, don't retry
+      const authFailed = await AsyncStorage.getItem(SYNC_AUTH_FAILED_KEY);
+      if (authFailed === 'true') {
+        return {pushed: 0, failed: 0};
+      }
 
-    const unsyncedLogs = await this.habitService.getUnsyncedLogs();
+      // Push habits first so the server knows about every habit referenced by
+      // a log. Otherwise the log push returns "Habit not found" for every log
+      // of a locally-created habit, and those logs accumulate forever.
+      const habitsPushed = await this.pushUnsyncedHabits();
 
-    if (unsyncedLogs.length === 0) {
-      return {pushed: 0, failed: 0};
+      const unsyncedLogs = await this.habitService.getUnsyncedLogs();
+
+      if (unsyncedLogs.length === 0) {
+        return {pushed: 0, failed: 0};
+      }
+
+      // If habit push failed (auth or network), skip the log push so we don't
+      // burn through the batch only to have every entry rejected.
+      if (!habitsPushed) {
+        return {pushed: 0, failed: 0};
+      }
+
+      // If more than MAX_UNBATCHED logs, chunk into batches
+      if (unsyncedLogs.length > MAX_UNBATCHED) {
+        return await this.pushInBatches(unsyncedLogs);
+      }
+
+      return await this.pushBatch(unsyncedLogs);
+    } finally {
+      this.inFlight = false;
+    }
+  }
+
+  /**
+   * Pushes locally-created/updated habits to the backend.
+   * Returns true if the push succeeded (or there was nothing to push) and the
+   * subsequent log push should proceed; false if the caller should skip the
+   * log push (e.g. unauthenticated, network failure).
+   */
+  private async pushUnsyncedHabits(): Promise<boolean> {
+    const unsyncedHabits = await this.habitService.getUnsyncedHabits();
+    if (unsyncedHabits.length === 0) {
+      return true;
     }
 
-    // If more than MAX_UNBATCHED logs, chunk into batches
-    if (unsyncedLogs.length > MAX_UNBATCHED) {
-      return this.pushInBatches(unsyncedLogs);
+    const payload = {
+      habits: unsyncedHabits.map(habit => ({
+        id: habit.id,
+        name: habit.name,
+        created_at_ms: habit.createdAt,
+        is_active: habit.isActive,
+      })),
+    };
+
+    let response: AxiosResponse | undefined;
+    try {
+      response = await apiClient.post('/habits/sync', payload);
+    } catch (error: unknown) {
+      const syncErr = error as SyncError;
+      if (is401Error(syncErr)) {
+        const reauthed = await this.attemptReauth();
+        if (!reauthed) {
+          return false;
+        }
+        try {
+          response = await apiClient.post('/habits/sync', payload);
+        } catch {
+          return false;
+        }
+      } else {
+        // Network or 5xx — give up for this cycle, retry later.
+        return false;
+      }
     }
 
-    return this.pushBatch(unsyncedLogs);
+    if (!response) {
+      return false;
+    }
+
+    const syncedIds: string[] = response.data?.synced_ids ?? [];
+    const syncedSet = new Set(syncedIds);
+    const syncedHabits = unsyncedHabits.filter(habit => syncedSet.has(habit.id));
+    await this.habitService.markHabitsSynced(syncedHabits);
+    // Only proceed to logs if every habit was accepted; otherwise some logs
+    // would still hit "Habit not found".
+    return syncedSet.size === unsyncedHabits.length;
   }
 
   private async pushBatch(
@@ -124,6 +204,7 @@ export default class SyncService {
       logs: logs.map(log => ({
         habit_id: log.habitId,
         completed_date: log.completedDate,
+        deleted: log.deletedAt != null,
       })),
     };
 
@@ -161,10 +242,16 @@ export default class SyncService {
     const succeeded = logs.filter(
       log => !errorSet.has(`${log.habitId}:${log.completedDate}`),
     );
+    const failed = logs.filter(log =>
+      errorSet.has(`${log.habitId}:${log.completedDate}`),
+    );
 
-    for (const log of succeeded) {
-      await log.markSynced();
-    }
+    await this.habitService.markLogsSynced(succeeded);
+    // Record per-log rejections so HabitService.getUnsyncedLogs can apply
+    // exponential backoff and eventually exclude permanently-failing rows
+    // from the scan. Without this, "Habit not found" rejections grow the
+    // unsynced backlog forever and every sync re-fetches them all.
+    await this.habitService.markLogsRetryFailed(failed);
 
     const errorMessages = (syncErrors || []).map(
       (e: {habit_id: string; completed_date: string; reason: string}) =>
@@ -193,10 +280,10 @@ export default class SyncService {
       if (result.errors) {
         allErrors.push(...result.errors);
       }
-
-      // Pause between batches (skip after last batch)
-      if (i + BATCH_SIZE < allLogs.length) {
-        await sleep(BATCH_PAUSE_MS);
+      // If repeated transient failures tripped the circuit breaker, stop now —
+      // every remaining batch would be rejected by the request interceptor.
+      if (isCircuitOpen()) {
+        break;
       }
     }
 
@@ -208,12 +295,16 @@ export default class SyncService {
   }
 
   private handleSyncError(error: SyncError): SyncResult {
-    if (isNetworkError(error) || is5xxError(error)) {
-      console.warn('Sync failed (will retry later):', error.message || 'Unknown error');
-      return {pushed: 0, failed: 0};
+    if (__DEV__) {
+      if (error instanceof CircuitOpenError) {
+        console.warn('Sync skipped: circuit breaker open');
+      } else if (isNetworkError(error) || is5xxError(error)) {
+        console.warn('Sync failed (will retry later):', error.message || 'Unknown error');
+      } else {
+        // For unexpected errors, also fail silently
+        console.warn('Sync failed with unexpected error:', error.message || 'Unknown error');
+      }
     }
-    // For unexpected errors, also fail silently
-    console.warn('Sync failed with unexpected error:', error.message || 'Unknown error');
     return {pushed: 0, failed: 0};
   }
 
@@ -227,27 +318,35 @@ export default class SyncService {
     try {
       const response = await apiClient.post('/auth/token', {secret});
       const {access_token} = response.data;
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, access_token);
+      await setAuthToken(access_token);
       await AsyncStorage.removeItem(SYNC_AUTH_FAILED_KEY);
       return true;
-    } catch {
-      await AsyncStorage.setItem(SYNC_AUTH_FAILED_KEY, 'true');
+    } catch (e) {
+      if (is401Error(e as SyncError)) {
+        await AsyncStorage.setItem(SYNC_AUTH_FAILED_KEY, 'true');
+      }
       return false;
     }
   }
 
   async isOffline(): Promise<boolean> {
-    const unsyncedLogs = await this.habitService.getUnsyncedLogs();
+    const [unsyncedLogs, unsyncedHabits] = await Promise.all([
+      this.habitService.getUnsyncedLogs(),
+      this.habitService.getUnsyncedHabits(),
+    ]);
     const isAuth = await this.isAuthenticated();
-    return unsyncedLogs.length > 0 && !isAuth;
+    return unsyncedLogs.length + unsyncedHabits.length > 0 && !isAuth;
   }
 
   async getSyncStatus(): Promise<{
     status: 'online' | 'offline' | 'auth_failed';
     pendingCount: number;
   }> {
-    const unsyncedLogs = await this.habitService.getUnsyncedLogs();
-    const pendingCount = unsyncedLogs.length;
+    const [unsyncedLogs, unsyncedHabits] = await Promise.all([
+      this.habitService.getUnsyncedLogs(),
+      this.habitService.getUnsyncedHabits(),
+    ]);
+    const pendingCount = unsyncedLogs.length + unsyncedHabits.length;
 
     const authFailed = await AsyncStorage.getItem(SYNC_AUTH_FAILED_KEY);
     if (authFailed === 'true') {
