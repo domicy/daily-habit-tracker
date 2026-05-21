@@ -26,11 +26,28 @@ const NotificationBootstrap: React.FC = () => {
   return null;
 };
 
+const SyncBootstrap: React.FC = () => {
+  const services = useServices();
+  // Push unsynced logs once at launch, then again whenever the app returns
+  // to the foreground. Without this the user only ever syncs by tapping
+  // "Sync Now" in Settings.
+  useEffect(() => {
+    if (!services) {
+      return;
+    }
+    services.syncService.pushUnsyncedLogs();
+    services.syncService.startBackgroundSync();
+    return () => services.syncService.stopBackgroundSync();
+  }, [services]);
+  return null;
+};
+
 const App: React.FC = () => {
   return (
     <ServicesProvider>
       <SafeAreaProvider>
         <NotificationBootstrap />
+        <SyncBootstrap />
         <NavigationContainer>
           <AppNavigator />
         </NavigationContainer>

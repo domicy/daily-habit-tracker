@@ -4,6 +4,7 @@ import {
   Text,
   Switch,
   FlatList,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -16,7 +17,7 @@ import {colors} from '../theme/colors';
 import {fontFamily, typeScale} from '../theme/typography';
 import {spacing} from '../theme/spacing';
 import HabitService from '../services/HabitService';
-import SyncService from '../services/SyncService';
+import SyncService, {AuthenticationError} from '../services/SyncService';
 import NotificationService from '../services/NotificationService';
 import {API_BASE_URL} from '../services/api';
 import {useServices} from '../services/ServicesContext';
@@ -58,6 +59,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [syncStatus, setSyncStatus] = useState<'online' | 'offline' | 'auth_failed'>('online');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [secretInput, setSecretInput] = useState('');
+  const [connecting, setConnecting] = useState(false);
 
   // Load notification preferences
   useEffect(() => {
@@ -158,6 +161,30 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setSyncing(false);
     }
   }, [sService]);
+
+  const handleConnect = useCallback(async () => {
+    const secret = secretInput.trim();
+    if (!secret) {
+      return;
+    }
+    setConnecting(true);
+    try {
+      await sService.authenticate(secret);
+      setSecretInput('');
+      // pendingCount is sourced from the observable; only refresh status here.
+      const status = await sService.getSyncStatus();
+      setSyncStatus(status.status);
+      Alert.alert('Connected', 'Sync is now enabled on this device.');
+    } catch (err: unknown) {
+      const message =
+        err instanceof AuthenticationError
+          ? err.message
+          : 'Could not reach the server. Check your connection and try again.';
+      Alert.alert('Connection failed', message);
+    } finally {
+      setConnecting(false);
+    }
+  }, [sService, secretInput]);
 
   const renderHabitRow = useCallback(
     ({item}: {item: Habit}) => (
@@ -292,6 +319,36 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             Last sync: {format(new Date(lastSyncTime), 'MMM d, yyyy h:mm a')}
           </Text>
         )}
+
+        <View style={styles.connectBlock}>
+          <Text style={styles.connectLabel}>Sync Secret</Text>
+          <TextInput
+            testID="sync-secret-input"
+            style={styles.connectInput}
+            value={secretInput}
+            onChangeText={setSecretInput}
+            placeholder="Paste your server secret"
+            placeholderTextColor={colors.textSecondary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+            editable={!connecting}
+          />
+          <TouchableOpacity
+            style={[
+              styles.connectButton,
+              (connecting || secretInput.trim().length === 0) && styles.connectButtonDisabled,
+            ]}
+            onPress={handleConnect}
+            disabled={connecting || secretInput.trim().length === 0}
+            testID="connect-button">
+            {connecting ? (
+              <ActivityIndicator color={colors.textPrimary} testID="connect-spinner" />
+            ) : (
+              <Text style={styles.connectButtonText}>Connect</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* About */}
@@ -433,6 +490,44 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     ...typeScale.caption,
     color: colors.textSecondary,
+  },
+  connectBlock: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  connectLabel: {
+    fontFamily: fontFamily.body,
+    ...typeScale.body,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  connectInput: {
+    fontFamily: fontFamily.body,
+    ...typeScale.body,
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  connectButton: {
+    backgroundColor: colors.clemsonOrange,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  connectButtonDisabled: {
+    opacity: 0.5,
+  },
+  connectButtonText: {
+    fontFamily: fontFamily.heading,
+    ...typeScale.body,
+    color: colors.textPrimary,
   },
 });
 

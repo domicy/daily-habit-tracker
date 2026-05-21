@@ -5,7 +5,7 @@ import axios from 'axios';
 import type {AxiosError, InternalAxiosRequestConfig} from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const API_BASE_URL = 'https://habit-tracker.tunnel.example.com';
+export const API_BASE_URL = 'https://habit-api.darling.solutions';
 export const AUTH_TOKEN_KEY = 'auth_token';
 
 // Per-request retry budget. axios-retry's default 3 retries with exponential

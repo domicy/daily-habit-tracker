@@ -5,7 +5,7 @@ services:
       MARIADB_ROOT_PASSWORD: secret
       MARIADB_DATABASE: habits
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -13,16 +13,18 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     env_file:
-      - .env.example
+      - .env
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
 
   tunnel:
     image: cloudflare/cloudflared:latest
