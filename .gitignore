@@ -44,6 +44,10 @@ android/.kotlin/
 # Android signing properties (real values; example template is checked in)
 android/keystore.properties
 
+# Backend secrets (real values; .env.example template is checked in)
+backend/.env
+.env
+
 # Bundle artifacts
 *.jsbundle
 

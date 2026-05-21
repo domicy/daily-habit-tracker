@@ -182,7 +182,7 @@ describe('SettingsScreen', () => {
 
     expect(getByTestId('app-version').props.children).toBe('0.0.1');
     expect(getByTestId('server-url').props.children).toBe(
-      'https://habit-tracker.tunnel.example.com',
+      'https://habit-api.darling.solutions',
     );
   });
 
