@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -61,6 +61,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [syncing, setSyncing] = useState(false);
   const [secretInput, setSecretInput] = useState('');
   const [connecting, setConnecting] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   // Load notification preferences
   useEffect(() => {
@@ -215,8 +217,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={styles.screen}
       contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
       testID="settings-screen">
       {/* Your Habits */}
       <Text style={styles.sectionTitle}>Your Habits</Text>
@@ -321,7 +325,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         )}
 
         <View style={styles.connectBlock}>
-          <Text style={styles.connectLabel}>Sync Secret</Text>
+          <View style={styles.connectLabelRow}>
+            <Text style={styles.connectLabel}>Sync Secret</Text>
+            <TouchableOpacity
+              onPress={() => setShowSecret(s => !s)}
+              testID="toggle-secret-visibility">
+              <Text style={styles.connectToggle}>
+                {showSecret ? 'Hide' : 'Show'}
+              </Text>
+            </TouchableOpacity>
+          </View>
           <TextInput
             testID="sync-secret-input"
             style={styles.connectInput}
@@ -331,8 +344,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"
             autoCorrect={false}
-            secureTextEntry
+            secureTextEntry={!showSecret}
             editable={!connecting}
+            // Android's adjustResize shrinks the window but doesn't scroll the
+            // ScrollView. Without this, the focused input sits behind the
+            // keyboard on tall keyboards (e.g. Pixel 10a).
+            onFocus={() => {
+              // Delay one tick so layout settles after the keyboard appears.
+              setTimeout(() => scrollRef.current?.scrollToEnd({animated: true}), 50);
+            }}
           />
           <TouchableOpacity
             style={[
@@ -497,11 +517,23 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  connectLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
   connectLabel: {
     fontFamily: fontFamily.body,
     ...typeScale.body,
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
+  },
+  connectToggle: {
+    fontFamily: fontFamily.body,
+    ...typeScale.caption,
+    color: colors.clemsonOrange,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   connectInput: {
     fontFamily: fontFamily.body,
