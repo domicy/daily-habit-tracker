@@ -221,8 +221,8 @@ describe('DashboardScreen', () => {
       <DashboardScreen habitService={service} />,
     );
 
-    expect(getByText('Daily Habits')).toBeTruthy();
-    expect(getByText('Wednesday, March 5')).toBeTruthy();
+    expect(getByText('TODAY')).toBeTruthy();
+    expect(getByText('WEDNESDAY, MARCH 5')).toBeTruthy();
     expect(getByTestId('add-habit-button')).toBeTruthy();
   });
 

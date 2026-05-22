@@ -11,6 +11,7 @@ import {getTodayString} from '../utils/dateUtils';
 import {colors} from '../theme/colors';
 import {fontFamily, typeScale} from '../theme/typography';
 import {spacing} from '../theme/spacing';
+import {borders} from '../theme';
 
 interface MonthCalendarProps {
   year: number;
@@ -220,27 +221,30 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   navArrow: {
-    color: colors.clemsonOrange,
+    color: colors.tiger,
     fontSize: 28,
     fontWeight: '700',
   },
   navArrowDisabled: {
-    color: colors.textSecondary,
+    color: colors.textSoft,
   },
   monthLabel: {
-    fontFamily: fontFamily.heading,
+    fontFamily: fontFamily.display,
     ...typeScale.h2,
-    color: colors.textPrimary,
+    color: colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: -0.4,
   },
   weekRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
   dayLabel: {
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.mono,
     ...typeScale.caption,
-    color: colors.textSecondary,
+    color: colors.textSoft,
     textAlign: 'center',
+    textTransform: 'uppercase',
   },
   dayCell: {
     flex: 1,
@@ -255,24 +259,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   completedCell: {
-    backgroundColor: colors.clemsonOrange,
+    backgroundColor: colors.tiger,
+    borderWidth: borders.base,
+    borderColor: colors.tigerDeep,
   },
   todayCell: {
-    borderWidth: 2,
-    borderColor: colors.clemsonOrange,
+    borderWidth: borders.base,
+    borderColor: colors.regalia,
   },
   dayText: {
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.mono,
     ...typeScale.caption,
-    color: colors.textPrimary,
+    color: colors.text,
     textAlign: 'center',
   },
   completedText: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontWeight: '700',
   },
   outsideText: {
-    color: colors.textSecondary,
+    color: colors.textSoft,
     opacity: 0.4,
   },
 });

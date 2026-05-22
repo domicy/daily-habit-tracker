@@ -2,20 +2,20 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   View,
   Text,
-  Switch,
   FlatList,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {format} from 'date-fns';
 import {colors} from '../theme/colors';
-import {fontFamily, typeScale} from '../theme/typography';
+import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
+import {radii, borders, shadowOffsets} from '../theme';
 import HabitService from '../services/HabitService';
 import SyncService, {AuthenticationError} from '../services/SyncService';
 import NotificationService from '../services/NotificationService';
@@ -23,6 +23,13 @@ import {API_BASE_URL} from '../services/api';
 import {useServices} from '../services/ServicesContext';
 import type Habit from '../models/Habit';
 import {useHabitObservable} from '../hooks/useHabitObservable';
+import NBSurface from '../components/atoms/NBSurface';
+import NBCard from '../components/atoms/NBCard';
+import NBChip from '../components/atoms/NBChip';
+import NBToggle from '../components/atoms/NBToggle';
+import NBButton from '../components/atoms/NBButton';
+import NBShadow from '../components/atoms/NBShadow';
+import NBSettingsRow from '../components/atoms/NBSettingsRow';
 
 const APP_VERSION = '0.0.1';
 const REMINDER_ENABLED_KEY = 'reminder_enabled';
@@ -34,6 +41,18 @@ interface SettingsScreenProps {
   syncService?: SyncService;
   notificationService?: NotificationService;
 }
+
+const SectionHeader: React.FC<{label: string; count?: string | number}> = ({
+  label,
+  count,
+}) => (
+  <View style={styles.sectionHeader}>
+    <Text style={styles.sectionHeaderText}>{`// ${label}`}</Text>
+    {count !== undefined && (
+      <Text style={styles.sectionHeaderText}>{count}</Text>
+    )}
+  </View>
+);
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({
   habitService,
@@ -52,11 +71,20 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const allHabits$ = useMemo(() => hService.getAllHabits(), [hService]);
   const habits = useHabitObservable<Habit[]>(allHabits$, [], 'SettingsScreen');
-  const unsyncedCount$ = useMemo(() => hService.observeUnsyncedCount(), [hService]);
-  const unsyncedCount = useHabitObservable<number>(unsyncedCount$, 0, 'SettingsScreen');
+  const unsyncedCount$ = useMemo(
+    () => hService.observeUnsyncedCount(),
+    [hService],
+  );
+  const unsyncedCount = useHabitObservable<number>(
+    unsyncedCount$,
+    0,
+    'SettingsScreen',
+  );
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('08:00');
-  const [syncStatus, setSyncStatus] = useState<'online' | 'offline' | 'auth_failed'>('online');
+  const [syncStatus, setSyncStatus] = useState<
+    'online' | 'offline' | 'auth_failed'
+  >('online');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [secretInput, setSecretInput] = useState('');
@@ -64,7 +92,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [showSecret, setShowSecret] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  // Load notification preferences
   useEffect(() => {
     (async () => {
       const enabled = await AsyncStorage.getItem(REMINDER_ENABLED_KEY);
@@ -78,9 +105,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     })();
   }, []);
 
-  // Load sync info (status + last-sync timestamp). The pending count is
-  // sourced from observeUnsyncedCount above so it updates live as the user
-  // edits habits on other tabs without remounting this screen.
   useEffect(() => {
     (async () => {
       const status = await sService.getSyncStatus();
@@ -123,7 +147,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       const minute = parseInt(reminderTime.split(':')[1], 10);
       const granted = await nService.onNotificationToggle(value, hour, minute);
 
-      // If user tried to enable but permission was denied, keep toggle off
       const finalValue = value ? granted : false;
       setReminderEnabled(finalValue);
       await AsyncStorage.setItem(REMINDER_ENABLED_KEY, String(finalValue));
@@ -137,7 +160,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setReminderTime(timeStr);
       await AsyncStorage.setItem(REMINDER_TIME_KEY, timeStr);
 
-      // If reminders are enabled, reschedule with the new time
       if (reminderEnabled) {
         await nService.scheduleDailyReminder(hour, 0);
       }
@@ -173,7 +195,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     try {
       await sService.authenticate(secret);
       setSecretInput('');
-      // pendingCount is sourced from the observable; only refresh status here.
       const status = await sService.getSyncStatus();
       setSyncStatus(status.status);
       Alert.alert('Connected', 'Sync is now enabled on this device.');
@@ -189,275 +210,291 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   }, [sService, secretInput]);
 
   const renderHabitRow = useCallback(
-    ({item}: {item: Habit}) => (
-      <TouchableOpacity
-        style={styles.habitRow}
+    ({item, index}: {item: Habit; index: number}) => (
+      <Pressable
         testID={`habit-row-${item.id}`}
         onLongPress={() => handleLongPressDeactivate(item.id, item.name)}
         accessibilityLabel={`${item.name} habit`}>
-        <View style={styles.habitInfo}>
-          <Text style={styles.habitName}>{item.name}</Text>
-          <Text style={styles.habitDate}>
-            Created {format(new Date(item.createdAt), 'MMM d, yyyy')}
-          </Text>
-        </View>
-        <Switch
-          testID={`toggle-active-${item.id}`}
-          value={item.isActive}
-          onValueChange={() => handleToggleActive(item.id)}
-          trackColor={{false: colors.border, true: colors.clemsonOrange}}
-          thumbColor={colors.textPrimary}
+        <NBSettingsRow
+          label={item.name}
+          hint={`CREATED ${format(new Date(item.createdAt), 'MMM d, yyyy').toUpperCase()}`}
+          right={
+            <NBToggle
+              testID={`toggle-active-${item.id}`}
+              value={item.isActive}
+              onValueChange={() => handleToggleActive(item.id)}
+              color={colors.tiger}
+            />
+          }
+          isLast={index === habits.length - 1}
         />
-      </TouchableOpacity>
+      </Pressable>
     ),
-    [handleToggleActive, handleLongPressDeactivate],
+    [habits.length, handleToggleActive, handleLongPressDeactivate],
   );
 
   const hours = Array.from({length: 24}, (_, i) => i);
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-      testID="settings-screen">
-      {/* Your Habits */}
-      <Text style={styles.sectionTitle}>Your Habits</Text>
-      <View style={styles.section}>
-        {habits.length === 0 ? (
-          <Text style={styles.emptyText}>No habits yet.</Text>
-        ) : (
-          <FlatList
-            data={habits}
-            renderItem={renderHabitRow}
-            keyExtractor={item => item.id}
-            scrollEnabled={false}
-            testID="habits-list"
-          />
-        )}
-      </View>
-
-      {/* Notifications */}
-      <Text style={styles.sectionTitle}>Notifications</Text>
-      <View style={styles.section}>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Daily Reminder</Text>
-          <Switch
-            testID="reminder-toggle"
-            value={reminderEnabled}
-            onValueChange={handleReminderToggle}
-            trackColor={{false: colors.border, true: colors.clemsonOrange}}
-            thumbColor={colors.textPrimary}
-          />
+    <NBSurface testID="settings-screen">
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled">
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <NBChip>v{APP_VERSION}</NBChip>
         </View>
-        {reminderEnabled && (
-          <View style={styles.timePickerContainer}>
-            <Text style={styles.rowLabel}>Reminder Time</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.timePicker}
-              testID="time-picker">
-              {hours.map(hour => (
+        <Text style={styles.title}>SETTINGS</Text>
+
+        {/* Habits */}
+        <SectionHeader label="HABITS" count={habits.length} />
+        <NBCard>
+          {habits.length === 0 ? (
+            <Text style={styles.emptyText}>No habits yet.</Text>
+          ) : (
+            <FlatList
+              data={habits}
+              renderItem={renderHabitRow}
+              keyExtractor={item => item.id}
+              scrollEnabled={false}
+              testID="habits-list"
+            />
+          )}
+        </NBCard>
+
+        {/* Notifications */}
+        <SectionHeader label="NOTIFICATIONS" count={reminderEnabled ? 1 : 0} />
+        <NBCard>
+          <NBSettingsRow
+            label="DAILY REMINDER"
+            hint={`${reminderTime} LOCAL`}
+            isLast={!reminderEnabled}
+            right={
+              <NBToggle
+                testID="reminder-toggle"
+                value={reminderEnabled}
+                onValueChange={handleReminderToggle}
+                color={colors.tiger}
+              />
+            }
+          />
+          {reminderEnabled && (
+            <View style={styles.timePickerContainer}>
+              <Text style={styles.rowLabel}>REMINDER TIME</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.timePicker}
+                testID="time-picker">
+                {hours.map(hour => {
+                  const selected =
+                    reminderTime === `${String(hour).padStart(2, '0')}:00`;
+                  return (
+                    <Pressable
+                      key={hour}
+                      testID={`time-option-${hour}`}
+                      style={[
+                        styles.timeOption,
+                        {
+                          backgroundColor: selected
+                            ? colors.tiger
+                            : colors.card,
+                          borderColor: selected ? colors.tigerDeep : colors.line,
+                        },
+                      ]}
+                      onPress={() => handleTimeChange(hour)}>
+                      <Text style={styles.timeOptionText}>
+                        {formatHour(hour)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </NBCard>
+
+        {/* Sync */}
+        <SectionHeader label="SYNC" count={unsyncedCount} />
+        <NBCard>
+          <View style={styles.syncBlock}>
+            {syncStatus === 'offline' ? (
+              <Text style={styles.syncStatus} testID="sync-status">
+                Offline — <Text testID="pending-sync-count">{unsyncedCount}</Text>{' '}
+                {unsyncedCount === 1 ? 'log' : 'logs'} pending
+              </Text>
+            ) : syncStatus === 'auth_failed' ? (
+              <Text style={styles.syncStatus} testID="sync-status">
+                Authentication required —{' '}
+                <Text testID="pending-sync-count">{unsyncedCount}</Text>{' '}
+                {unsyncedCount === 1 ? 'log' : 'logs'} pending
+              </Text>
+            ) : (
+              <Text style={styles.syncStatus} testID="sync-status">
+                <Text testID="pending-sync-count">{unsyncedCount}</Text>{' '}
+                {unsyncedCount === 1 ? 'log' : 'logs'} pending sync
+              </Text>
+            )}
+            <NBButton
+              variant="primary"
+              testID="sync-now-button"
+              onPress={handleSyncNow}
+              disabled={syncing}
+              loading={syncing}
+              style={styles.syncButton}>
+              SYNC NOW
+            </NBButton>
+            {lastSyncTime && (
+              <Text style={styles.lastSync} testID="last-sync-time">
+                Last sync:{' '}
+                {format(new Date(lastSyncTime), 'MMM d, yyyy h:mm a')}
+              </Text>
+            )}
+
+            <View style={styles.connectBlock}>
+              <View style={styles.connectLabelRow}>
+                <Text style={styles.connectLabel}>SYNC SECRET</Text>
                 <TouchableOpacity
-                  key={hour}
-                  testID={`time-option-${hour}`}
-                  style={[
-                    styles.timeOption,
-                    reminderTime === `${String(hour).padStart(2, '0')}:00` &&
-                      styles.timeOptionSelected,
-                  ]}
-                  onPress={() => handleTimeChange(hour)}>
-                  <Text
-                    style={[
-                      styles.timeOptionText,
-                      reminderTime === `${String(hour).padStart(2, '0')}:00` &&
-                        styles.timeOptionTextSelected,
-                    ]}>
-                    {hour === 0
-                      ? '12 AM'
-                      : hour < 12
-                        ? `${hour} AM`
-                        : hour === 12
-                          ? '12 PM'
-                          : `${hour - 12} PM`}
+                  onPress={() => setShowSecret(s => !s)}
+                  testID="toggle-secret-visibility">
+                  <Text style={styles.connectToggle}>
+                    {showSecret ? 'HIDE' : 'SHOW'}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              </View>
+              <NBShadow
+                offsetX={shadowOffsets.xs}
+                offsetY={shadowOffsets.xs}
+                color={colors.shadow}
+                borderRadius={radii.pill}>
+                <TextInput
+                  testID="sync-secret-input"
+                  style={styles.connectInput}
+                  value={secretInput}
+                  onChangeText={setSecretInput}
+                  placeholder="Paste your server secret"
+                  placeholderTextColor={colors.textSoft}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  secureTextEntry={!showSecret}
+                  editable={!connecting}
+                  // Android's adjustResize shrinks the window but doesn't
+                  // scroll the ScrollView. Without this, the focused input
+                  // sits behind the keyboard on tall keyboards (e.g.
+                  // Pixel 10a).
+                  onFocus={() => {
+                    // Delay one tick so layout settles after the keyboard appears.
+                    setTimeout(
+                      () => scrollRef.current?.scrollToEnd({animated: true}),
+                      50,
+                    );
+                  }}
+                />
+              </NBShadow>
+              <NBButton
+                variant="secondary"
+                testID="connect-button"
+                onPress={handleConnect}
+                disabled={connecting || secretInput.trim().length === 0}
+                loading={connecting}
+                style={styles.connectButton}>
+                CONNECT
+              </NBButton>
+            </View>
           </View>
-        )}
-      </View>
+        </NBCard>
 
-      {/* Sync */}
-      <Text style={styles.sectionTitle}>Sync</Text>
-      <View style={styles.section}>
-        {syncStatus === 'offline' ? (
-          <Text style={styles.syncStatus} testID="sync-status">
-            Offline — <Text testID="pending-sync-count">{unsyncedCount}</Text> {unsyncedCount === 1 ? 'log' : 'logs'} pending
-          </Text>
-        ) : syncStatus === 'auth_failed' ? (
-          <Text style={styles.syncStatus} testID="sync-status">
-            Authentication required — <Text testID="pending-sync-count">{unsyncedCount}</Text>{' '}
-            {unsyncedCount === 1 ? 'log' : 'logs'} pending
-          </Text>
-        ) : (
-          <Text style={styles.syncStatus} testID="sync-status">
-            <Text testID="pending-sync-count">{unsyncedCount}</Text> {unsyncedCount === 1 ? 'log' : 'logs'} pending sync
-          </Text>
-        )}
-        <TouchableOpacity
-          style={styles.syncButton}
-          onPress={handleSyncNow}
-          disabled={syncing}
-          testID="sync-now-button">
-          {syncing ? (
-            <ActivityIndicator color={colors.textPrimary} testID="sync-spinner" />
-          ) : (
-            <Text style={styles.syncButtonText}>Sync Now</Text>
-          )}
-        </TouchableOpacity>
-        {lastSyncTime && (
-          <Text style={styles.lastSync} testID="last-sync-time">
-            Last sync: {format(new Date(lastSyncTime), 'MMM d, yyyy h:mm a')}
-          </Text>
-        )}
-
-        <View style={styles.connectBlock}>
-          <View style={styles.connectLabelRow}>
-            <Text style={styles.connectLabel}>Sync Secret</Text>
-            <TouchableOpacity
-              onPress={() => setShowSecret(s => !s)}
-              testID="toggle-secret-visibility">
-              <Text style={styles.connectToggle}>
-                {showSecret ? 'Hide' : 'Show'}
+        {/* About */}
+        <SectionHeader label="ABOUT" />
+        <NBCard>
+          <NBSettingsRow
+            label="VERSION"
+            right={
+              <Text style={styles.rowValue} testID="app-version">
+                {APP_VERSION}
               </Text>
-            </TouchableOpacity>
-          </View>
-          <TextInput
-            testID="sync-secret-input"
-            style={styles.connectInput}
-            value={secretInput}
-            onChangeText={setSecretInput}
-            placeholder="Paste your server secret"
-            placeholderTextColor={colors.textSecondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry={!showSecret}
-            editable={!connecting}
-            // Android's adjustResize shrinks the window but doesn't scroll the
-            // ScrollView. Without this, the focused input sits behind the
-            // keyboard on tall keyboards (e.g. Pixel 10a).
-            onFocus={() => {
-              // Delay one tick so layout settles after the keyboard appears.
-              setTimeout(() => scrollRef.current?.scrollToEnd({animated: true}), 50);
-            }}
+            }
           />
-          <TouchableOpacity
-            style={[
-              styles.connectButton,
-              (connecting || secretInput.trim().length === 0) && styles.connectButtonDisabled,
-            ]}
-            onPress={handleConnect}
-            disabled={connecting || secretInput.trim().length === 0}
-            testID="connect-button">
-            {connecting ? (
-              <ActivityIndicator color={colors.textPrimary} testID="connect-spinner" />
-            ) : (
-              <Text style={styles.connectButtonText}>Connect</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+          <NBSettingsRow
+            label="SERVER URL"
+            isLast
+            right={
+              <Text
+                style={[styles.rowValue, styles.serverUrl]}
+                testID="server-url"
+                numberOfLines={1}>
+                {API_BASE_URL}
+              </Text>
+            }
+          />
+        </NBCard>
 
-      {/* About */}
-      <Text style={styles.sectionTitle}>About</Text>
-      <View style={styles.section}>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Version</Text>
-          <Text style={styles.rowValue} testID="app-version">
-            {APP_VERSION}
-          </Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Server URL</Text>
-          <Text
-            style={[styles.rowValue, styles.serverUrl]}
-            testID="server-url"
-            numberOfLines={1}>
-            {API_BASE_URL}
-          </Text>
-        </View>
-      </View>
-    </ScrollView>
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
+    </NBSurface>
   );
 };
 
+function formatHour(hour: number): string {
+  if (hour === 0) return '12 AM';
+  if (hour < 12) return `${hour} AM`;
+  if (hour === 12) return '12 PM';
+  return `${hour - 12} PM`;
+}
+
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   content: {
     padding: spacing.md,
     paddingBottom: spacing.xxl,
   },
-  sectionTitle: {
-    fontFamily: fontFamily.heading,
-    ...typeScale.h2,
-    color: colors.clemsonOrange,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  section: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.md,
-  },
-  habitRow: {
+  headerRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
-  habitInfo: {
-    flex: 1,
+  title: {
+    fontFamily: fontFamily.display,
+    fontSize: 54,
+    lineHeight: 46,
+    letterSpacing: -2.5,
+    color: colors.text,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
-  habitName: {
-    fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textPrimary,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingBottom: 6,
+    marginTop: spacing.md,
   },
-  habitDate: {
-    fontFamily: fontFamily.body,
-    ...typeScale.caption,
-    color: colors.textSecondary,
-    marginTop: 2,
+  sectionHeaderText: {
+    fontFamily: fontFamily.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSoft,
+    letterSpacing: 0.5,
   },
   emptyText: {
-    fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textSecondary,
+    fontFamily: fontFamily.mono,
+    fontSize: 12,
+    color: colors.textSoft,
     textAlign: 'center',
     paddingVertical: spacing.md,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
+    backgroundColor: colors.card,
   },
   rowLabel: {
-    fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textPrimary,
+    fontFamily: fontFamily.display,
+    fontSize: 14,
+    color: colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: -0.1,
   },
   rowValue: {
-    fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textSecondary,
+    fontFamily: fontFamily.mono,
+    fontSize: 12,
+    color: colors.textSoft,
   },
   serverUrl: {
     flex: 1,
@@ -465,57 +502,50 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   timePickerContainer: {
-    paddingVertical: spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.card,
   },
   timePicker: {
     marginTop: spacing.sm,
   },
   timeOption: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 20,
-    backgroundColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    borderWidth: borders.base,
     marginRight: spacing.sm,
   },
-  timeOptionSelected: {
-    backgroundColor: colors.clemsonOrange,
-  },
   timeOptionText: {
-    fontFamily: fontFamily.body,
-    ...typeScale.caption,
-    color: colors.textSecondary,
+    fontFamily: fontFamily.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.text,
   },
-  timeOptionTextSelected: {
-    color: colors.textPrimary,
+  syncBlock: {
+    padding: 16,
+    backgroundColor: colors.card,
   },
   syncStatus: {
-    fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textPrimary,
+    fontFamily: fontFamily.mono,
+    fontSize: 12,
+    color: colors.text,
     marginBottom: spacing.sm,
   },
   syncButton: {
-    backgroundColor: colors.clemsonOrange,
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
     marginBottom: spacing.sm,
-  },
-  syncButtonText: {
-    fontFamily: fontFamily.heading,
-    ...typeScale.body,
-    color: colors.textPrimary,
+    alignSelf: 'stretch',
   },
   lastSync: {
-    fontFamily: fontFamily.body,
-    ...typeScale.caption,
-    color: colors.textSecondary,
+    fontFamily: fontFamily.mono,
+    fontSize: 10,
+    color: colors.textSoft,
   },
   connectBlock: {
     marginTop: spacing.md,
     paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopWidth: borders.thin,
+    borderTopColor: colors.regaliaSoft,
   },
   connectLabelRow: {
     flexDirection: 'row',
@@ -524,42 +554,38 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   connectLabel: {
-    fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textPrimary,
+    fontFamily: fontFamily.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: 0.5,
   },
   connectToggle: {
-    fontFamily: fontFamily.body,
-    ...typeScale.caption,
-    color: colors.clemsonOrange,
+    fontFamily: fontFamily.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.tiger,
+    letterSpacing: 0.5,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   connectInput: {
-    fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textPrimary,
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
+    fontFamily: fontFamily.mono,
+    fontSize: 13,
+    color: colors.text,
+    backgroundColor: colors.card,
+    borderRadius: radii.pill,
+    borderWidth: borders.thick,
+    borderColor: colors.line,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     marginBottom: spacing.sm,
   },
   connectButton: {
-    backgroundColor: colors.clemsonOrange,
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
+    alignSelf: 'stretch',
   },
-  connectButtonDisabled: {
-    opacity: 0.5,
-  },
-  connectButtonText: {
-    fontFamily: fontFamily.heading,
-    ...typeScale.body,
-    color: colors.textPrimary,
+  bottomSpacer: {
+    height: 100,
   },
 });
 

@@ -1,10 +1,10 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`DashboardScreen matches snapshot 1`] = `
-<View
+<RCTSafeAreaView
   style={
     {
-      "backgroundColor": "#1A1A2E",
+      "backgroundColor": "#F2EBDC",
       "flex": 1,
     }
   }
@@ -12,152 +12,80 @@ exports[`DashboardScreen matches snapshot 1`] = `
 >
   <View
     style={
-      {
-        "alignItems": "flex-start",
-        "flexDirection": "row",
-        "justifyContent": "space-between",
-        "paddingBottom": 16,
-        "paddingHorizontal": 16,
-        "paddingTop": 32,
-      }
-    }
-  >
-    <View
-      style={
-        {
-          "flex": 1,
-        }
-      }
-    >
-      <Text
-        style={
-          {
-            "color": "#F56600",
-            "fontFamily": "TradeGothicNextLT-Bold",
-            "fontSize": 32,
-            "lineHeight": 40,
-          }
-        }
-      >
-        Daily Habits
-      </Text>
-      <Text
-        style={
-          {
-            "color": "#A0A0B0",
-            "fontFamily": "Biotif-Regular",
-            "fontSize": 16,
-            "lineHeight": 24,
-            "marginTop": 4,
-          }
-        }
-      >
-        Wednesday, March 5
-      </Text>
-    </View>
-    <View
-      accessibilityLabel="Create new habit"
-      accessibilityRole="button"
-      accessibilityState={
-        {
-          "busy": undefined,
-          "checked": undefined,
-          "disabled": undefined,
-          "expanded": undefined,
-          "selected": undefined,
-        }
-      }
-      accessibilityValue={
-        {
-          "max": undefined,
-          "min": undefined,
-          "now": undefined,
-          "text": undefined,
-        }
-      }
-      accessible={true}
-      collapsable={false}
-      focusable={true}
-      onClick={[Function]}
-      onResponderGrant={[Function]}
-      onResponderMove={[Function]}
-      onResponderRelease={[Function]}
-      onResponderTerminate={[Function]}
-      onResponderTerminationRequest={[Function]}
-      onStartShouldSetResponder={[Function]}
-      style={
-        {
-          "alignItems": "center",
-          "backgroundColor": "#F56600",
-          "borderRadius": 22,
-          "height": 44,
-          "justifyContent": "center",
-          "marginTop": 4,
-          "opacity": 1,
-          "width": 44,
-        }
-      }
-      testID="add-habit-button"
-    >
-      <Text
-        style={
-          {
-            "color": "#FFFFFF",
-            "fontSize": 28,
-            "fontWeight": "700",
-            "lineHeight": 30,
-          }
-        }
-      >
-        +
-      </Text>
-    </View>
-  </View>
-  <RCTScrollView
-    ListEmptyComponent={[Function]}
-    data={
       [
         {
-          "completedToday": true,
-          "id": "1",
-          "name": "Exercise",
-          "streak": 7,
+          "backgroundColor": "#F2EBDC",
+          "flex": 1,
         },
-        {
-          "completedToday": false,
-          "id": "2",
-          "name": "Read",
-          "streak": 0,
-        },
+        undefined,
       ]
     }
-    getItem={[Function]}
-    getItemCount={[Function]}
-    getItemLayout={[Function]}
-    initialNumToRender={10}
-    keyExtractor={[Function]}
-    maxToRenderPerBatch={5}
-    onContentSizeChange={[Function]}
-    onLayout={[Function]}
-    onMomentumScrollBegin={[Function]}
-    onMomentumScrollEnd={[Function]}
-    onScroll={[Function]}
-    onScrollBeginDrag={[Function]}
-    onScrollEndDrag={[Function]}
-    removeClippedSubviews={true}
-    renderItem={[Function]}
-    scrollEventThrottle={0.0001}
-    stickyHeaderIndices={[]}
-    testID="habit-list"
-    viewabilityConfigCallbackPairs={[]}
-    windowSize={5}
   >
-    <View>
+    <View
+      style={
+        {
+          "paddingBottom": 16,
+          "paddingHorizontal": 24,
+          "paddingTop": 16,
+        }
+      }
+    >
       <View
-        onFocusCapture={[Function]}
-        style={null}
+        style={
+          {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "justifyContent": "space-between",
+          }
+        }
       >
         <View
+          style={
+            [
+              {
+                "alignSelf": "flex-start",
+                "borderRadius": 999,
+                "borderWidth": 2,
+                "paddingHorizontal": 10,
+                "paddingVertical": 4,
+              },
+              {
+                "backgroundColor": "#FAF5EA",
+                "borderColor": "#6A5A86",
+              },
+              {
+                "backgroundColor": "#FAF5EA",
+                "borderColor": "#6A5A86",
+              },
+              undefined,
+            ]
+          }
+        >
+          <Text
+            style={
+              [
+                {
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700",
+                  "letterSpacing": 0.5,
+                  "lineHeight": 14,
+                  "textTransform": "uppercase",
+                },
+                {
+                  "color": "#2E2A26",
+                },
+                null,
+                undefined,
+              ]
+            }
+          >
+            WEDNESDAY, MARCH 5
+          </Text>
+        </View>
+        <View
+          accessibilityLabel="Create new habit"
+          accessibilityRole="button"
           accessibilityState={
             {
               "busy": undefined,
@@ -178,293 +106,213 @@ exports[`DashboardScreen matches snapshot 1`] = `
           accessible={true}
           collapsable={false}
           focusable={true}
+          onBlur={[Function]}
           onClick={[Function]}
+          onFocus={[Function]}
           onResponderGrant={[Function]}
           onResponderMove={[Function]}
           onResponderRelease={[Function]}
           onResponderTerminate={[Function]}
           onResponderTerminationRequest={[Function]}
           onStartShouldSetResponder={[Function]}
-          style={
-            {
-              "alignItems": "center",
-              "backgroundColor": "#16213E",
-              "borderBottomColor": "#2A2A4A",
-              "borderBottomWidth": 1,
-              "flexDirection": "row",
-              "height": 72,
-              "justifyContent": "space-between",
-              "opacity": 1,
-              "paddingHorizontal": 16,
-            }
-          }
-          testID="habit-card-1"
+          testID="add-habit-button"
         >
           <View
             style={
-              {
-                "flex": 1,
-                "marginRight": 16,
-              }
+              [
+                {
+                  "alignSelf": "flex-start",
+                  "borderRadius": 999,
+                  "borderWidth": 2,
+                  "paddingHorizontal": 10,
+                  "paddingVertical": 4,
+                },
+                {
+                  "backgroundColor": "#FAF5EA",
+                  "borderColor": "#6A5A86",
+                },
+                {
+                  "backgroundColor": "#C7754A",
+                  "borderColor": "#8E4F2E",
+                },
+                undefined,
+              ]
             }
           >
             <Text
-              numberOfLines={1}
-              style={
-                {
-                  "color": "#FFFFFF",
-                  "fontFamily": "Biotif-Regular",
-                  "fontSize": 16,
-                  "lineHeight": 24,
-                }
-              }
-              testID="habit-name-1"
-            >
-              Exercise
-            </Text>
-            <Text
-              style={
-                {
-                  "color": "#FFD700",
-                  "fontFamily": "Biotif-Regular",
-                  "fontSize": 12,
-                  "lineHeight": 16,
-                  "marginTop": 4,
-                }
-              }
-              testID="streak-1"
-            >
-              🔥 
-              7 days
-            </Text>
-          </View>
-          <View
-            accessibilityLabel="Mark Exercise as incomplete. Current streak: 7 days."
-            accessibilityRole="button"
-            accessibilityState={
-              {
-                "busy": undefined,
-                "checked": undefined,
-                "disabled": undefined,
-                "expanded": undefined,
-                "selected": undefined,
-              }
-            }
-            accessibilityValue={
-              {
-                "max": undefined,
-                "min": undefined,
-                "now": undefined,
-                "text": undefined,
-              }
-            }
-            accessible={true}
-            collapsable={false}
-            focusable={true}
-            hitSlop={
-              {
-                "bottom": 8,
-                "left": 8,
-                "right": 8,
-                "top": 8,
-              }
-            }
-            onClick={[Function]}
-            onResponderGrant={[Function]}
-            onResponderMove={[Function]}
-            onResponderRelease={[Function]}
-            onResponderTerminate={[Function]}
-            onResponderTerminationRequest={[Function]}
-            onStartShouldSetResponder={[Function]}
-            style={
-              {
-                "opacity": 1,
-              }
-            }
-            testID="toggle-1"
-          >
-            <View
               style={
                 [
                   {
-                    "alignItems": "center",
-                    "borderRadius": 28,
-                    "height": 56,
-                    "justifyContent": "center",
-                    "width": 56,
+                    "fontFamily": "Space Mono",
+                    "fontSize": 11,
+                    "fontWeight": "700",
+                    "letterSpacing": 0.5,
+                    "lineHeight": 14,
+                    "textTransform": "uppercase",
                   },
                   {
-                    "backgroundColor": "#4CAF50",
+                    "color": "#2E2A26",
                   },
+                  null,
+                  undefined,
                 ]
               }
             >
-              <Text
-                collapsable={false}
-                style={
-                  {
-                    "color": "#FFFFFF",
-                    "fontSize": 24,
-                    "fontWeight": "700",
-                    "transform": [
-                      {
-                        "scale": 0.5,
-                      },
-                    ],
-                  }
-                }
-                testID="checkmark-1"
-              >
-                ✓
-              </Text>
-            </View>
+              + NEW HABIT
+            </Text>
           </View>
         </View>
       </View>
+      <Text
+        style={
+          {
+            "color": "#2E2A26",
+            "fontFamily": "Archivo Black",
+            "fontSize": 72,
+            "letterSpacing": -3.5,
+            "lineHeight": 60,
+            "marginTop": 8,
+          }
+        }
+      >
+        TODAY
+      </Text>
       <View
-        onFocusCapture={[Function]}
-        style={null}
+        style={
+          [
+            {
+              "position": "relative",
+            },
+            undefined,
+          ]
+        }
       >
         <View
-          accessibilityState={
-            {
-              "busy": undefined,
-              "checked": undefined,
-              "disabled": undefined,
-              "expanded": undefined,
-              "selected": undefined,
-            }
-          }
-          accessibilityValue={
-            {
-              "max": undefined,
-              "min": undefined,
-              "now": undefined,
-              "text": undefined,
-            }
-          }
-          accessible={true}
-          collapsable={false}
-          focusable={true}
-          onClick={[Function]}
-          onResponderGrant={[Function]}
-          onResponderMove={[Function]}
-          onResponderRelease={[Function]}
-          onResponderTerminate={[Function]}
-          onResponderTerminationRequest={[Function]}
-          onStartShouldSetResponder={[Function]}
+          pointerEvents="none"
           style={
-            {
-              "alignItems": "center",
-              "backgroundColor": "#16213E",
-              "borderBottomColor": "#2A2A4A",
-              "borderBottomWidth": 1,
-              "flexDirection": "row",
-              "height": 72,
-              "justifyContent": "space-between",
-              "opacity": 1,
-              "paddingHorizontal": 16,
-            }
+            [
+              {
+                "bottom": 0,
+                "left": 0,
+                "position": "absolute",
+                "right": 0,
+                "top": 0,
+              },
+              {
+                "backgroundColor": "#3D2F52",
+                "borderRadius": 22,
+                "transform": [
+                  {
+                    "translateX": 5,
+                  },
+                  {
+                    "translateY": 5,
+                  },
+                ],
+              },
+            ]
           }
-          testID="habit-card-2"
+        />
+        <View
+          style={
+            [
+              {
+                "overflow": "hidden",
+              },
+              {
+                "backgroundColor": "#FAF5EA",
+                "borderColor": "#6A5A86",
+                "borderRadius": 22,
+                "borderWidth": 2.5,
+              },
+              null,
+              {
+                "marginTop": 16,
+              },
+            ]
+          }
         >
           <View
             style={
               {
-                "flex": 1,
-                "marginRight": 16,
+                "backgroundColor": "#3D2F52",
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "paddingHorizontal": 14,
+                "paddingVertical": 8,
               }
             }
           >
             <Text
-              numberOfLines={1}
               style={
                 {
-                  "color": "#FFFFFF",
-                  "fontFamily": "Biotif-Regular",
-                  "fontSize": 16,
-                  "lineHeight": 24,
+                  "color": "#FAF5EA",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700",
+                  "letterSpacing": 0.7,
                 }
               }
-              testID="habit-name-2"
             >
-              Read
+              PROGRESS
             </Text>
             <Text
               style={
                 {
-                  "color": "#FFD700",
-                  "fontFamily": "Biotif-Regular",
-                  "fontSize": 12,
-                  "lineHeight": 16,
-                  "marginTop": 4,
+                  "color": "#FAF5EA",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700",
+                  "letterSpacing": 0.7,
                 }
               }
-              testID="streak-2"
             >
-              🔥 
-              0 days
+              1
+              /
+              2
+               DONE
             </Text>
           </View>
           <View
-            accessibilityLabel="Mark Read as complete. Current streak: 0 days."
-            accessibilityRole="button"
-            accessibilityState={
-              {
-                "busy": undefined,
-                "checked": undefined,
-                "disabled": undefined,
-                "expanded": undefined,
-                "selected": undefined,
-              }
-            }
-            accessibilityValue={
-              {
-                "max": undefined,
-                "min": undefined,
-                "now": undefined,
-                "text": undefined,
-              }
-            }
-            accessible={true}
-            collapsable={false}
-            focusable={true}
-            hitSlop={
-              {
-                "bottom": 8,
-                "left": 8,
-                "right": 8,
-                "top": 8,
-              }
-            }
-            onClick={[Function]}
-            onResponderGrant={[Function]}
-            onResponderMove={[Function]}
-            onResponderRelease={[Function]}
-            onResponderTerminate={[Function]}
-            onResponderTerminationRequest={[Function]}
-            onStartShouldSetResponder={[Function]}
             style={
               {
-                "opacity": 1,
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 8,
+                "paddingHorizontal": 16,
+                "paddingVertical": 14,
               }
             }
-            testID="toggle-2"
           >
             <View
               style={
                 [
                   {
-                    "alignItems": "center",
-                    "borderRadius": 28,
-                    "height": 56,
-                    "justifyContent": "center",
-                    "width": 56,
+                    "borderRadius": 11,
+                    "borderWidth": 2.5,
+                    "height": 22,
+                    "width": 22,
                   },
                   {
-                    "backgroundColor": "transparent",
-                    "borderColor": "#F56600",
-                    "borderWidth": 3,
+                    "backgroundColor": "#C7754A",
+                    "borderColor": "#8E4F2E",
+                  },
+                ]
+              }
+            />
+            <View
+              style={
+                [
+                  {
+                    "borderRadius": 11,
+                    "borderWidth": 2.5,
+                    "height": 22,
+                    "width": 22,
+                  },
+                  {
+                    "backgroundColor": "#FAF5EA",
+                    "borderColor": "#B5AC9A",
                   },
                 ]
               }
@@ -473,6 +321,544 @@ exports[`DashboardScreen matches snapshot 1`] = `
         </View>
       </View>
     </View>
-  </RCTScrollView>
-</View>
+    <RCTScrollView
+      ListEmptyComponent={[Function]}
+      contentContainerStyle={
+        {
+          "paddingBottom": 120,
+        }
+      }
+      data={
+        [
+          {
+            "completedToday": true,
+            "id": "1",
+            "name": "Exercise",
+            "streak": 7,
+          },
+          {
+            "completedToday": false,
+            "id": "2",
+            "name": "Read",
+            "streak": 0,
+          },
+        ]
+      }
+      getItem={[Function]}
+      getItemCount={[Function]}
+      getItemLayout={[Function]}
+      initialNumToRender={10}
+      keyExtractor={[Function]}
+      maxToRenderPerBatch={5}
+      onContentSizeChange={[Function]}
+      onLayout={[Function]}
+      onMomentumScrollBegin={[Function]}
+      onMomentumScrollEnd={[Function]}
+      onScroll={[Function]}
+      onScrollBeginDrag={[Function]}
+      onScrollEndDrag={[Function]}
+      removeClippedSubviews={true}
+      renderItem={[Function]}
+      scrollEventThrottle={0.0001}
+      stickyHeaderIndices={[]}
+      testID="habit-list"
+      viewabilityConfigCallbackPairs={[]}
+      windowSize={5}
+    >
+      <View>
+        <View
+          onFocusCapture={[Function]}
+          style={null}
+        >
+          <View
+            accessibilityState={
+              {
+                "busy": undefined,
+                "checked": undefined,
+                "disabled": undefined,
+                "expanded": undefined,
+                "selected": undefined,
+              }
+            }
+            accessibilityValue={
+              {
+                "max": undefined,
+                "min": undefined,
+                "now": undefined,
+                "text": undefined,
+              }
+            }
+            accessible={true}
+            collapsable={false}
+            focusable={true}
+            onBlur={[Function]}
+            onClick={[Function]}
+            onFocus={[Function]}
+            onResponderGrant={[Function]}
+            onResponderMove={[Function]}
+            onResponderRelease={[Function]}
+            onResponderTerminate={[Function]}
+            onResponderTerminationRequest={[Function]}
+            onStartShouldSetResponder={[Function]}
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#F2EBDC",
+                  "borderBottomColor": "#C9BFD8",
+                  "borderBottomWidth": 1.5,
+                  "flexDirection": "row",
+                  "gap": 12,
+                  "height": 72,
+                  "paddingHorizontal": 16,
+                },
+                null,
+              ]
+            }
+            testID="habit-card-1"
+          >
+            <View
+              accessibilityLabel="Mark Exercise as incomplete. Current streak: 7 days."
+              accessibilityRole="button"
+              accessibilityState={
+                {
+                  "busy": undefined,
+                  "checked": undefined,
+                  "disabled": undefined,
+                  "expanded": undefined,
+                  "selected": undefined,
+                }
+              }
+              accessibilityValue={
+                {
+                  "max": undefined,
+                  "min": undefined,
+                  "now": undefined,
+                  "text": undefined,
+                }
+              }
+              accessible={true}
+              collapsable={false}
+              focusable={true}
+              hitSlop={
+                {
+                  "bottom": 8,
+                  "left": 8,
+                  "right": 8,
+                  "top": 8,
+                }
+              }
+              onClick={[Function]}
+              onResponderGrant={[Function]}
+              onResponderMove={[Function]}
+              onResponderRelease={[Function]}
+              onResponderTerminate={[Function]}
+              onResponderTerminationRequest={[Function]}
+              onStartShouldSetResponder={[Function]}
+              style={
+                {
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "opacity": 1,
+                }
+              }
+              testID="toggle-1"
+            >
+              <View
+                style={
+                  [
+                    {
+                      "position": "relative",
+                    },
+                    undefined,
+                  ]
+                }
+              >
+                <View
+                  pointerEvents="none"
+                  style={
+                    [
+                      {
+                        "bottom": 0,
+                        "left": 0,
+                        "position": "absolute",
+                        "right": 0,
+                        "top": 0,
+                      },
+                      {
+                        "backgroundColor": "#3D2F52",
+                        "borderRadius": 16,
+                        "opacity": 1,
+                        "transform": [
+                          {
+                            "translateX": 2,
+                          },
+                          {
+                            "translateY": 2,
+                          },
+                        ],
+                      },
+                    ]
+                  }
+                />
+                <View
+                  style={
+                    [
+                      {
+                        "alignItems": "center",
+                        "justifyContent": "center",
+                      },
+                      {
+                        "backgroundColor": "#C7754A",
+                        "borderColor": "#8E4F2E",
+                        "borderRadius": 16,
+                        "borderWidth": 2.5,
+                        "height": 32,
+                        "width": 32,
+                      },
+                    ]
+                  }
+                  testID="checkmark-1"
+                >
+                  <RNSVGSvgView
+                    align="xMidYMid"
+                    bbHeight={16}
+                    bbWidth={16}
+                    focusable={false}
+                    height={16}
+                    meetOrSlice={0}
+                    minX={0}
+                    minY={0}
+                    style={
+                      [
+                        {
+                          "backgroundColor": "transparent",
+                          "borderWidth": 0,
+                        },
+                        {
+                          "flex": 0,
+                          "height": 16,
+                          "width": 16,
+                        },
+                      ]
+                    }
+                    vbHeight={20}
+                    vbWidth={20}
+                    width={16}
+                  >
+                    <RNSVGGroup
+                      fill={
+                        {
+                          "payload": 4278190080,
+                          "type": 0,
+                        }
+                      }
+                    >
+                      <RNSVGPath
+                        d="M4 10 L8.5 14.5 L16 6"
+                        fill={null}
+                        propList={
+                          [
+                            "fill",
+                            "stroke",
+                            "strokeWidth",
+                            "strokeLinecap",
+                            "strokeLinejoin",
+                          ]
+                        }
+                        stroke={
+                          {
+                            "payload": 4281215526,
+                            "type": 0,
+                          }
+                        }
+                        strokeLinecap={1}
+                        strokeLinejoin={1}
+                        strokeWidth={3}
+                      />
+                    </RNSVGGroup>
+                  </RNSVGSvgView>
+                </View>
+              </View>
+            </View>
+            <View
+              style={
+                {
+                  "flex": 1,
+                }
+              }
+            >
+              <Text
+                numberOfLines={1}
+                style={
+                  [
+                    {
+                      "color": "#2E2A26",
+                      "fontFamily": "Archivo Black",
+                      "fontSize": 17,
+                      "letterSpacing": -0.2,
+                      "textTransform": "uppercase",
+                    },
+                    {
+                      "color": "#5B544B",
+                      "textDecorationLine": "line-through",
+                    },
+                  ]
+                }
+                testID="habit-name-1"
+              >
+                Exercise
+              </Text>
+            </View>
+            <View
+              style={
+                [
+                  {
+                    "borderRadius": 999,
+                    "borderWidth": 2,
+                    "paddingHorizontal": 10,
+                    "paddingVertical": 3,
+                  },
+                  {
+                    "backgroundColor": "#C7754A",
+                    "borderColor": "#8E4F2E",
+                  },
+                ]
+              }
+            >
+              <Text
+                style={
+                  {
+                    "color": "#2E2A26",
+                    "fontFamily": "Space Mono",
+                    "fontSize": 12,
+                    "fontWeight": "700",
+                  }
+                }
+                testID="streak-1"
+              >
+                🔥 
+                7 days
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View
+          onFocusCapture={[Function]}
+          style={null}
+        >
+          <View
+            accessibilityState={
+              {
+                "busy": undefined,
+                "checked": undefined,
+                "disabled": undefined,
+                "expanded": undefined,
+                "selected": undefined,
+              }
+            }
+            accessibilityValue={
+              {
+                "max": undefined,
+                "min": undefined,
+                "now": undefined,
+                "text": undefined,
+              }
+            }
+            accessible={true}
+            collapsable={false}
+            focusable={true}
+            onBlur={[Function]}
+            onClick={[Function]}
+            onFocus={[Function]}
+            onResponderGrant={[Function]}
+            onResponderMove={[Function]}
+            onResponderRelease={[Function]}
+            onResponderTerminate={[Function]}
+            onResponderTerminationRequest={[Function]}
+            onStartShouldSetResponder={[Function]}
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#F2EBDC",
+                  "borderBottomColor": "#C9BFD8",
+                  "borderBottomWidth": 1.5,
+                  "flexDirection": "row",
+                  "gap": 12,
+                  "height": 72,
+                  "paddingHorizontal": 16,
+                },
+                null,
+              ]
+            }
+            testID="habit-card-2"
+          >
+            <View
+              accessibilityLabel="Mark Read as complete. Current streak: 0 days."
+              accessibilityRole="button"
+              accessibilityState={
+                {
+                  "busy": undefined,
+                  "checked": undefined,
+                  "disabled": undefined,
+                  "expanded": undefined,
+                  "selected": undefined,
+                }
+              }
+              accessibilityValue={
+                {
+                  "max": undefined,
+                  "min": undefined,
+                  "now": undefined,
+                  "text": undefined,
+                }
+              }
+              accessible={true}
+              collapsable={false}
+              focusable={true}
+              hitSlop={
+                {
+                  "bottom": 8,
+                  "left": 8,
+                  "right": 8,
+                  "top": 8,
+                }
+              }
+              onClick={[Function]}
+              onResponderGrant={[Function]}
+              onResponderMove={[Function]}
+              onResponderRelease={[Function]}
+              onResponderTerminate={[Function]}
+              onResponderTerminationRequest={[Function]}
+              onStartShouldSetResponder={[Function]}
+              style={
+                {
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "opacity": 1,
+                }
+              }
+              testID="toggle-2"
+            >
+              <View
+                style={
+                  [
+                    {
+                      "position": "relative",
+                    },
+                    undefined,
+                  ]
+                }
+              >
+                <View
+                  pointerEvents="none"
+                  style={
+                    [
+                      {
+                        "bottom": 0,
+                        "left": 0,
+                        "position": "absolute",
+                        "right": 0,
+                        "top": 0,
+                      },
+                      {
+                        "backgroundColor": "#3D2F52",
+                        "borderRadius": 16,
+                        "opacity": 0,
+                        "transform": [
+                          {
+                            "translateX": 2,
+                          },
+                          {
+                            "translateY": 2,
+                          },
+                        ],
+                      },
+                    ]
+                  }
+                />
+                <View
+                  style={
+                    [
+                      {
+                        "alignItems": "center",
+                        "justifyContent": "center",
+                      },
+                      {
+                        "backgroundColor": "#FAF5EA",
+                        "borderColor": "#6A5A86",
+                        "borderRadius": 16,
+                        "borderWidth": 2.5,
+                        "height": 32,
+                        "width": 32,
+                      },
+                    ]
+                  }
+                />
+              </View>
+            </View>
+            <View
+              style={
+                {
+                  "flex": 1,
+                }
+              }
+            >
+              <Text
+                numberOfLines={1}
+                style={
+                  [
+                    {
+                      "color": "#2E2A26",
+                      "fontFamily": "Archivo Black",
+                      "fontSize": 17,
+                      "letterSpacing": -0.2,
+                      "textTransform": "uppercase",
+                    },
+                    false,
+                  ]
+                }
+                testID="habit-name-2"
+              >
+                Read
+              </Text>
+            </View>
+            <View
+              style={
+                [
+                  {
+                    "borderRadius": 999,
+                    "borderWidth": 2,
+                    "paddingHorizontal": 10,
+                    "paddingVertical": 3,
+                  },
+                  {
+                    "backgroundColor": "#FAF5EA",
+                    "borderColor": "#6A5A86",
+                  },
+                ]
+              }
+            >
+              <Text
+                style={
+                  {
+                    "color": "#2E2A26",
+                    "fontFamily": "Space Mono",
+                    "fontSize": 12,
+                    "fontWeight": "700",
+                  }
+                }
+                testID="streak-2"
+              >
+                🔥 
+                0 days
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </RCTScrollView>
+  </View>
+</RCTSafeAreaView>
 `;
