@@ -47,7 +47,7 @@ const SectionHeader: React.FC<{label: string; count?: string | number}> = ({
   count,
 }) => (
   <View style={styles.sectionHeader}>
-    <Text style={styles.sectionHeaderText}>// {label}</Text>
+    <Text style={styles.sectionHeaderText}>{`// ${label}`}</Text>
     {count !== undefined && (
       <Text style={styles.sectionHeaderText}>{count}</Text>
     )}

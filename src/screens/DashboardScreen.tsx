@@ -177,7 +177,7 @@ const DashboardScreenBody: React.FC<DashboardScreenBodyProps> = ({
           </View>
           <View style={styles.progressDots}>
             {habits.length === 0 ? (
-              <Text style={styles.progressEmpty}>// AWAITING HABITS</Text>
+              <Text style={styles.progressEmpty}>{'// AWAITING HABITS'}</Text>
             ) : (
               habits.map(h => (
                 <View
