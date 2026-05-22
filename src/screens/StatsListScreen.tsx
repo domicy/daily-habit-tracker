@@ -11,23 +11,56 @@ import NBChevron from '../components/atoms/NBChevron';
 import NBFlame from '../components/atoms/NBFlame';
 import {useHabits} from '../hooks/useHabits';
 import type {HabitDisplayData} from '../hooks/useHabits';
+import {useHabitsContext} from '../hooks/useHabitsContext';
 import HabitService from '../services/HabitService';
-import database from '../models';
 
 interface StatsListScreenProps {
   navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
   habitService?: HabitService;
 }
 
-const defaultHabitService = new HabitService(database);
-
 const StatsListScreen: React.FC<StatsListScreenProps> = ({
   navigation,
   habitService,
-}) => {
-  const service = habitService ?? defaultHabitService;
-  const {habits} = useHabits(service);
+}) =>
+  habitService ? (
+    <StatsListScreenWithService
+      navigation={navigation}
+      habitService={habitService}
+    />
+  ) : (
+    <StatsListScreenFromContext navigation={navigation} />
+  );
 
+interface StatsListScreenWithServiceProps {
+  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  habitService: HabitService;
+}
+
+const StatsListScreenWithService: React.FC<StatsListScreenWithServiceProps> = ({
+  navigation,
+  habitService,
+}) => {
+  const {habits} = useHabits(habitService);
+  return <StatsListScreenBody navigation={navigation} habits={habits} />;
+};
+
+const StatsListScreenFromContext: React.FC<{
+  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+}> = ({navigation}) => {
+  const {habits} = useHabitsContext();
+  return <StatsListScreenBody navigation={navigation} habits={habits} />;
+};
+
+interface StatsListScreenBodyProps {
+  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  habits: HabitDisplayData[];
+}
+
+const StatsListScreenBody: React.FC<StatsListScreenBodyProps> = ({
+  navigation,
+  habits,
+}) => {
   const handlePress = useCallback(
     (habitId: string) => {
       navigation?.navigate('Stats', {habitId});

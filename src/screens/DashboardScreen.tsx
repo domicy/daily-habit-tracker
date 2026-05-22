@@ -18,22 +18,59 @@ import NBCard from '../components/atoms/NBCard';
 import NBChip from '../components/atoms/NBChip';
 import {useHabits} from '../hooks/useHabits';
 import type {HabitDisplayData} from '../hooks/useHabits';
+import {useHabitsContext} from '../hooks/useHabitsContext';
 import HabitService from '../services/HabitService';
-import database from '../models';
 
 interface DashboardScreenProps {
   navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
   habitService?: HabitService;
 }
 
-const defaultHabitService = new HabitService(database);
-
 const DashboardScreen: React.FC<DashboardScreenProps> = ({
   navigation,
   habitService,
+}) =>
+  habitService ? (
+    <DashboardScreenWithService
+      navigation={navigation}
+      habitService={habitService}
+    />
+  ) : (
+    <DashboardScreenFromContext navigation={navigation} />
+  );
+
+interface DashboardScreenWithServiceProps {
+  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  habitService: HabitService;
+}
+
+const DashboardScreenWithService: React.FC<DashboardScreenWithServiceProps> = ({
+  navigation,
+  habitService,
 }) => {
-  const service = habitService ?? defaultHabitService;
-  const {habits, toggleHabit} = useHabits(service);
+  const state = useHabits(habitService);
+  return <DashboardScreenBody navigation={navigation} {...state} />;
+};
+
+const DashboardScreenFromContext: React.FC<{
+  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+}> = ({navigation}) => {
+  const state = useHabitsContext();
+  return <DashboardScreenBody navigation={navigation} {...state} />;
+};
+
+interface DashboardScreenBodyProps {
+  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  habits: HabitDisplayData[];
+  toggleHabit: (habitId: string) => Promise<void>;
+  loading: boolean;
+}
+
+const DashboardScreenBody: React.FC<DashboardScreenBodyProps> = ({
+  navigation,
+  habits,
+  toggleHabit,
+}) => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [today, setToday] = useState(() => getFormattedToday());

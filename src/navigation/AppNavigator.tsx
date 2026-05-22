@@ -8,6 +8,11 @@ import StreaksScreen from '../screens/StreaksScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import CreateHabitModal from '../screens/CreateHabitModal';
 import NBTabBar from '../components/atoms/NBTabBar';
+import {HabitsProvider} from '../hooks/useHabitsContext';
+import HabitService from '../services/HabitService';
+import database from '../models';
+
+const sharedHabitService = new HabitService(database);
 
 const HomeStack = createNativeStackNavigator();
 const StatsStack = createNativeStackNavigator();
@@ -40,14 +45,16 @@ const SettingsStackScreen: React.FC = () => (
 );
 
 const AppNavigator: React.FC = () => (
-  <Tab.Navigator
-    screenOptions={{headerShown: false}}
-    tabBar={props => <NBTabBar {...props} />}>
-    <Tab.Screen name="Today" component={HomeStackScreen} />
-    <Tab.Screen name="Streaks" component={StreaksScreen} />
-    <Tab.Screen name="Stats" component={StatsStackScreen} />
-    <Tab.Screen name="Me" component={SettingsStackScreen} />
-  </Tab.Navigator>
+  <HabitsProvider habitService={sharedHabitService}>
+    <Tab.Navigator
+      screenOptions={{headerShown: false}}
+      tabBar={props => <NBTabBar {...props} />}>
+      <Tab.Screen name="Today" component={HomeStackScreen} />
+      <Tab.Screen name="Streaks" component={StreaksScreen} />
+      <Tab.Screen name="Stats" component={StatsStackScreen} />
+      <Tab.Screen name="Me" component={SettingsStackScreen} />
+    </Tab.Navigator>
+  </HabitsProvider>
 );
 
 export default AppNavigator;
