@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {format} from 'date-fns';
@@ -88,6 +89,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [syncing, setSyncing] = useState(false);
   const [secretInput, setSecretInput] = useState('');
   const [connecting, setConnecting] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     (async () => {
@@ -234,7 +237,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   return (
     <NBSurface testID="settings-screen">
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.headerRow}>
           <NBChip>v{APP_VERSION}</NBChip>
@@ -347,7 +353,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             )}
 
             <View style={styles.connectBlock}>
-              <Text style={styles.connectLabel}>SYNC SECRET</Text>
+              <View style={styles.connectLabelRow}>
+                <Text style={styles.connectLabel}>SYNC SECRET</Text>
+                <TouchableOpacity
+                  onPress={() => setShowSecret(s => !s)}
+                  testID="toggle-secret-visibility">
+                  <Text style={styles.connectToggle}>
+                    {showSecret ? 'HIDE' : 'SHOW'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <NBShadow
                 offsetX={shadowOffsets.xs}
                 offsetY={shadowOffsets.xs}
@@ -362,8 +377,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   placeholderTextColor={colors.textSoft}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  secureTextEntry
+                  secureTextEntry={!showSecret}
                   editable={!connecting}
+                  // Android's adjustResize shrinks the window but doesn't
+                  // scroll the ScrollView. Without this, the focused input
+                  // sits behind the keyboard on tall keyboards (e.g.
+                  // Pixel 10a).
+                  onFocus={() => {
+                    // Delay one tick so layout settles after the keyboard appears.
+                    setTimeout(
+                      () => scrollRef.current?.scrollToEnd({animated: true}),
+                      50,
+                    );
+                  }}
                 />
               </NBShadow>
               <NBButton
@@ -521,13 +547,27 @@ const styles = StyleSheet.create({
     borderTopWidth: borders.thin,
     borderTopColor: colors.regaliaSoft,
   },
+  connectLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
   connectLabel: {
     fontFamily: fontFamily.mono,
     fontSize: 11,
     fontWeight: '700',
     color: colors.text,
     letterSpacing: 0.5,
-    marginBottom: spacing.sm,
+  },
+  connectToggle: {
+    fontFamily: fontFamily.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.tiger,
+    letterSpacing: 0.5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   connectInput: {
     fontFamily: fontFamily.mono,
