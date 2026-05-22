@@ -58,8 +58,6 @@ describe('theme design system', () => {
       'body',
       'mono',
       'heading',
-      'headingFallback',
-      'bodyFallback',
     ];
 
     it.each(expectedFontKeys)(
@@ -78,11 +76,9 @@ describe('theme design system', () => {
       'display02',
       'display03',
       'label',
-      'h1',
       'h2',
       'body',
       'caption',
-      'streak',
     ];
 
     it.each(expectedScaleKeys)(
