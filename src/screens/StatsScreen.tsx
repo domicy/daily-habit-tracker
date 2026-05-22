@@ -18,7 +18,7 @@ import NBSurface from '../components/atoms/NBSurface';
 import NBCard from '../components/atoms/NBCard';
 import NBChip from '../components/atoms/NBChip';
 import HabitService from '../services/HabitService';
-import database from '../models';
+import {getDefaultHabitService} from '../services/defaultHabitService';
 
 interface StatsScreenProps {
   route?: {params: {habitId: string}};
@@ -26,14 +26,12 @@ interface StatsScreenProps {
   habitService?: HabitService;
 }
 
-const defaultHabitService = new HabitService(database);
-
 const StatsScreen: React.FC<StatsScreenProps> = ({
   route,
   navigation,
   habitService,
 }) => {
-  const service = habitService ?? defaultHabitService;
+  const service = habitService ?? getDefaultHabitService();
   const habitId = route?.params?.habitId ?? '';
 
   const [habitName, setHabitName] = useState('');

@@ -9,10 +9,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import CreateHabitModal from '../screens/CreateHabitModal';
 import NBTabBar from '../components/atoms/NBTabBar';
 import {HabitsProvider} from '../hooks/useHabitsContext';
-import HabitService from '../services/HabitService';
-import database from '../models';
-
-const sharedHabitService = new HabitService(database);
+import {getDefaultHabitService} from '../services/defaultHabitService';
 
 const HomeStack = createNativeStackNavigator();
 const StatsStack = createNativeStackNavigator();
@@ -45,7 +42,7 @@ const SettingsStackScreen: React.FC = () => (
 );
 
 const AppNavigator: React.FC = () => (
-  <HabitsProvider habitService={sharedHabitService}>
+  <HabitsProvider habitService={getDefaultHabitService()}>
     <Tab.Navigator
       screenOptions={{headerShown: false}}
       tabBar={props => <NBTabBar {...props} />}>
