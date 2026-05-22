@@ -380,7 +380,9 @@ exports[`DashboardScreen matches snapshot 1`] = `
             accessible={true}
             collapsable={false}
             focusable={true}
+            onBlur={[Function]}
             onClick={[Function]}
+            onFocus={[Function]}
             onResponderGrant={[Function]}
             onResponderMove={[Function]}
             onResponderRelease={[Function]}
@@ -388,17 +390,19 @@ exports[`DashboardScreen matches snapshot 1`] = `
             onResponderTerminationRequest={[Function]}
             onStartShouldSetResponder={[Function]}
             style={
-              {
-                "alignItems": "center",
-                "backgroundColor": "#F2EBDC",
-                "borderBottomColor": "#C9BFD8",
-                "borderBottomWidth": 1.5,
-                "flexDirection": "row",
-                "gap": 12,
-                "height": 72,
-                "opacity": 1,
-                "paddingHorizontal": 16,
-              }
+              [
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#F2EBDC",
+                  "borderBottomColor": "#C9BFD8",
+                  "borderBottomWidth": 1.5,
+                  "flexDirection": "row",
+                  "gap": 12,
+                  "height": 72,
+                  "paddingHorizontal": 16,
+                },
+                null,
+              ]
             }
             testID="habit-card-1"
           >
@@ -473,6 +477,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
                       {
                         "backgroundColor": "#3D2F52",
                         "borderRadius": 16,
+                        "opacity": 1,
                         "transform": [
                           {
                             "translateX": 2,
@@ -490,91 +495,78 @@ exports[`DashboardScreen matches snapshot 1`] = `
                     [
                       {
                         "alignItems": "center",
-                        "borderRadius": 16,
-                        "borderWidth": 2.5,
-                        "height": 32,
                         "justifyContent": "center",
-                        "width": 32,
                       },
                       {
                         "backgroundColor": "#C7754A",
                         "borderColor": "#8E4F2E",
+                        "borderRadius": 16,
+                        "borderWidth": 2.5,
+                        "height": 32,
+                        "width": 32,
                       },
                     ]
                   }
+                  testID="checkmark-1"
                 >
-                  <View
-                    collapsable={false}
+                  <RNSVGSvgView
+                    align="xMidYMid"
+                    bbHeight={16}
+                    bbWidth={16}
+                    focusable={false}
+                    height={16}
+                    meetOrSlice={0}
+                    minX={0}
+                    minY={0}
                     style={
-                      {
-                        "transform": [
-                          {
-                            "scale": 0.5,
-                          },
-                        ],
-                      }
+                      [
+                        {
+                          "backgroundColor": "transparent",
+                          "borderWidth": 0,
+                        },
+                        {
+                          "flex": 0,
+                          "height": 16,
+                          "width": 16,
+                        },
+                      ]
                     }
-                    testID="checkmark-1"
+                    vbHeight={20}
+                    vbWidth={20}
+                    width={16}
                   >
-                    <RNSVGSvgView
-                      align="xMidYMid"
-                      bbHeight={16}
-                      bbWidth={16}
-                      focusable={false}
-                      height={16}
-                      meetOrSlice={0}
-                      minX={0}
-                      minY={0}
-                      style={
-                        [
-                          {
-                            "backgroundColor": "transparent",
-                            "borderWidth": 0,
-                          },
-                          {
-                            "flex": 0,
-                            "height": 16,
-                            "width": 16,
-                          },
-                        ]
+                    <RNSVGGroup
+                      fill={
+                        {
+                          "payload": 4278190080,
+                          "type": 0,
+                        }
                       }
-                      vbHeight={20}
-                      vbWidth={20}
-                      width={16}
                     >
-                      <RNSVGGroup
-                        fill={
+                      <RNSVGPath
+                        d="M4 10 L8.5 14.5 L16 6"
+                        fill={null}
+                        propList={
+                          [
+                            "fill",
+                            "stroke",
+                            "strokeWidth",
+                            "strokeLinecap",
+                            "strokeLinejoin",
+                          ]
+                        }
+                        stroke={
                           {
-                            "payload": 4278190080,
+                            "payload": 4281215526,
                             "type": 0,
                           }
                         }
-                      >
-                        <RNSVGPath
-                          d="M4 10 L8.5 14.5 L16 6"
-                          fill={null}
-                          propList={
-                            [
-                              "fill",
-                              "stroke",
-                              "strokeWidth",
-                              "strokeLinecap",
-                              "strokeLinejoin",
-                            ]
-                          }
-                          stroke={
-                            {
-                              "payload": 4281215526,
-                              "type": 0,
-                            }
-                          }
-                          strokeLinecap={1}
-                          strokeLinejoin={1}
-                          strokeWidth={3}
-                        />
-                      </RNSVGGroup>
-                    </RNSVGSvgView>
-                  </View>
+                        strokeLinecap={1}
+                        strokeLinejoin={1}
+                        strokeWidth={3}
+                      />
+                    </RNSVGGroup>
+                  </RNSVGSvgView>
                 </View>
               </View>
             </View>
@@ -665,7 +657,9 @@ exports[`DashboardScreen matches snapshot 1`] = `
             accessible={true}
             collapsable={false}
             focusable={true}
+            onBlur={[Function]}
             onClick={[Function]}
+            onFocus={[Function]}
             onResponderGrant={[Function]}
             onResponderMove={[Function]}
             onResponderRelease={[Function]}
@@ -673,17 +667,19 @@ exports[`DashboardScreen matches snapshot 1`] = `
             onResponderTerminationRequest={[Function]}
             onStartShouldSetResponder={[Function]}
             style={
-              {
-                "alignItems": "center",
-                "backgroundColor": "#F2EBDC",
-                "borderBottomColor": "#C9BFD8",
-                "borderBottomWidth": 1.5,
-                "flexDirection": "row",
-                "gap": 12,
-                "height": 72,
-                "opacity": 1,
-                "paddingHorizontal": 16,
-              }
+              [
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#F2EBDC",
+                  "borderBottomColor": "#C9BFD8",
+                  "borderBottomWidth": 1.5,
+                  "flexDirection": "row",
+                  "gap": 12,
+                  "height": 72,
+                  "paddingHorizontal": 16,
+                },
+                null,
+              ]
             }
             testID="habit-card-2"
           >
@@ -738,20 +734,58 @@ exports[`DashboardScreen matches snapshot 1`] = `
                 style={
                   [
                     {
-                      "alignItems": "center",
-                      "borderRadius": 16,
-                      "borderWidth": 2.5,
-                      "height": 32,
-                      "justifyContent": "center",
-                      "width": 32,
+                      "position": "relative",
                     },
-                    {
-                      "backgroundColor": "#FAF5EA",
-                      "borderColor": "#6A5A86",
-                    },
+                    undefined,
                   ]
                 }
-              />
+              >
+                <View
+                  pointerEvents="none"
+                  style={
+                    [
+                      {
+                        "bottom": 0,
+                        "left": 0,
+                        "position": "absolute",
+                        "right": 0,
+                        "top": 0,
+                      },
+                      {
+                        "backgroundColor": "#3D2F52",
+                        "borderRadius": 16,
+                        "opacity": 0,
+                        "transform": [
+                          {
+                            "translateX": 2,
+                          },
+                          {
+                            "translateY": 2,
+                          },
+                        ],
+                      },
+                    ]
+                  }
+                />
+                <View
+                  style={
+                    [
+                      {
+                        "alignItems": "center",
+                        "justifyContent": "center",
+                      },
+                      {
+                        "backgroundColor": "#FAF5EA",
+                        "borderColor": "#6A5A86",
+                        "borderRadius": 16,
+                        "borderWidth": 2.5,
+                        "height": 32,
+                        "width": 32,
+                      },
+                    ]
+                  }
+                />
+              </View>
             </View>
             <View
               style={
