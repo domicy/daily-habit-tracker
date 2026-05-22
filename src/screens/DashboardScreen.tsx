@@ -11,7 +11,7 @@ import {colors} from '../theme/colors';
 import {getFormattedToday} from '../utils/dateUtils';
 import {fontFamily, typeScale} from '../theme/typography';
 import {spacing} from '../theme/spacing';
-import {radii, borders} from '../theme/radii';
+import {radii, borders} from '../theme';
 import HabitCard, {HABIT_ROW_HEIGHT} from '../components/HabitCard';
 import NBSurface from '../components/atoms/NBSurface';
 import NBCard from '../components/atoms/NBCard';

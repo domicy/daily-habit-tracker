@@ -11,7 +11,7 @@ import {getTodayString} from '../utils/dateUtils';
 import {colors} from '../theme/colors';
 import {fontFamily, typeScale} from '../theme/typography';
 import {spacing} from '../theme/spacing';
-import {borders} from '../theme/radii';
+import {borders} from '../theme';
 
 interface MonthCalendarProps {
   year: number;

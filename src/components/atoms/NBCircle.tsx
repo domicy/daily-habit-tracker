@@ -2,7 +2,7 @@ import React from 'react';
 import {View, StyleSheet} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {colors} from '../../theme/colors';
-import {borders, shadowOffsets} from '../../theme/radii';
+import {borders, shadowOffsets} from '../../theme';
 import NBShadow from './NBShadow';
 
 interface NBCircleProps {

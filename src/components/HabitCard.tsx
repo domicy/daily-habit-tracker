@@ -10,7 +10,7 @@ import Svg, {Path} from 'react-native-svg';
 import {colors} from '../theme/colors';
 import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
-import {radii, borders, shadowOffsets} from '../theme/radii';
+import {radii, borders, shadowOffsets} from '../theme';
 import NBShadow from './atoms/NBShadow';
 
 export const HABIT_ROW_HEIGHT = 72;
