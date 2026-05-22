@@ -3,7 +3,7 @@ import {View, Text, StyleSheet} from 'react-native';
 import type {ViewStyle, StyleProp, TextStyle} from 'react-native';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/typography';
-import {radii, borders} from '../../theme/radii';
+import {radii, borders} from '../../theme';
 
 interface NBChipProps {
   background?: string;
@@ -15,28 +15,39 @@ interface NBChipProps {
   children: React.ReactNode;
 }
 
+const DEFAULT_BACKGROUND = colors.card;
+const DEFAULT_BORDER_COLOR = colors.line;
+const DEFAULT_TEXT_COLOR = colors.text;
+
 const NBChip: React.FC<NBChipProps> = ({
-  background = colors.card,
-  color = colors.text,
-  borderColor = colors.line,
+  background,
+  color,
+  borderColor,
   style,
   textStyle,
   testID,
   children,
 }) => {
+  // Allocate the override object only when a caller supplied at least one
+  // color override; the default path uses the stable `defaultStyle`.
+  const hasContainerOverride =
+    background !== undefined || borderColor !== undefined;
+  const containerOverride: ViewStyle | null = hasContainerOverride
+    ? {
+        backgroundColor: background ?? DEFAULT_BACKGROUND,
+        borderColor: borderColor ?? DEFAULT_BORDER_COLOR,
+      }
+    : null;
+  const textOverride: TextStyle | null =
+    color !== undefined ? {color} : null;
+
   return (
     <View
       testID={testID}
-      style={[
-        styles.chip,
-        {
-          backgroundColor: background,
-          borderColor,
-          borderWidth: borders.base,
-        },
-        style,
-      ]}>
-      <Text style={[styles.text, {color}, textStyle]}>{children}</Text>
+      style={[styles.chip, styles.defaultContainer, containerOverride, style]}>
+      <Text style={[styles.text, styles.defaultText, textOverride, textStyle]}>
+        {children}
+      </Text>
     </View>
   );
 };
@@ -47,6 +58,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: radii.pill,
+    borderWidth: borders.base,
+  },
+  defaultContainer: {
+    backgroundColor: DEFAULT_BACKGROUND,
+    borderColor: DEFAULT_BORDER_COLOR,
   },
   text: {
     fontFamily: fontFamily.mono,
@@ -55,6 +71,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     lineHeight: 14,
+  },
+  defaultText: {
+    color: DEFAULT_TEXT_COLOR,
   },
 });
 

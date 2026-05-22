@@ -13,8 +13,8 @@ interface NBShadowProps {
 }
 
 // Hard-edge offset shadow done with a translated colored View behind the child.
-// RN's boxShadow is unreliable across versions and Android elevation blurs;
-// this matches the Soft Clemson v3 design exactly.
+// RN's boxShadow is unreliable across versions and Android elevation blurs the
+// edges; this primitive renders a crisp offset block instead.
 const NBShadow: React.FC<NBShadowProps> = ({
   offsetX = 5,
   offsetY = 5,

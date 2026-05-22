@@ -3,7 +3,7 @@ import {Pressable, Text, ActivityIndicator, View, StyleSheet} from 'react-native
 import type {ViewStyle, StyleProp, TextStyle} from 'react-native';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/typography';
-import {radii, borders, shadowOffsets} from '../../theme/radii';
+import {radii, borders, shadowOffsets} from '../../theme';
 import NBShadow from './NBShadow';
 
 type NBButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -35,8 +35,8 @@ const NBButton: React.FC<NBButtonProps> = ({
 
   return (
     <NBShadow
-      offsetX={shadowOffsets.xs + 2}
-      offsetY={shadowOffsets.xs + 2}
+      offsetX={shadowOffsets.sm}
+      offsetY={shadowOffsets.sm}
       color={styling.shadowColor}
       borderRadius={radii.pill}
       style={[styles.wrapper, disabled && styles.disabled, style]}>

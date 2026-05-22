@@ -3,7 +3,7 @@ import {View, Text, StyleSheet} from 'react-native';
 import type {ViewStyle, StyleProp} from 'react-native';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/typography';
-import {borders} from '../../theme/radii';
+import {borders} from '../../theme';
 
 interface NBSettingsRowProps {
   label: string;

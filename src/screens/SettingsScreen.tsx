@@ -14,7 +14,7 @@ import {format} from 'date-fns';
 import {colors} from '../theme/colors';
 import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
-import {radii, borders, shadowOffsets} from '../theme/radii';
+import {radii, borders, shadowOffsets} from '../theme';
 import HabitService from '../services/HabitService';
 import SyncService, {AuthenticationError} from '../services/SyncService';
 import NotificationService from '../services/NotificationService';

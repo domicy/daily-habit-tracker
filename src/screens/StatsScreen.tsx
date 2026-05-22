@@ -12,7 +12,7 @@ import {getTodayString} from '../utils/dateUtils';
 import {colors} from '../theme/colors';
 import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
-import {radii, borders} from '../theme/radii';
+import {radii, borders} from '../theme';
 import MonthCalendar from '../components/MonthCalendar';
 import NBSurface from '../components/atoms/NBSurface';
 import NBCard from '../components/atoms/NBCard';
