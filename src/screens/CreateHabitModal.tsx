@@ -14,7 +14,7 @@ import NBCard from '../components/atoms/NBCard';
 import NBButton from '../components/atoms/NBButton';
 import NBShadow from '../components/atoms/NBShadow';
 import HabitService from '../services/HabitService';
-import database from '../models';
+import {getDefaultHabitService} from '../services/defaultHabitService';
 
 const MAX_LENGTH = 50;
 
@@ -23,13 +23,11 @@ interface CreateHabitModalProps {
   habitService?: HabitService;
 }
 
-const defaultHabitService = new HabitService(database);
-
 const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
   navigation,
   habitService,
 }) => {
-  const service = habitService ?? defaultHabitService;
+  const service = habitService ?? getDefaultHabitService();
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
 
