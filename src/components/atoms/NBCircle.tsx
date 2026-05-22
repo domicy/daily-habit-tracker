@@ -11,6 +11,12 @@ interface NBCircleProps {
   border?: string;
   size?: number;
   testID?: string;
+  /**
+   * When true (default), NBCircle wraps itself in an NBShadow when `filled`.
+   * Pass `false` if the caller is rendering its own NBShadow wrapper (so the
+   * subtree stays structurally stable across toggles) — see HabitCard.
+   */
+  withShadow?: boolean;
 }
 
 const NBCircle: React.FC<NBCircleProps> = ({
@@ -19,6 +25,7 @@ const NBCircle: React.FC<NBCircleProps> = ({
   border = colors.line,
   size = 28,
   testID,
+  withShadow = true,
 }) => {
   const inner = (
     <View
@@ -49,7 +56,7 @@ const NBCircle: React.FC<NBCircleProps> = ({
     </View>
   );
 
-  if (!filled) {
+  if (!filled || !withShadow) {
     return inner;
   }
 

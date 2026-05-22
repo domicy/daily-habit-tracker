@@ -9,6 +9,12 @@ interface NBShadowProps {
   color?: string;
   borderRadius?: number;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Opacity of the offset shadow element only (not the children).
+   * Lets callers keep a stable component tree across state changes while
+   * visually toggling the shadow on/off. Defaults to 1 (fully visible).
+   */
+  shadowOpacity?: number;
   children: React.ReactNode;
 }
 
@@ -21,21 +27,28 @@ const NBShadow: React.FC<NBShadowProps> = ({
   color = colors.shadow,
   borderRadius = 0,
   style,
+  shadowOpacity,
   children,
 }) => {
+  // Only include opacity in the style when explicitly overridden so existing
+  // consumers' snapshots (and styles) remain unchanged.
+  const shadowFill: ViewStyle =
+    shadowOpacity === undefined
+      ? {
+          backgroundColor: color,
+          borderRadius,
+          transform: [{translateX: offsetX}, {translateY: offsetY}],
+        }
+      : {
+          backgroundColor: color,
+          borderRadius,
+          opacity: shadowOpacity,
+          transform: [{translateX: offsetX}, {translateY: offsetY}],
+        };
+
   return (
     <View style={[styles.wrapper, style]}>
-      <View
-        pointerEvents="none"
-        style={[
-          styles.shadow,
-          {
-            backgroundColor: color,
-            borderRadius,
-            transform: [{translateX: offsetX}, {translateY: offsetY}],
-          },
-        ]}
-      />
+      <View pointerEvents="none" style={[styles.shadow, shadowFill]} />
       {children}
     </View>
   );
