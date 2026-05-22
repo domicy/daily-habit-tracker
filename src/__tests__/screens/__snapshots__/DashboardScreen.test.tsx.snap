@@ -45,13 +45,17 @@ exports[`DashboardScreen matches snapshot 1`] = `
               {
                 "alignSelf": "flex-start",
                 "borderRadius": 999,
+                "borderWidth": 2,
                 "paddingHorizontal": 10,
                 "paddingVertical": 4,
               },
               {
                 "backgroundColor": "#FAF5EA",
                 "borderColor": "#6A5A86",
-                "borderWidth": 2,
+              },
+              {
+                "backgroundColor": "#FAF5EA",
+                "borderColor": "#6A5A86",
               },
               undefined,
             ]
@@ -71,6 +75,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
                 {
                   "color": "#2E2A26",
                 },
+                null,
                 undefined,
               ]
             }
@@ -118,13 +123,17 @@ exports[`DashboardScreen matches snapshot 1`] = `
                 {
                   "alignSelf": "flex-start",
                   "borderRadius": 999,
+                  "borderWidth": 2,
                   "paddingHorizontal": 10,
                   "paddingVertical": 4,
                 },
                 {
+                  "backgroundColor": "#FAF5EA",
+                  "borderColor": "#6A5A86",
+                },
+                {
                   "backgroundColor": "#C7754A",
                   "borderColor": "#8E4F2E",
-                  "borderWidth": 2,
                 },
                 undefined,
               ]
@@ -144,6 +153,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
                   {
                     "color": "#2E2A26",
                   },
+                  null,
                   undefined,
                 ]
               }
@@ -215,6 +225,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
                 "borderRadius": 22,
                 "borderWidth": 2.5,
               },
+              null,
               {
                 "marginTop": 16,
               },

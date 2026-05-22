@@ -9,7 +9,7 @@ import {
 import {colors} from '../theme/colors';
 import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
-import {radii, borders, shadowOffsets} from '../theme/radii';
+import {radii, borders, shadowOffsets} from '../theme';
 import NBCard from '../components/atoms/NBCard';
 import NBButton from '../components/atoms/NBButton';
 import NBShadow from '../components/atoms/NBShadow';

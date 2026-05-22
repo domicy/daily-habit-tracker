@@ -1,7 +1,7 @@
 import React, {useCallback} from 'react';
 import {View, Pressable, StyleSheet} from 'react-native';
 import {colors} from '../../theme/colors';
-import {radii, borders, shadowOffsets} from '../../theme/radii';
+import {radii, borders, shadowOffsets} from '../../theme';
 import NBShadow from './NBShadow';
 
 interface NBToggleProps {
@@ -10,7 +10,7 @@ interface NBToggleProps {
   color?: string;
   testID?: string;
   accessibilityLabel?: string;
-  // Accept-and-ignore Switch-API niceties so existing callsites compile.
+  // Switch-compatible color overrides; defaults preserve existing visuals.
   trackColor?: {false?: string; true?: string};
   thumbColor?: string;
   disabled?: boolean;
@@ -26,6 +26,8 @@ const NBToggle: React.FC<NBToggleProps> = ({
   color = colors.tiger,
   testID,
   accessibilityLabel,
+  trackColor,
+  thumbColor,
   disabled,
 }) => {
   const handlePress = useCallback(() => {
@@ -34,6 +36,11 @@ const NBToggle: React.FC<NBToggleProps> = ({
     }
     onValueChange?.(!value);
   }, [disabled, onValueChange, value]);
+
+  const trackBackground = value
+    ? trackColor?.true ?? color
+    : trackColor?.false ?? colors.card;
+  const thumbBackground = thumbColor ?? colors.card;
 
   return (
     <NBShadow
@@ -48,27 +55,33 @@ const NBToggle: React.FC<NBToggleProps> = ({
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{checked: value, disabled: !!disabled}}
         onPress={handlePress}
-        // eslint-disable-next-line react-native/no-inline-styles
         style={[
           styles.track,
+          // eslint-disable-next-line react-native/no-inline-styles
           {
-            backgroundColor: value ? color : colors.card,
-            borderColor: colors.line,
+            backgroundColor: trackBackground,
             opacity: disabled ? 0.5 : 1,
           },
         ]}>
         <View
           style={[
-            styles.thumb,
-            {
-              left: value ? TOGGLE_WIDTH - THUMB_SIZE - borders.thick : -borders.thick,
-              borderColor: colors.line,
-            },
+            value ? styles.thumbOn : styles.thumbOff,
+            {backgroundColor: thumbBackground},
           ]}
         />
       </Pressable>
     </NBShadow>
   );
+};
+
+const thumbBase = {
+  position: 'absolute' as const,
+  top: -borders.thick,
+  width: THUMB_SIZE,
+  height: THUMB_SIZE + borders.thick * 2,
+  borderRadius: THUMB_SIZE / 2,
+  borderWidth: borders.thick,
+  borderColor: colors.line,
 };
 
 const styles = StyleSheet.create({
@@ -80,16 +93,16 @@ const styles = StyleSheet.create({
     height: TOGGLE_HEIGHT,
     borderRadius: radii.pill,
     borderWidth: borders.thick,
+    borderColor: colors.line,
     position: 'relative',
   },
-  thumb: {
-    position: 'absolute',
-    top: -borders.thick,
-    width: THUMB_SIZE,
-    height: THUMB_SIZE + borders.thick * 2,
-    borderRadius: THUMB_SIZE / 2,
-    backgroundColor: colors.card,
-    borderWidth: borders.thick,
+  thumbOn: {
+    ...thumbBase,
+    left: TOGGLE_WIDTH - THUMB_SIZE - borders.thick,
+  },
+  thumbOff: {
+    ...thumbBase,
+    left: -borders.thick,
   },
 });
 

@@ -7,13 +7,21 @@ export type {FontFamily, TypeScale} from './typography';
 export {spacing} from './spacing';
 export type {Spacing} from './spacing';
 
-export {radii, borders, shadowOffsets} from './radii';
-export type {Radii, Borders, ShadowOffsets} from './radii';
+export {radii} from './radii';
+export type {Radii} from './radii';
+
+export {borders} from './borders';
+export type {Borders} from './borders';
+
+export {shadowOffsets} from './shadowOffsets';
+export type {ShadowOffsets} from './shadowOffsets';
 
 import {colors} from './colors';
 import {fontFamily, typeScale} from './typography';
 import {spacing} from './spacing';
-import {radii, borders, shadowOffsets} from './radii';
+import {radii} from './radii';
+import {borders} from './borders';
+import {shadowOffsets} from './shadowOffsets';
 
 export const theme = {
   colors,

@@ -3,7 +3,7 @@ import {View, Text, StyleSheet, ScrollView} from 'react-native';
 import {colors} from '../theme/colors';
 import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
-import {borders} from '../theme/radii';
+import {borders} from '../theme';
 import NBSurface from '../components/atoms/NBSurface';
 import NBCard from '../components/atoms/NBCard';
 import NBChip from '../components/atoms/NBChip';

@@ -3,7 +3,7 @@ import {View, Text, TouchableOpacity, Pressable, StyleSheet} from 'react-native'
 import {colors} from '../theme/colors';
 import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
-import {radii, borders, shadowOffsets} from '../theme/radii';
+import {radii, borders, shadowOffsets} from '../theme';
 import NBCircle from './atoms/NBCircle';
 import NBShadow from './atoms/NBShadow';
 

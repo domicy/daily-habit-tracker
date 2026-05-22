@@ -1,9 +1,9 @@
-// Soft Clemson v3 — Pixel 10a habit tracker palette.
-// No black: text-only ink. Two-tier tiger + two-tier regalia do the
-// contrast work that black used to.
+// App color tokens. Warm "tiger + regalia" palette; no pure black — the
+// two-tier tiger and two-tier regalia ramps do the contrast work that
+// black used to.
 
 export const colors = Object.freeze({
-  // Soft Clemson core
+  // Core surfaces and ink
   paper: '#F2EBDC',
   card: '#FAF5EA',
   text: '#2E2A26',
@@ -28,16 +28,18 @@ export const colors = Object.freeze({
 
   // Legacy keys retained for backward compatibility with consumers that
   // still import them, remapped onto the new palette.
-  background: '#F2EBDC',
-  surface: '#FAF5EA',
-  clemsonOrange: '#C7754A',
-  regaliaPurple: '#6A5A86',
-  textPrimary: '#2E2A26',
-  textSecondary: '#5B544B',
-  success: '#C7754A',
-  streakGold: '#C7754A',
-  error: '#8E4F2E',
-  border: '#6A5A86',
+  background: '#F2EBDC', // alias of paper — primary screen background
+  surface: '#FAF5EA', // alias of card — raised surfaces
+  clemsonOrange: '#C7754A', // alias of tiger — kept for older imports
+  regaliaPurple: '#6A5A86', // alias of regalia — kept for older imports
+  textPrimary: '#2E2A26', // alias of text
+  textSecondary: '#5B544B', // alias of textSoft
+  // Semantic status colors, tuned to sit alongside the warm palette while
+  // staying visually distinct from tiger (orange) and tigerDeep (shadow).
+  success: '#5C7A4E', // muted olive-green — reads as "ok/done" without clashing
+  streakGold: '#C8A24B', // warm gold — distinct from tiger orange
+  error: '#8C2F36', // burgundy red — clearly different from tigerDeep shadow
+  border: '#6A5A86', // alias of line
 });
 
 export type Colors = typeof colors;
