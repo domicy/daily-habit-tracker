@@ -10,14 +10,12 @@ import NBChip from '../components/atoms/NBChip';
 import NBFlame from '../components/atoms/NBFlame';
 import {useHabits} from '../hooks/useHabits';
 import type {HabitDisplayData} from '../hooks/useHabits';
+import {useHabitsContext} from '../hooks/useHabitsContext';
 import HabitService from '../services/HabitService';
-import database from '../models';
 
 interface StreaksScreenProps {
   habitService?: HabitService;
 }
-
-const defaultHabitService = new HabitService(database);
 
 interface RankStyle {
   fill: string;
@@ -49,10 +47,30 @@ const RANK_STYLES: RankStyle[] = [
 
 const RANK_OFFSETS = [0, 8, -6];
 
-const StreaksScreen: React.FC<StreaksScreenProps> = ({habitService}) => {
-  const service = habitService ?? defaultHabitService;
-  const {habits} = useHabits(service);
+const StreaksScreen: React.FC<StreaksScreenProps> = ({habitService}) =>
+  habitService ? (
+    <StreaksScreenWithService habitService={habitService} />
+  ) : (
+    <StreaksScreenFromContext />
+  );
 
+const StreaksScreenWithService: React.FC<{habitService: HabitService}> = ({
+  habitService,
+}) => {
+  const {habits} = useHabits(habitService);
+  return <StreaksScreenBody habits={habits} />;
+};
+
+const StreaksScreenFromContext: React.FC = () => {
+  const {habits} = useHabitsContext();
+  return <StreaksScreenBody habits={habits} />;
+};
+
+interface StreaksScreenBodyProps {
+  habits: HabitDisplayData[];
+}
+
+const StreaksScreenBody: React.FC<StreaksScreenBodyProps> = ({habits}) => {
   const top3 = useMemo(
     () =>
       [...habits]
