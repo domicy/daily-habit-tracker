@@ -6,7 +6,6 @@ import {spacing} from '../theme/spacing';
 import {borders} from '../theme';
 import NBSurface from '../components/atoms/NBSurface';
 import NBCard from '../components/atoms/NBCard';
-import NBChip from '../components/atoms/NBChip';
 import NBChevron from '../components/atoms/NBChevron';
 import NBFlame from '../components/atoms/NBFlame';
 import {useHabits} from '../hooks/useHabits';
@@ -36,14 +35,11 @@ const StatsListScreen: React.FC<StatsListScreenProps> = ({
   );
 
   const renderItem = useCallback(
-    ({item, index}: {item: HabitDisplayData; index: number}) => (
+    ({item}: {item: HabitDisplayData}) => (
       <Pressable
         testID={`stats-row-${item.id}`}
         onPress={() => handlePress(item.id)}
-        style={[
-          styles.row,
-          index === habits.length - 1 && styles.rowLast,
-        ]}>
+        style={styles.row}>
         <View style={styles.rowText}>
           <Text style={styles.rowLabel}>{item.name.toUpperCase()}</Text>
           <View style={styles.streakRow}>
@@ -57,13 +53,17 @@ const StatsListScreen: React.FC<StatsListScreenProps> = ({
         <NBChevron color={colors.regalia} />
       </Pressable>
     ),
-    [habits.length, handlePress],
+    [handlePress],
+  );
+
+  const renderSeparator = useCallback(
+    () => <View style={styles.separator} />,
+    [],
   );
 
   return (
     <NBSurface testID="stats-list-screen">
       <View style={styles.header}>
-        <NBChip>STATS</NBChip>
         <Text style={styles.title}>STATS</Text>
         <Text style={styles.subtitle}>
           PICK A HABIT TO SEE THE CALENDAR
@@ -80,6 +80,7 @@ const StatsListScreen: React.FC<StatsListScreenProps> = ({
             data={habits}
             renderItem={renderItem}
             keyExtractor={item => item.id}
+            ItemSeparatorComponent={renderSeparator}
             scrollEnabled={false}
             testID="stats-habit-list"
           />
@@ -119,13 +120,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderBottomWidth: borders.thin,
-    borderBottomColor: colors.regaliaSoft,
     backgroundColor: colors.card,
     gap: 12,
   },
-  rowLast: {
-    borderBottomWidth: 0,
+  separator: {
+    height: borders.thin,
+    backgroundColor: colors.regaliaSoft,
   },
   rowText: {
     flex: 1,

@@ -1,5 +1,6 @@
 import React, {useMemo} from 'react';
 import {View, Text, StyleSheet, ScrollView} from 'react-native';
+import {format, getISOWeek, getISOWeekYear} from 'date-fns';
 import {colors} from '../theme/colors';
 import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
@@ -53,6 +54,16 @@ const StreaksScreen: React.FC<StreaksScreenProps> = ({habitService}) => {
   const service = habitService ?? defaultHabitService;
   const {habits} = useHabits(service);
 
+  // Compute date labels once at mount — they don't change more than once per day.
+  // Avoids running `new Date()` and date arithmetic on every render.
+  const [weekText, monthDayText] = useMemo(() => {
+    const now = new Date();
+    return [
+      `WK ${getISOWeek(now)} / ${getISOWeekYear(now)}`,
+      format(now, 'LLL · EEE').toUpperCase(),
+    ];
+  }, []);
+
   const top3 = useMemo(
     () =>
       [...habits]
@@ -71,9 +82,9 @@ const StreaksScreen: React.FC<StreaksScreenProps> = ({habitService}) => {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
           <NBChip background={colors.darkBg} color={colors.darkBgText} borderColor={colors.regaliaDeep}>
-            {weekLabel()}
+            {weekText}
           </NBChip>
-          <NBChip>{monthDayLabel()}</NBChip>
+          <NBChip>{monthDayText}</NBChip>
         </View>
         <Text style={styles.title}>TOP{'\n'}STREAKS</Text>
 
@@ -162,36 +173,6 @@ const RankCard: React.FC<RankCardProps> = ({rank, habit, style, offset}) => {
     </View>
   );
 };
-
-function weekLabel(): string {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
-  const dayOfYear = Math.floor(
-    (now.getTime() - start.getTime()) / 86_400_000,
-  );
-  const week = Math.ceil((dayOfYear + start.getDay() + 1) / 7);
-  return `WK ${week} / ${now.getFullYear()}`;
-}
-
-function monthDayLabel(): string {
-  const now = new Date();
-  const months = [
-    'JAN',
-    'FEB',
-    'MAR',
-    'APR',
-    'MAY',
-    'JUN',
-    'JUL',
-    'AUG',
-    'SEP',
-    'OCT',
-    'NOV',
-    'DEC',
-  ];
-  const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  return `${months[now.getMonth()]} · ${days[now.getDay()]}`;
-}
 
 const styles = StyleSheet.create({
   content: {
