@@ -39,11 +39,14 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
   const [habitName, setHabitName] = useState('');
   const [streak, setStreak] = useState(0);
   const [completedDates, setCompletedDates] = useState<Set<string>>(new Set());
-  const [calendarYear, setCalendarYear] = useState(
-    new Date().getFullYear(),
+  // Single Date observation so year and month can't straddle a midnight/month
+  // boundary (two separate `new Date()` calls could observe different values).
+  const initialNow = useRef(new Date()).current;
+  const [calendarYear, setCalendarYear] = useState(() =>
+    initialNow.getFullYear(),
   );
-  const [calendarMonth, setCalendarMonth] = useState(
-    new Date().getMonth(),
+  const [calendarMonth, setCalendarMonth] = useState(() =>
+    initialNow.getMonth(),
   );
 
   const animatedStreak = useRef(new Animated.Value(0)).current;

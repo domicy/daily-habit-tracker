@@ -184,14 +184,7 @@ const DashboardScreenBody: React.FC<DashboardScreenBodyProps> = ({
                   key={h.id}
                   style={[
                     styles.progressDot,
-                    {
-                      backgroundColor: h.completedToday
-                        ? colors.tiger
-                        : colors.card,
-                      borderColor: h.completedToday
-                        ? colors.tigerDeep
-                        : colors.mute,
-                    },
+                    h.completedToday ? styles.dotFilled : styles.dotEmpty,
                   ]}
                 />
               ))
@@ -274,6 +267,14 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: borders.thick,
+  },
+  dotFilled: {
+    backgroundColor: colors.tiger,
+    borderColor: colors.tigerDeep,
+  },
+  dotEmpty: {
+    backgroundColor: colors.card,
+    borderColor: colors.mute,
   },
   progressEmpty: {
     fontFamily: fontFamily.mono,
