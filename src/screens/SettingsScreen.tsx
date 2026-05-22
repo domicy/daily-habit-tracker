@@ -7,7 +7,6 @@ import {
   Pressable,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,6 +28,7 @@ import NBChip from '../components/atoms/NBChip';
 import NBToggle from '../components/atoms/NBToggle';
 import NBButton from '../components/atoms/NBButton';
 import NBShadow from '../components/atoms/NBShadow';
+import NBSettingsRow from '../components/atoms/NBSettingsRow';
 
 const APP_VERSION = '0.0.1';
 const REMINDER_ENABLED_KEY = 'reminder_enabled';
@@ -209,24 +209,21 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const renderHabitRow = useCallback(
     ({item, index}: {item: Habit; index: number}) => (
       <Pressable
-        style={[
-          styles.habitRow,
-          index === habits.length - 1 && styles.habitRowLast,
-        ]}
         testID={`habit-row-${item.id}`}
         onLongPress={() => handleLongPressDeactivate(item.id, item.name)}
         accessibilityLabel={`${item.name} habit`}>
-        <View style={styles.habitInfo}>
-          <Text style={styles.habitName}>{item.name}</Text>
-          <Text style={styles.habitDate}>
-            CREATED {format(new Date(item.createdAt), 'MMM d, yyyy').toUpperCase()}
-          </Text>
-        </View>
-        <NBToggle
-          testID={`toggle-active-${item.id}`}
-          value={item.isActive}
-          onValueChange={() => handleToggleActive(item.id)}
-          color={colors.tiger}
+        <NBSettingsRow
+          label={item.name}
+          hint={`CREATED ${format(new Date(item.createdAt), 'MMM d, yyyy').toUpperCase()}`}
+          right={
+            <NBToggle
+              testID={`toggle-active-${item.id}`}
+              value={item.isActive}
+              onValueChange={() => handleToggleActive(item.id)}
+              color={colors.tiger}
+            />
+          }
+          isLast={index === habits.length - 1}
         />
       </Pressable>
     ),
@@ -263,18 +260,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         {/* Notifications */}
         <SectionHeader label="NOTIFICATIONS" count={reminderEnabled ? 1 : 0} />
         <NBCard>
-          <View style={styles.row}>
-            <View style={styles.rowText}>
-              <Text style={styles.rowLabel}>DAILY REMINDER</Text>
-              <Text style={styles.rowHint}>{reminderTime} LOCAL</Text>
-            </View>
-            <NBToggle
-              testID="reminder-toggle"
-              value={reminderEnabled}
-              onValueChange={handleReminderToggle}
-              color={colors.tiger}
-            />
-          </View>
+          <NBSettingsRow
+            label="DAILY REMINDER"
+            hint={`${reminderTime} LOCAL`}
+            isLast={!reminderEnabled}
+            right={
+              <NBToggle
+                testID="reminder-toggle"
+                value={reminderEnabled}
+                onValueChange={handleReminderToggle}
+                color={colors.tiger}
+              />
+            }
+          />
           {reminderEnabled && (
             <View style={styles.timePickerContainer}>
               <Text style={styles.rowLabel}>REMINDER TIME</Text>
@@ -339,14 +337,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
               disabled={syncing}
               loading={syncing}
               style={styles.syncButton}>
-              {syncing ? (
-                <ActivityIndicator
-                  color={colors.text}
-                  testID="sync-spinner"
-                />
-              ) : (
-                'SYNC NOW'
-              )}
+              SYNC NOW
             </NBButton>
             {lastSyncTime && (
               <Text style={styles.lastSync} testID="last-sync-time">
@@ -382,14 +373,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 disabled={connecting || secretInput.trim().length === 0}
                 loading={connecting}
                 style={styles.connectButton}>
-                {connecting ? (
-                  <ActivityIndicator
-                    color={colors.text}
-                    testID="connect-spinner"
-                  />
-                ) : (
-                  'CONNECT'
-                )}
+                CONNECT
               </NBButton>
             </View>
           </View>
@@ -398,21 +382,26 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         {/* About */}
         <SectionHeader label="ABOUT" />
         <NBCard>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>VERSION</Text>
-            <Text style={styles.rowValue} testID="app-version">
-              {APP_VERSION}
-            </Text>
-          </View>
-          <View style={[styles.row, styles.rowLast]}>
-            <Text style={styles.rowLabel}>SERVER URL</Text>
-            <Text
-              style={[styles.rowValue, styles.serverUrl]}
-              testID="server-url"
-              numberOfLines={1}>
-              {API_BASE_URL}
-            </Text>
-          </View>
+          <NBSettingsRow
+            label="VERSION"
+            right={
+              <Text style={styles.rowValue} testID="app-version">
+                {APP_VERSION}
+              </Text>
+            }
+          />
+          <NBSettingsRow
+            label="SERVER URL"
+            isLast
+            right={
+              <Text
+                style={[styles.rowValue, styles.serverUrl]}
+                testID="server-url"
+                numberOfLines={1}>
+                {API_BASE_URL}
+              </Text>
+            }
+          />
         </NBCard>
 
         <View style={styles.bottomSpacer} />
@@ -461,35 +450,6 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     letterSpacing: 0.5,
   },
-  habitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: borders.thin,
-    borderBottomColor: colors.regaliaSoft,
-    backgroundColor: colors.card,
-    gap: 12,
-  },
-  habitRowLast: {
-    borderBottomWidth: 0,
-  },
-  habitInfo: {
-    flex: 1,
-  },
-  habitName: {
-    fontFamily: fontFamily.display,
-    fontSize: 16,
-    color: colors.text,
-    textTransform: 'uppercase',
-    letterSpacing: -0.2,
-  },
-  habitDate: {
-    marginTop: 4,
-    fontFamily: fontFamily.mono,
-    fontSize: 10,
-    color: colors.textSoft,
-  },
   emptyText: {
     fontFamily: fontFamily.mono,
     fontSize: 12,
@@ -498,34 +458,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     backgroundColor: colors.card,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.card,
-    borderBottomWidth: borders.thin,
-    borderBottomColor: colors.regaliaSoft,
-  },
-  rowLast: {
-    borderBottomWidth: 0,
-  },
-  rowText: {
-    flex: 1,
-  },
   rowLabel: {
     fontFamily: fontFamily.display,
     fontSize: 14,
     color: colors.text,
     textTransform: 'uppercase',
     letterSpacing: -0.1,
-  },
-  rowHint: {
-    marginTop: 4,
-    fontFamily: fontFamily.mono,
-    fontSize: 10,
-    color: colors.textSoft,
   },
   rowValue: {
     fontFamily: fontFamily.mono,
