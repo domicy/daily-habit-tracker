@@ -23,11 +23,16 @@ exports[`DashboardScreen matches snapshot 1`] = `
   >
     <View
       style={
-        {
-          "paddingBottom": 16,
-          "paddingHorizontal": 24,
-          "paddingTop": 16,
-        }
+        [
+          {
+            "paddingBottom": 16,
+            "paddingHorizontal": 24,
+            "paddingTop": 16,
+          },
+          {
+            "paddingTop": 32,
+          },
+        ]
       }
     >
       <View

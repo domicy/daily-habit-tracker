@@ -1969,11 +1969,16 @@ exports[`StatsScreen matches snapshot 1`] = `
       <View>
         <View
           style={
-            {
-              "alignItems": "center",
-              "flexDirection": "row",
-              "justifyContent": "space-between",
-            }
+            [
+              {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+              },
+              {
+                "paddingTop": 32,
+              },
+            ]
           }
         >
           <View

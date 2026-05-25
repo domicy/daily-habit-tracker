@@ -16,5 +16,12 @@ module.exports = {
         '@typescript-eslint/no-var-requires': 'off',
       },
     },
+    {
+      files: ['jest.setup.js'],
+      env: {jest: true},
+      rules: {
+        '@typescript-eslint/no-var-requires': 'off',
+      },
+    },
   ],
 };
