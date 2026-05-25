@@ -20,8 +20,10 @@
     "date-fns": "^4.1.0",
     "react": "19.0.0",
     "react-native": "0.78.1",
+    "react-native-device-info": "^14.1.1",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-screens": "~4.18.0",
+    "react-native-svg": "^15.8.0",
     "react-native-uuid": "^2.0.3"
   },
   "devDependencies": {

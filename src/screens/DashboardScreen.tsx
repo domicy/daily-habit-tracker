@@ -1,9 +1,9 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   AppState,
 } from 'react-native';
@@ -12,25 +12,66 @@ import {colors} from '../theme/colors';
 import {getFormattedToday} from '../utils/dateUtils';
 import {fontFamily, typeScale} from '../theme/typography';
 import {spacing} from '../theme/spacing';
+import {radii, borders} from '../theme';
 import HabitCard, {HABIT_ROW_HEIGHT} from '../components/HabitCard';
+import NBSurface from '../components/atoms/NBSurface';
+import NBCard from '../components/atoms/NBCard';
+import NBChip from '../components/atoms/NBChip';
 import {useHabits} from '../hooks/useHabits';
 import type {HabitDisplayData} from '../hooks/useHabits';
+import {useHabitsContext} from '../hooks/useHabitsContext';
 import HabitService from '../services/HabitService';
-import database from '../models';
 
 interface DashboardScreenProps {
   navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
   habitService?: HabitService;
 }
 
-const defaultHabitService = new HabitService(database);
-
 const DashboardScreen: React.FC<DashboardScreenProps> = ({
   navigation,
   habitService,
+}) =>
+  habitService ? (
+    <DashboardScreenWithService
+      navigation={navigation}
+      habitService={habitService}
+    />
+  ) : (
+    <DashboardScreenFromContext navigation={navigation} />
+  );
+
+interface DashboardScreenWithServiceProps {
+  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  habitService: HabitService;
+}
+
+const DashboardScreenWithService: React.FC<DashboardScreenWithServiceProps> = ({
+  navigation,
+  habitService,
 }) => {
-  const service = habitService ?? defaultHabitService;
-  const {habits, toggleHabit} = useHabits(service);
+  const state = useHabits(habitService);
+  return <DashboardScreenBody navigation={navigation} {...state} />;
+};
+
+const DashboardScreenFromContext: React.FC<{
+  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+}> = ({navigation}) => {
+  const state = useHabitsContext();
+  return <DashboardScreenBody navigation={navigation} {...state} />;
+};
+
+interface DashboardScreenBodyProps {
+  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  habits: HabitDisplayData[];
+  toggleHabit: (habitId: string) => Promise<void>;
+  loading: boolean;
+}
+
+const DashboardScreenBody: React.FC<DashboardScreenBodyProps> = ({
+  navigation,
+  habits,
+  toggleHabit,
+}) => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
   // Clear the system status bar (notch/punch-hole) then keep the existing 32px
@@ -39,7 +80,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   const [today, setToday] = useState(() => getFormattedToday());
 
-  // Update the displayed date when the app comes to the foreground
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextState => {
       if (nextState === 'active') {
@@ -48,6 +88,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     });
     return () => subscription.remove();
   }, []);
+
+  const doneCount = useMemo(
+    () => habits.filter(h => h.completedToday).length,
+    [habits],
+  );
 
   const handleToggle = useCallback(
     async (habitId: string) => {
@@ -110,20 +155,47 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   );
 
   return (
-    <View style={styles.screen} testID="dashboard-screen">
+    <NBSurface testID="dashboard-screen">
       <View style={[styles.header, {paddingTop: headerPaddingTop}]}>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>Daily Habits</Text>
-          <Text style={styles.date}>{today}</Text>
+        <View style={styles.chipRow}>
+          <NBChip background={colors.card} borderColor={colors.line}>
+            {today.toUpperCase()}
+          </NBChip>
+          <Pressable
+            onPress={handleAddPress}
+            accessibilityLabel="Create new habit"
+            accessibilityRole="button"
+            testID="add-habit-button">
+            <NBChip background={colors.tiger} borderColor={colors.tigerDeep}>
+              + NEW HABIT
+            </NBChip>
+          </Pressable>
         </View>
-        <TouchableOpacity
-          onPress={handleAddPress}
-          style={styles.addButton}
-          accessibilityLabel="Create new habit"
-          accessibilityRole="button"
-          testID="add-habit-button">
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
+        <Text style={styles.title}>TODAY</Text>
+
+        <NBCard style={styles.progressCard}>
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressHeaderText}>PROGRESS</Text>
+            <Text style={styles.progressHeaderText}>
+              {doneCount}/{habits.length} DONE
+            </Text>
+          </View>
+          <View style={styles.progressDots}>
+            {habits.length === 0 ? (
+              <Text style={styles.progressEmpty}>{'// AWAITING HABITS'}</Text>
+            ) : (
+              habits.map(h => (
+                <View
+                  key={h.id}
+                  style={[
+                    styles.progressDot,
+                    h.completedToday ? styles.dotFilled : styles.dotEmpty,
+                  ]}
+                />
+              ))
+            )}
+          </View>
+        </NBCard>
       </View>
 
       <FlatList
@@ -136,7 +208,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         windowSize={5}
         removeClippedSubviews={true}
         ListEmptyComponent={renderEmpty}
-        contentContainerStyle={habits.length === 0 ? styles.emptyListContent : undefined}
+        contentContainerStyle={
+          habits.length === 0 ? styles.emptyListContent : styles.listContent
+        }
         testID="habit-list"
       />
 
@@ -145,51 +219,75 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
           <Text style={styles.toastText}>{toastMessage}</Text>
         </View>
       )}
-    </View>
+    </NBSurface>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.md,
   },
-  headerTextContainer: {
-    flex: 1,
+  chipRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: {
-    fontFamily: fontFamily.heading,
-    ...typeScale.h1,
-    color: colors.clemsonOrange,
+    fontFamily: fontFamily.display,
+    fontSize: 72,
+    lineHeight: 60,
+    letterSpacing: -3.5,
+    color: colors.text,
+    marginTop: spacing.sm,
   },
-  date: {
-    fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
+  progressCard: {
+    marginTop: spacing.md,
   },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.clemsonOrange,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.xs,
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: colors.darkBg,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  addButtonText: {
-    color: colors.textPrimary,
-    fontSize: 28,
+  progressHeaderText: {
+    fontFamily: fontFamily.mono,
+    fontSize: 11,
     fontWeight: '700',
-    lineHeight: 30,
+    color: colors.darkBgText,
+    letterSpacing: 0.7,
+  },
+  progressDots: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  progressDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: borders.thick,
+  },
+  dotFilled: {
+    backgroundColor: colors.tiger,
+    borderColor: colors.tigerDeep,
+  },
+  dotEmpty: {
+    backgroundColor: colors.card,
+    borderColor: colors.mute,
+  },
+  progressEmpty: {
+    fontFamily: fontFamily.mono,
+    fontSize: 12,
+    color: colors.textSoft,
+  },
+  listContent: {
+    paddingBottom: 120,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -203,7 +301,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: fontFamily.body,
     ...typeScale.body,
-    color: colors.textSecondary,
+    color: colors.textSoft,
     textAlign: 'center',
   },
   emptyListContent: {
@@ -211,19 +309,20 @@ const styles = StyleSheet.create({
   },
   toast: {
     position: 'absolute',
-    bottom: spacing.xl,
+    bottom: 96,
     left: spacing.md,
     right: spacing.md,
-    backgroundColor: colors.error,
-    borderRadius: 8,
+    backgroundColor: colors.tigerDeep,
+    borderRadius: radii.pill,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
   },
   toastText: {
-    fontFamily: fontFamily.body,
-    ...typeScale.caption,
-    color: colors.textPrimary,
+    fontFamily: fontFamily.mono,
+    fontSize: 12,
+    color: colors.card,
+    fontWeight: '700',
   },
 });
 

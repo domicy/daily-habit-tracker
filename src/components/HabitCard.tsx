@@ -1,14 +1,11 @@
-import React, {useCallback, useRef, useEffect} from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-} from 'react-native';
+import React, {useCallback} from 'react';
+import {View, Text, TouchableOpacity, Pressable, StyleSheet} from 'react-native';
 import {colors} from '../theme/colors';
-import {fontFamily, typeScale} from '../theme/typography';
+import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
+import {radii, borders, shadowOffsets} from '../theme';
+import NBCircle from './atoms/NBCircle';
+import NBShadow from './atoms/NBShadow';
 
 export const HABIT_ROW_HEIGHT = 72;
 
@@ -21,7 +18,7 @@ interface HabitCardProps {
   onPress?: (habitId: string) => void;
 }
 
-const CHECK_CIRCLE_SIZE = 56;
+const CHECK_CIRCLE_SIZE = 32;
 
 function areEqual(prev: HabitCardProps, next: HabitCardProps): boolean {
   return (
@@ -42,22 +39,6 @@ const HabitCard: React.FC<HabitCardProps> = ({
   onToggle,
   onPress,
 }) => {
-  const scaleAnim = useRef(new Animated.Value(completedToday ? 1 : 0)).current;
-
-  useEffect(() => {
-    if (completedToday) {
-      scaleAnim.setValue(0.5);
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 4,
-        tension: 100,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      scaleAnim.setValue(0);
-    }
-  }, [completedToday, scaleAnim]);
-
   const handleToggle = useCallback(() => {
     onToggle(habitId);
   }, [habitId, onToggle]);
@@ -73,41 +54,58 @@ const HabitCard: React.FC<HabitCardProps> = ({
   const streakLabel = streak === 1 ? '1 day' : `${streak} days`;
 
   return (
-    <TouchableOpacity
-      style={styles.container}
+    <Pressable
+      style={({pressed}) => [
+        styles.container,
+        pressed && onPress ? styles.containerPressed : null,
+      ]}
       testID={`habit-card-${habitId}`}
-      onPress={handlePress}
-      activeOpacity={onPress ? 0.7 : 1}>
-      <View style={styles.textContainer}>
-        <Text style={styles.habitName} numberOfLines={1} testID={`habit-name-${habitId}`}>
-          {name}
-        </Text>
-        <Text style={styles.streakText} testID={`streak-${habitId}`}>🔥 {streakLabel}</Text>
-      </View>
+      onPress={handlePress}>
       <TouchableOpacity
         onPress={handleToggle}
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
         testID={`toggle-${habitId}`}
-        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-        <View
-          style={[
-            styles.circle,
-            completedToday ? styles.circleCompleted : styles.circleIncomplete,
-          ]}>
-          {completedToday && (
-            <Animated.Text
-              testID={`checkmark-${habitId}`}
-              style={[
-                styles.checkmark,
-                {transform: [{scale: scaleAnim}]},
-              ]}>
-              ✓
-            </Animated.Text>
-          )}
-        </View>
+        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+        style={styles.circleSlot}>
+        <NBShadow
+          offsetX={shadowOffsets.xs}
+          offsetY={shadowOffsets.xs}
+          color={colors.shadow}
+          borderRadius={CHECK_CIRCLE_SIZE / 2}
+          shadowOpacity={completedToday ? 1 : 0}>
+          <NBCircle
+            filled={completedToday}
+            size={CHECK_CIRCLE_SIZE}
+            border={completedToday ? colors.tigerDeep : colors.line}
+            withShadow={false}
+            testID={completedToday ? `checkmark-${habitId}` : undefined}
+          />
+        </NBShadow>
       </TouchableOpacity>
-    </TouchableOpacity>
+
+      <View style={styles.textContainer}>
+        <Text
+          style={[
+            styles.habitName,
+            completedToday && styles.habitNameDone,
+          ]}
+          numberOfLines={1}
+          testID={`habit-name-${habitId}`}>
+          {name}
+        </Text>
+      </View>
+
+      <View
+        style={[
+          styles.streakBadge,
+          completedToday ? styles.badgeFilled : styles.badgeEmpty,
+        ]}>
+        <Text style={styles.streakText} testID={`streak-${habitId}`}>
+          🔥 {streakLabel}
+        </Text>
+      </View>
+    </Pressable>
   );
 };
 
@@ -116,46 +114,52 @@ const styles = StyleSheet.create({
     height: HABIT_ROW_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: colors.paper,
+    borderBottomWidth: borders.thin,
+    borderBottomColor: colors.regaliaSoft,
+    gap: 12,
   },
-  textContainer: {
-    flex: 1,
-    marginRight: spacing.md,
+  containerPressed: {
+    opacity: 0.7,
   },
-  habitName: {
-    fontFamily: fontFamily.body,
-    ...typeScale.body,
-    color: colors.textPrimary,
-  },
-  streakText: {
-    fontFamily: fontFamily.body,
-    ...typeScale.caption,
-    color: colors.streakGold,
-    marginTop: spacing.xs,
-  },
-  circle: {
-    width: CHECK_CIRCLE_SIZE,
-    height: CHECK_CIRCLE_SIZE,
-    borderRadius: CHECK_CIRCLE_SIZE / 2,
+  circleSlot: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  circleIncomplete: {
-    borderWidth: 3,
-    borderColor: colors.clemsonOrange,
-    backgroundColor: 'transparent',
+  textContainer: {
+    flex: 1,
   },
-  circleCompleted: {
-    backgroundColor: colors.success,
+  habitName: {
+    fontFamily: fontFamily.display,
+    fontSize: 17,
+    color: colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: -0.2,
   },
-  checkmark: {
-    color: colors.textPrimary,
-    fontSize: 24,
+  habitNameDone: {
+    color: colors.textSoft,
+    textDecorationLine: 'line-through',
+  },
+  streakBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    borderWidth: borders.base,
+  },
+  badgeFilled: {
+    backgroundColor: colors.tiger,
+    borderColor: colors.tigerDeep,
+  },
+  badgeEmpty: {
+    backgroundColor: colors.card,
+    borderColor: colors.line,
+  },
+  streakText: {
+    fontFamily: fontFamily.mono,
+    fontSize: 12,
     fontWeight: '700',
+    color: colors.text,
   },
 });
 
