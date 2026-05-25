@@ -30,8 +30,9 @@ import NBToggle from '../components/atoms/NBToggle';
 import NBButton from '../components/atoms/NBButton';
 import NBShadow from '../components/atoms/NBShadow';
 import NBSettingsRow from '../components/atoms/NBSettingsRow';
+import {getAppReleaseString} from '../utils/appVersion';
 
-const APP_VERSION = '0.0.1';
+const APP_VERSION = getAppReleaseString();
 const REMINDER_ENABLED_KEY = 'reminder_enabled';
 const REMINDER_TIME_KEY = 'reminder_time';
 const LAST_SYNC_KEY = 'last_sync_timestamp';
