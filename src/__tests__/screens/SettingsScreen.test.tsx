@@ -11,6 +11,14 @@ import {of} from 'rxjs';
 // Mock the database import to avoid SQLite initialization in tests
 jest.mock('../../models', () => ({}));
 
+jest.mock('react-native-device-info', () => ({
+  __esModule: true,
+  default: {
+    getVersion: jest.fn().mockReturnValue('1.2.3'),
+    getBuildNumber: jest.fn().mockReturnValue('456'),
+  },
+}));
+
 // Mock @notifee/react-native (imported transitively via NotificationService)
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
@@ -196,7 +204,7 @@ describe('SettingsScreen', () => {
       expect(getByTestId('app-version')).toBeTruthy();
     });
 
-    expect(getByTestId('app-version').props.children).toBe('0.0.1');
+    expect(getByTestId('app-version').props.children).toBe('1.2.3-r456');
     expect(getByTestId('server-url').props.children).toBe(
       'https://habit-api.darling.solutions',
     );
