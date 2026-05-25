@@ -7,6 +7,7 @@ import {
   StyleSheet,
   AppState,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors} from '../theme/colors';
 import {getFormattedToday} from '../utils/dateUtils';
 import {fontFamily, typeScale} from '../theme/typography';
@@ -31,6 +32,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const service = habitService ?? defaultHabitService;
   const {habits, toggleHabit} = useHabits(service);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+  // Clear the system status bar (notch/punch-hole) then keep the existing 32px
+  // breathing room. Without this, the header sits under the Android battery bar.
+  const headerPaddingTop = Math.max(insets.top + spacing.md, spacing.xl);
 
   const [today, setToday] = useState(() => getFormattedToday());
 
@@ -106,7 +111,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   return (
     <View style={styles.screen} testID="dashboard-screen">
-      <View style={styles.header}>
+      <View style={[styles.header, {paddingTop: headerPaddingTop}]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.title}>Daily Habits</Text>
           <Text style={styles.date}>{today}</Text>

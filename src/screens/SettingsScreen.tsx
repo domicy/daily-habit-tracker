@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {format} from 'date-fns';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors} from '../theme/colors';
 import {fontFamily, typeScale} from '../theme/typography';
 import {spacing} from '../theme/spacing';
@@ -63,6 +64,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [connecting, setConnecting] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
+  // Clear the system status bar so the first row ("Your Habits") and any
+  // content the user scrolls to (e.g. the Version row) don't slide under it.
+  const contentPaddingTop = Math.max(insets.top + spacing.md, spacing.xl);
 
   // Load notification preferences
   useEffect(() => {
@@ -219,7 +224,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     <ScrollView
       ref={scrollRef}
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, {paddingTop: contentPaddingTop}]}
       keyboardShouldPersistTaps="handled"
       testID="settings-screen">
       {/* Your Habits */}

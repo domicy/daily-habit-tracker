@@ -8,6 +8,7 @@ import {
   Animated,
 } from 'react-native';
 import {format, getDaysInMonth} from 'date-fns';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {getTodayString} from '../utils/dateUtils';
 import {colors} from '../theme/colors';
 import {fontFamily, typeScale} from '../theme/typography';
@@ -31,6 +32,9 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
 }) => {
   const service = habitService ?? defaultHabitService;
   const habitId = route?.params?.habitId ?? '';
+  const insets = useSafeAreaInsets();
+  // Clear the system status bar before laying out the back button + title.
+  const headerPaddingTop = Math.max(insets.top + spacing.md, spacing.xl);
 
   const [habitName, setHabitName] = useState('');
   const [streak, setStreak] = useState(0);
@@ -129,7 +133,7 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
       contentContainerStyle={styles.content}
       testID="stats-screen">
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, {paddingTop: headerPaddingTop}]}>
         <TouchableOpacity
           onPress={handleBack}
           style={styles.backButton}

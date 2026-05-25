@@ -12,14 +12,19 @@ exports[`DashboardScreen matches snapshot 1`] = `
 >
   <View
     style={
-      {
-        "alignItems": "flex-start",
-        "flexDirection": "row",
-        "justifyContent": "space-between",
-        "paddingBottom": 16,
-        "paddingHorizontal": 16,
-        "paddingTop": 32,
-      }
+      [
+        {
+          "alignItems": "flex-start",
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "paddingBottom": 16,
+          "paddingHorizontal": 16,
+          "paddingTop": 32,
+        },
+        {
+          "paddingTop": 32,
+        },
+      ]
     }
   >
     <View

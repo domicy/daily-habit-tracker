@@ -23,8 +23,8 @@ const HomeStackScreen: React.FC = () => (
 );
 
 const SettingsStackScreen: React.FC = () => (
-  <SettingsStack.Navigator>
-    <SettingsStack.Screen name="SettingsScreen" component={SettingsScreen} options={{title: 'Settings'}} />
+  <SettingsStack.Navigator screenOptions={{headerShown: false}}>
+    <SettingsStack.Screen name="SettingsScreen" component={SettingsScreen} />
   </SettingsStack.Navigator>
 );
 
