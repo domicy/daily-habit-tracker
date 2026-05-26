@@ -36,5 +36,20 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 4,
+      steps: [
+        // Per-habit notification opt-in and time. Existing rows get the
+        // column-type defaults (false, ''), which the service/UI treats as
+        // "no notification scheduled" — identical to pre-migration behavior.
+        addColumns({
+          table: 'habits',
+          columns: [
+            {name: 'notifications_enabled', type: 'boolean'},
+            {name: 'notification_time', type: 'string'},
+          ],
+        }),
+      ],
+    },
   ],
 });

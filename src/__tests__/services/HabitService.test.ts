@@ -687,4 +687,67 @@ describe('HabitService', () => {
       expect(habits[0].name).toBe('Active Habit');
     });
   });
+
+  describe('per-habit notifications', () => {
+    it('createHabit sets sane defaults for the new notification fields', async () => {
+      const habit = await service.createHabit('Stretch');
+      expect(habit.notificationsEnabled).toBe(false);
+      expect(habit.notificationTime).toBe('08:00');
+    });
+
+    it('setHabitNotification updates the row but does NOT flip synced=false', async () => {
+      // Start from a synced habit so we can verify the synced bit is preserved.
+      const habit = await createTestHabit(database, 'Water', true);
+      await service.setHabitNotification(habit.id, true, '07:30');
+
+      const updated = await service.getHabitById(habit.id);
+      expect(updated.notificationsEnabled).toBe(true);
+      expect(updated.notificationTime).toBe('07:30');
+      // Critical: notification prefs are device-local and must NOT enter the
+      // sync queue. Flipping synced=false would push them to the server.
+      expect(updated.synced).toBe(true);
+    });
+
+    it('getHabitsWithNotifications returns only active habits that opted in', async () => {
+      const enabledActive = await createTestHabit(database, 'A');
+      await service.setHabitNotification(enabledActive.id, true, '08:00');
+
+      // 'B' is left at the default (notifications_enabled=false) — created
+      // for its side effect of populating the table, no handle needed.
+      await createTestHabit(database, 'B');
+
+      const enabledInactive = await createTestHabit(database, 'C');
+      await service.setHabitNotification(enabledInactive.id, true, '09:00');
+      await enabledInactive.markInactive();
+
+      const result = await service.getHabitsWithNotifications();
+      expect(result.map(h => h.name).sort()).toEqual(['A']);
+      // disabledActive excluded by notifications_enabled=false
+      // enabledInactive excluded by is_active=false
+      expect(result.find(h => h.name === 'B')).toBeUndefined();
+      expect(result.find(h => h.name === 'C')).toBeUndefined();
+    });
+
+    it('observeUnsyncedCount is unaffected by toggling per-habit notifications', async () => {
+      const habit = await createTestHabit(database, 'Walk', true);
+
+      const initial = await new Promise<number>(resolve => {
+        const sub = service.observeUnsyncedCount().subscribe(v => {
+          resolve(v);
+          Promise.resolve().then(() => sub.unsubscribe());
+        });
+      });
+
+      await service.setHabitNotification(habit.id, true, '06:30');
+
+      const after = await new Promise<number>(resolve => {
+        const sub = service.observeUnsyncedCount().subscribe(v => {
+          resolve(v);
+          Promise.resolve().then(() => sub.unsubscribe());
+        });
+      });
+
+      expect(after).toBe(initial);
+    });
+  });
 });

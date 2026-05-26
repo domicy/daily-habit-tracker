@@ -10,6 +10,7 @@ import {Alert} from 'react-native';
 
 const NOTIFICATION_ID = 'daily-habit-reminder';
 const CHANNEL_ID = 'daily-reminders';
+const HABIT_NOTIFICATION_PREFIX = 'habit-reminder-';
 
 class NotificationService {
   /**
@@ -112,6 +113,72 @@ class NotificationService {
     }
 
     return target.getTime();
+  }
+
+  private habitNotificationId(habitId: string): string {
+    return `${HABIT_NOTIFICATION_PREFIX}${habitId}`;
+  }
+
+  /**
+   * Schedule (or replace) a daily repeating reminder for a single habit.
+   * Uses a per-habit notification ID derived from the habit's row id so
+   * each habit's reminder is independent of the others and of the global
+   * "daily-habit-reminder" reminder.
+   */
+  async scheduleHabitReminder(
+    habitId: string,
+    habitName: string,
+    hour: number,
+    minute: number,
+  ): Promise<void> {
+    const id = this.habitNotificationId(habitId);
+    await notifee.cancelTriggerNotification(id);
+
+    await notifee.createChannel({
+      id: CHANNEL_ID,
+      name: 'Daily Reminders',
+    });
+
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp: this.getNextTriggerTimestamp(new Date(), hour, minute),
+      repeatFrequency: RepeatFrequency.DAILY,
+    };
+
+    await notifee.createTriggerNotification(
+      {
+        id,
+        title: habitName,
+        body: "Don't forget your habit today.",
+        android: {
+          channelId: CHANNEL_ID,
+          pressAction: {id: 'default'},
+        },
+      },
+      trigger,
+    );
+  }
+
+  async cancelHabitReminder(habitId: string): Promise<void> {
+    await notifee.cancelTriggerNotification(this.habitNotificationId(habitId));
+  }
+
+  /**
+   * Cancel every scheduled per-habit reminder. Filters by the
+   * "habit-reminder-" prefix so it never touches the global
+   * "daily-habit-reminder" or any unrelated trigger.
+   */
+  async cancelAllHabitReminders(): Promise<void> {
+    const triggers = await notifee.getTriggerNotifications();
+    const habitIds = triggers
+      .map(t => t.notification.id)
+      .filter(
+        (id): id is string =>
+          typeof id === 'string' && id.startsWith(HABIT_NOTIFICATION_PREFIX),
+      );
+    await Promise.all(
+      habitIds.map(id => notifee.cancelTriggerNotification(id)),
+    );
   }
 }
 

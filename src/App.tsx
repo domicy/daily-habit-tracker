@@ -9,17 +9,45 @@ const NotificationBootstrap: React.FC = () => {
   const services = useServices();
   // Reschedule notifications on app launch.
   // iOS can clear scheduled notifications on reboot, so we re-register them
-  // every time the app starts if the user has notifications enabled.
+  // every time the app starts. The global reminder is gated by the
+  // `reminder_enabled` AsyncStorage flag; when global is OFF, each habit
+  // with `notifications_enabled=true` gets its own scheduled reminder.
   useEffect(() => {
     if (!services) {
       return;
     }
     (async () => {
+      const {notificationService, habitService} = services;
       const enabled = await AsyncStorage.getItem('reminder_enabled');
       if (enabled === 'true') {
         const time = (await AsyncStorage.getItem('reminder_time')) ?? '08:00';
         const [hour, minute] = time.split(':').map(Number);
-        await services.notificationService.scheduleDailyReminder(hour, minute);
+        await notificationService.scheduleDailyReminder(hour, minute);
+        // Defensive: ensure no per-habit reminders linger from a prior
+        // session in which global was OFF.
+        await notificationService.cancelAllHabitReminders();
+      } else {
+        await notificationService.cancelDailyReminder();
+        // Clear any stale per-habit reminders (e.g. for habits that have
+        // since been deactivated or had notifications turned off) before
+        // re-registering from the current DB state.
+        await notificationService.cancelAllHabitReminders();
+        const habits = await habitService.getHabitsWithNotifications();
+        // Promise.all so several reminders don't serialize across the
+        // Notifee bridge and stutter cold-launch.
+        await Promise.all(
+          habits.map(habit => {
+            const [hour, minute] = (habit.notificationTime || '08:00')
+              .split(':')
+              .map(Number);
+            return notificationService.scheduleHabitReminder(
+              habit.id,
+              habit.name,
+              hour,
+              minute,
+            );
+          }),
+        );
       }
     })();
   }, [services]);

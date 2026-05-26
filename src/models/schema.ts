@@ -1,7 +1,7 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 3,
+  version: 4,
   tables: [
     tableSchema({
       name: 'habits',
@@ -10,6 +10,12 @@ export const schema = appSchema({
         {name: 'created_at', type: 'number'},
         {name: 'is_active', type: 'boolean'},
         {name: 'synced', type: 'boolean', isIndexed: true},
+        // Per-habit notification preferences. Device-local only — never
+        // included in the sync payload. notification_time is "HH:MM" to
+        // match the AsyncStorage `reminder_time` format used by the global
+        // reminder. Empty string = unset; service/UI falls back to "08:00".
+        {name: 'notifications_enabled', type: 'boolean'},
+        {name: 'notification_time', type: 'string'},
       ],
     }),
     tableSchema({
