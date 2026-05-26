@@ -61,18 +61,33 @@ jest.mock('react-native', () => {
 });
 
 function createMockHabits(
-  items: Array<{id: string; name: string; isActive: boolean; createdAt?: number}>,
+  items: Array<{
+    id: string;
+    name: string;
+    isActive: boolean;
+    createdAt?: number;
+    notificationsEnabled?: boolean;
+    notificationTime?: string;
+  }>,
 ) {
   return items.map(h => ({
     id: h.id,
     name: h.name,
     isActive: h.isActive,
     createdAt: h.createdAt ?? 1704067200000, // Jan 1, 2024
+    notificationsEnabled: h.notificationsEnabled ?? false,
+    notificationTime: h.notificationTime ?? '08:00',
   }));
 }
 
 function createMockHabitService(
-  habits: Array<{id: string; name: string; isActive: boolean}>,
+  habits: Array<{
+    id: string;
+    name: string;
+    isActive: boolean;
+    notificationsEnabled?: boolean;
+    notificationTime?: string;
+  }>,
   unsyncedCount = 0,
 ) {
   const mockHabits = createMockHabits(habits);
@@ -94,6 +109,8 @@ function createMockHabitService(
     calculateStreak: jest.fn().mockResolvedValue(0),
     getLogsForHabit: jest.fn().mockResolvedValue([]),
     getHabitById: jest.fn().mockResolvedValue(null),
+    setHabitNotification: jest.fn().mockResolvedValue(undefined),
+    getHabitsWithNotifications: jest.fn().mockResolvedValue([]),
   } as unknown as jest.Mocked<HabitService>;
 }
 
@@ -103,6 +120,9 @@ function createMockNotificationService() {
     scheduleDailyReminder: jest.fn().mockResolvedValue(undefined),
     cancelDailyReminder: jest.fn().mockResolvedValue(undefined),
     onNotificationToggle: jest.fn().mockResolvedValue(true),
+    scheduleHabitReminder: jest.fn().mockResolvedValue(undefined),
+    cancelHabitReminder: jest.fn().mockResolvedValue(undefined),
+    cancelAllHabitReminders: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<NotificationService>;
 }
 

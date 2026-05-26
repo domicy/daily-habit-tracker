@@ -121,30 +121,49 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   }, [sService]);
 
   const handleToggleActive = useCallback(
-    async (habitId: string) => {
-      await hService.toggleHabitActive(habitId);
+    async (habit: Habit) => {
+      const wasActive = habit.isActive;
+      await hService.toggleHabitActive(habit.id);
+      // Reminders only make sense for active habits. When deactivating,
+      // cancel any scheduled per-habit reminder. When reactivating, restore
+      // it if the user previously had per-habit notifications enabled and
+      // the global reminder is OFF.
+      if (wasActive) {
+        await nService.cancelHabitReminder(habit.id);
+      } else if (habit.notificationsEnabled && !reminderEnabled) {
+        const [hour, minute] = (habit.notificationTime || '08:00')
+          .split(':')
+          .map(Number);
+        await nService.scheduleHabitReminder(
+          habit.id,
+          habit.name,
+          hour,
+          minute,
+        );
+      }
     },
-    [hService],
+    [hService, nService, reminderEnabled],
   );
 
   const handleLongPressDeactivate = useCallback(
-    (habitId: string, habitName: string) => {
+    (habit: Habit) => {
       Alert.alert(
         'Deactivate Habit',
-        `Are you sure you want to deactivate "${habitName}"? Historical logs will be preserved.`,
+        `Are you sure you want to deactivate "${habit.name}"? Historical logs will be preserved.`,
         [
           {text: 'Cancel', style: 'cancel'},
           {
             text: 'Deactivate',
             style: 'destructive',
             onPress: async () => {
-              await hService.toggleHabitActive(habitId);
+              await hService.toggleHabitActive(habit.id);
+              await nService.cancelHabitReminder(habit.id);
             },
           },
         ],
       );
     },
-    [hService],
+    [hService, nService],
   );
 
   const handleReminderToggle = useCallback(
@@ -156,8 +175,26 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       const finalValue = value ? granted : false;
       setReminderEnabled(finalValue);
       await AsyncStorage.setItem(REMINDER_ENABLED_KEY, String(finalValue));
+
+      if (finalValue) {
+        // Global mode took over — drop any per-habit reminders. DB rows
+        // keep their values so toggling global OFF later restores them.
+        await nService.cancelAllHabitReminders();
+      } else {
+        // Global mode off → reinstate each enabled habit's reminder.
+        // Concurrent dispatch avoids stutter on the Notifee bridge.
+        const enabledHabits = await hService.getHabitsWithNotifications();
+        await Promise.all(
+          enabledHabits.map(habit => {
+            const [h, m] = (habit.notificationTime || '08:00')
+              .split(':')
+              .map(Number);
+            return nService.scheduleHabitReminder(habit.id, habit.name, h, m);
+          }),
+        );
+      }
     },
-    [nService, reminderTime],
+    [nService, hService, reminderTime],
   );
 
   const handleTimeChange = useCallback(
@@ -171,6 +208,44 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       }
     },
     [nService, reminderEnabled],
+  );
+
+  const handleHabitNotificationToggle = useCallback(
+    async (habit: Habit, value: boolean) => {
+      if (reminderEnabled) {
+        return; // Defensive — UI also marks the toggle disabled.
+      }
+      if (value) {
+        const granted = await nService.requestPermission();
+        if (!granted) {
+          Alert.alert(
+            'Notifications Disabled',
+            'Please enable notifications for Daily Habit Tracker in your device Settings.',
+          );
+          return;
+        }
+      }
+      const time = habit.notificationTime || '08:00';
+      await hService.setHabitNotification(habit.id, value, time);
+      if (value) {
+        const [h, m] = time.split(':').map(Number);
+        await nService.scheduleHabitReminder(habit.id, habit.name, h, m);
+      } else {
+        await nService.cancelHabitReminder(habit.id);
+      }
+    },
+    [hService, nService, reminderEnabled],
+  );
+
+  const handleHabitTimeChange = useCallback(
+    async (habit: Habit, hour: number) => {
+      const time = `${String(hour).padStart(2, '0')}:00`;
+      await hService.setHabitNotification(habit.id, true, time);
+      if (!reminderEnabled) {
+        await nService.scheduleHabitReminder(habit.id, habit.name, hour, 0);
+      }
+    },
+    [hService, nService, reminderEnabled],
   );
 
   const handleSyncNow = useCallback(async () => {
@@ -215,31 +290,104 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     }
   }, [sService, secretInput]);
 
-  const renderHabitRow = useCallback(
-    ({item, index}: {item: Habit; index: number}) => (
-      <Pressable
-        testID={`habit-row-${item.id}`}
-        onLongPress={() => handleLongPressDeactivate(item.id, item.name)}
-        accessibilityLabel={`${item.name} habit`}>
-        <NBSettingsRow
-          label={item.name}
-          hint={`CREATED ${format(new Date(item.createdAt), 'MMM d, yyyy').toUpperCase()}`}
-          right={
-            <NBToggle
-              testID={`toggle-active-${item.id}`}
-              value={item.isActive}
-              onValueChange={() => handleToggleActive(item.id)}
-              color={colors.tiger}
-            />
-          }
-          isLast={index === habits.length - 1}
-        />
-      </Pressable>
-    ),
-    [habits.length, handleToggleActive, handleLongPressDeactivate],
-  );
+  const hours = useMemo(() => Array.from({length: 24}, (_, i) => i), []);
 
-  const hours = Array.from({length: 24}, (_, i) => i);
+  const renderHabitRow = useCallback(
+    ({item, index}: {item: Habit; index: number}) => {
+      const isLast = index === habits.length - 1;
+      const showPicker =
+        item.notificationsEnabled && !reminderEnabled && item.isActive;
+      const habitTime = item.notificationTime || '08:00';
+      return (
+        <View>
+          <Pressable
+            testID={`habit-row-${item.id}`}
+            onLongPress={() => handleLongPressDeactivate(item)}
+            accessibilityLabel={`${item.name} habit`}>
+            <NBSettingsRow
+              label={item.name}
+              hint={`CREATED ${format(new Date(item.createdAt), 'MMM d, yyyy').toUpperCase()}`}
+              right={
+                <View style={styles.habitToggleGroup}>
+                  <View style={styles.habitToggleCol}>
+                    <Text style={styles.habitToggleLabel}>ACTIVE</Text>
+                    <NBToggle
+                      testID={`toggle-active-${item.id}`}
+                      value={item.isActive}
+                      onValueChange={() => handleToggleActive(item)}
+                      color={colors.tiger}
+                    />
+                  </View>
+                  <View style={styles.habitToggleCol}>
+                    <Text style={styles.habitToggleLabel}>NOTIFY</Text>
+                    <NBToggle
+                      testID={`toggle-notify-${item.id}`}
+                      value={item.notificationsEnabled}
+                      onValueChange={v =>
+                        handleHabitNotificationToggle(item, v)
+                      }
+                      disabled={reminderEnabled || !item.isActive}
+                      color={colors.tiger}
+                    />
+                  </View>
+                </View>
+              }
+              isLast={isLast && !showPicker}
+            />
+          </Pressable>
+          {showPicker && (
+            <View
+              style={[
+                styles.timePickerContainer,
+                !isLast && styles.habitPickerDivider,
+              ]}
+              testID={`habit-time-picker-${item.id}`}>
+              <Text style={styles.rowLabel}>REMINDER TIME</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.timePicker}>
+                {hours.map(hour => {
+                  const selected =
+                    habitTime === `${String(hour).padStart(2, '0')}:00`;
+                  return (
+                    <Pressable
+                      key={hour}
+                      testID={`habit-time-option-${item.id}-${hour}`}
+                      style={[
+                        styles.timeOption,
+                        {
+                          backgroundColor: selected
+                            ? colors.tiger
+                            : colors.card,
+                          borderColor: selected
+                            ? colors.tigerDeep
+                            : colors.line,
+                        },
+                      ]}
+                      onPress={() => handleHabitTimeChange(item, hour)}>
+                      <Text style={styles.timeOptionText}>
+                        {formatHour(hour)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      );
+    },
+    [
+      habits.length,
+      reminderEnabled,
+      handleToggleActive,
+      handleLongPressDeactivate,
+      handleHabitNotificationToggle,
+      handleHabitTimeChange,
+      hours,
+    ],
+  );
 
   return (
     <NBSurface testID="settings-screen">
@@ -511,6 +659,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: colors.card,
+  },
+  habitToggleGroup: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  habitToggleCol: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  habitToggleLabel: {
+    fontFamily: fontFamily.mono,
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.textSoft,
+    letterSpacing: 0.5,
+  },
+  habitPickerDivider: {
+    borderBottomWidth: borders.thin,
+    borderBottomColor: colors.regaliaSoft,
   },
   timePicker: {
     marginTop: spacing.sm,

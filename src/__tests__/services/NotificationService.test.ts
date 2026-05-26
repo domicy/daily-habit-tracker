@@ -9,6 +9,7 @@ jest.mock('@notifee/react-native', () => ({
     createChannel: jest.fn().mockResolvedValue(''),
     createTriggerNotification: jest.fn().mockResolvedValue(''),
     cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
+    getTriggerNotifications: jest.fn().mockResolvedValue([]),
   },
   AuthorizationStatus: {
     DENIED: 0,
@@ -26,6 +27,7 @@ const mockNotifee = notifee as any as {
   createChannel: jest.Mock;
   createTriggerNotification: jest.Mock;
   cancelTriggerNotification: jest.Mock;
+  getTriggerNotifications: jest.Mock;
 };
 
 // Mock Alert
@@ -181,6 +183,93 @@ describe('NotificationService', () => {
         'Notifications Disabled',
         'Please enable notifications for Daily Habit Tracker in your device Settings.',
       );
+    });
+  });
+
+  describe('scheduleHabitReminder', () => {
+    it('uses a unique notification ID derived from the habit id', async () => {
+      await service.scheduleHabitReminder('habit-abc', 'Drink water', 9, 0);
+
+      expect(mockNotifee.createTriggerNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'habit-reminder-habit-abc',
+          title: 'Drink water',
+          body: "Don't forget your habit today.",
+        }),
+        expect.objectContaining({
+          type: 0, // TriggerType.TIMESTAMP
+          repeatFrequency: 3, // RepeatFrequency.DAILY
+        }),
+      );
+    });
+
+    it('cancels the habit-specific id before re-scheduling', async () => {
+      await service.scheduleHabitReminder('habit-xyz', 'Read', 7, 30);
+
+      const cancelOrder =
+        mockNotifee.cancelTriggerNotification.mock.invocationCallOrder[0];
+      const createOrder =
+        mockNotifee.createTriggerNotification.mock.invocationCallOrder[0];
+      expect(cancelOrder).toBeLessThan(createOrder);
+      expect(mockNotifee.cancelTriggerNotification).toHaveBeenCalledWith(
+        'habit-reminder-habit-xyz',
+      );
+    });
+
+    it('produces distinct notification IDs for distinct habits', async () => {
+      await service.scheduleHabitReminder('h-1', 'A', 8, 0);
+      await service.scheduleHabitReminder('h-2', 'B', 9, 0);
+
+      const ids = mockNotifee.createTriggerNotification.mock.calls.map(
+        ([notif]) => notif.id,
+      );
+      expect(ids).toEqual(['habit-reminder-h-1', 'habit-reminder-h-2']);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+  });
+
+  describe('cancelHabitReminder', () => {
+    it('cancels the trigger for that habit only', async () => {
+      await service.cancelHabitReminder('habit-123');
+
+      expect(mockNotifee.cancelTriggerNotification).toHaveBeenCalledWith(
+        'habit-reminder-habit-123',
+      );
+      expect(mockNotifee.cancelTriggerNotification).not.toHaveBeenCalledWith(
+        'daily-habit-reminder',
+      );
+    });
+  });
+
+  describe('cancelAllHabitReminders', () => {
+    it('cancels every per-habit trigger but leaves the global reminder alone', async () => {
+      mockNotifee.getTriggerNotifications.mockResolvedValue([
+        {notification: {id: 'habit-reminder-a'}},
+        {notification: {id: 'habit-reminder-b'}},
+        {notification: {id: 'daily-habit-reminder'}},
+        {notification: {id: 'unrelated-trigger'}},
+        {notification: {id: undefined}},
+      ]);
+
+      await service.cancelAllHabitReminders();
+
+      const cancelled = mockNotifee.cancelTriggerNotification.mock.calls.map(
+        ([id]) => id,
+      );
+      expect(cancelled).toEqual(
+        expect.arrayContaining(['habit-reminder-a', 'habit-reminder-b']),
+      );
+      expect(cancelled).not.toContain('daily-habit-reminder');
+      expect(cancelled).not.toContain('unrelated-trigger');
+      expect(cancelled).toHaveLength(2);
+    });
+
+    it('is a no-op when there are no scheduled triggers', async () => {
+      mockNotifee.getTriggerNotifications.mockResolvedValue([]);
+
+      await service.cancelAllHabitReminders();
+
+      expect(mockNotifee.cancelTriggerNotification).not.toHaveBeenCalled();
     });
   });
 });

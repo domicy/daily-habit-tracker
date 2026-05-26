@@ -73,8 +73,37 @@ export default class HabitService {
         habit.createdAt = Date.now();
         habit.isActive = true;
         habit.synced = false;
+        habit.notificationsEnabled = false;
+        habit.notificationTime = '08:00';
       });
     });
+  }
+
+  async setHabitNotification(
+    habitId: string,
+    enabled: boolean,
+    time: string,
+  ): Promise<void> {
+    const habit = await this.database.get<Habit>('habits').find(habitId);
+    await this.database.write(async () => {
+      await habit.update(h => {
+        h.notificationsEnabled = enabled;
+        h.notificationTime = time;
+        // notifications_enabled and notification_time are device-local
+        // preferences and are intentionally NOT part of the sync payload,
+        // so we do NOT flip `synced` to false here.
+      });
+    });
+  }
+
+  async getHabitsWithNotifications(): Promise<Habit[]> {
+    return this.database
+      .get<Habit>('habits')
+      .query(
+        Q.where('notifications_enabled', true),
+        Q.where('is_active', true),
+      )
+      .fetch();
   }
 
   async toggleHabitCompletion(
