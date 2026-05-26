@@ -250,7 +250,7 @@ describe('HabitService', () => {
       expect(streak).toBe(1);
     });
 
-    it('returns 0 if today is not logged but yesterday was', async () => {
+    it('returns 1 if today is not logged but yesterday was', async () => {
       const habit = await createTestHabit(database);
       const today = '2026-03-07';
       const yesterday = '2026-03-06';
@@ -258,6 +258,27 @@ describe('HabitService', () => {
       await createTestLog(database, habit.id, yesterday);
 
       const streak = await service.calculateStreak(habit.id, today);
+      expect(streak).toBe(1);
+    });
+
+    it('returns N for an N-day streak ending yesterday when today is not yet logged', async () => {
+      const habit = await createTestHabit(database);
+      await createTestLog(database, habit.id, '2026-03-03');
+      await createTestLog(database, habit.id, '2026-03-04');
+      await createTestLog(database, habit.id, '2026-03-05');
+      await createTestLog(database, habit.id, '2026-03-06'); // yesterday
+      // today (2026-03-07) deliberately not logged
+
+      const streak = await service.calculateStreak(habit.id, '2026-03-07');
+      expect(streak).toBe(4);
+    });
+
+    it('returns 0 when neither today nor yesterday is logged', async () => {
+      const habit = await createTestHabit(database);
+      // Older log exists, but the streak is broken by the missing yesterday
+      await createTestLog(database, habit.id, '2026-03-04');
+
+      const streak = await service.calculateStreak(habit.id, '2026-03-07');
       expect(streak).toBe(0);
     });
 

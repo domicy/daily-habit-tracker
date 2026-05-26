@@ -315,6 +315,16 @@ export default class HabitService {
 
     const dateSet = new Set(logs.map(log => log.completedDate));
 
+    // A streak is still alive if yesterday was logged — the user has
+    // until end of day to complete today. Walk from yesterday when
+    // today has no log so the count reflects the streak being protected.
+    if (!dateSet.has(currentDate)) {
+      currentDate = format(
+        subDays(new Date(currentDate + 'T00:00:00'), 1),
+        'yyyy-MM-dd',
+      );
+    }
+
     while (dateSet.has(currentDate)) {
       streak++;
       currentDate = format(
