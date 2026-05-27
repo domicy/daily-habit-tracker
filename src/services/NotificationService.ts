@@ -6,7 +6,6 @@ import notifee, {
   TimestampTrigger,
   TriggerType,
 } from '@notifee/react-native';
-import {Alert} from 'react-native';
 
 const NOTIFICATION_ID = 'daily-habit-reminder';
 const CHANNEL_ID = 'daily-reminders';
@@ -66,34 +65,6 @@ class NotificationService {
    */
   async cancelDailyReminder(): Promise<void> {
     await notifee.cancelTriggerNotification(NOTIFICATION_ID);
-  }
-
-  /**
-   * Convenience method called from Settings.
-   * If enabled, requests permission then schedules. If disabled, cancels.
-   */
-  async onNotificationToggle(
-    enabled: boolean,
-    hour: number,
-    minute: number,
-  ): Promise<boolean> {
-    if (!enabled) {
-      await this.cancelDailyReminder();
-      return false;
-    }
-
-    const granted = await this.requestPermission();
-    if (!granted) {
-      // User previously denied — direct them to device Settings
-      Alert.alert(
-        'Notifications Disabled',
-        'Please enable notifications for Daily Habit Tracker in your device Settings.',
-      );
-      return false;
-    }
-
-    await this.scheduleDailyReminder(hour, minute);
-    return true;
   }
 
   /**

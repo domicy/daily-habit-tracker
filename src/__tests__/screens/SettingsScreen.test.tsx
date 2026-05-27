@@ -119,7 +119,6 @@ function createMockNotificationService() {
     requestPermission: jest.fn().mockResolvedValue(true),
     scheduleDailyReminder: jest.fn().mockResolvedValue(undefined),
     cancelDailyReminder: jest.fn().mockResolvedValue(undefined),
-    onNotificationToggle: jest.fn().mockResolvedValue(true),
     scheduleHabitReminder: jest.fn().mockResolvedValue(undefined),
     cancelHabitReminder: jest.fn().mockResolvedValue(undefined),
     cancelAllHabitReminders: jest.fn().mockResolvedValue(undefined),
@@ -649,9 +648,6 @@ describe('SettingsScreen', () => {
     const service = createMockHabitService(habits);
     const syncService = createMockSyncService();
     const notificationService = createMockNotificationService();
-    (notificationService.onNotificationToggle as jest.Mock).mockResolvedValueOnce(
-      true,
-    );
 
     const {getByTestId} = render(
       <SettingsScreen
@@ -669,8 +665,150 @@ describe('SettingsScreen', () => {
       fireEvent(getByTestId('reminder-toggle'), 'valueChange', true);
     });
 
+    expect(notificationService.requestPermission).toHaveBeenCalled();
+    expect(notificationService.scheduleDailyReminder).toHaveBeenCalled();
     expect(notificationService.cancelAllHabitReminders).toHaveBeenCalled();
     expect(notificationService.scheduleHabitReminder).not.toHaveBeenCalled();
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      'reminder_enabled',
+      'true',
+    );
+  });
+
+  it('surfaces a schedule failure as an Alert and leaves the global toggle off', async () => {
+    const habits = [{id: 'h1', name: 'Exercise', isActive: true}];
+    const service = createMockHabitService(habits);
+    const syncService = createMockSyncService();
+    const notificationService = createMockNotificationService();
+    (
+      notificationService.scheduleDailyReminder as jest.Mock
+    ).mockRejectedValueOnce(new Error('exact alarm denied'));
+
+    const {getByTestId} = render(
+      <SettingsScreen
+        habitService={service}
+        syncService={syncService}
+        notificationService={notificationService}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('reminder-toggle')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent(getByTestId('reminder-toggle'), 'valueChange', true);
+    });
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Notification Error',
+      expect.stringContaining('exact alarm denied'),
+    );
+    expect(
+      getByTestId('reminder-toggle').props.accessibilityState.checked,
+    ).toBe(false);
+    // The initial-load useEffect may legitimately call setItem with other
+    // arguments — narrow the negative assertion to the specific call.
+    expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
+      'reminder_enabled',
+      'true',
+    );
+  });
+
+  it('rolls back the DB write when a per-habit schedule throws', async () => {
+    const habits = [
+      {
+        id: 'h1',
+        name: 'Exercise',
+        isActive: true,
+        notificationsEnabled: false,
+        notificationTime: '08:00',
+      },
+    ];
+    const service = createMockHabitService(habits);
+    const syncService = createMockSyncService();
+    const notificationService = createMockNotificationService();
+    (
+      notificationService.scheduleHabitReminder as jest.Mock
+    ).mockRejectedValueOnce(new Error('trigger failed'));
+
+    const {getByTestId} = render(
+      <SettingsScreen
+        habitService={service}
+        syncService={syncService}
+        notificationService={notificationService}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('toggle-notify-h1')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent(getByTestId('toggle-notify-h1'), 'valueChange', true);
+    });
+
+    expect(service.setHabitNotification).toHaveBeenCalledWith(
+      'h1',
+      true,
+      '08:00',
+    );
+    // Rollback: re-write with the previous value.
+    expect(service.setHabitNotification).toHaveBeenCalledWith(
+      'h1',
+      false,
+      '08:00',
+    );
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Notification Error',
+      expect.stringContaining('trigger failed'),
+    );
+    expect(
+      getByTestId('toggle-notify-h1').props.accessibilityState.checked,
+    ).toBe(false);
+  });
+
+  it('does not call scheduleHabitReminder when the per-habit DB write throws', async () => {
+    const habits = [
+      {
+        id: 'h1',
+        name: 'Exercise',
+        isActive: true,
+        notificationsEnabled: false,
+        notificationTime: '08:00',
+      },
+    ];
+    const service = createMockHabitService(habits);
+    (service.setHabitNotification as jest.Mock).mockRejectedValueOnce(
+      new Error('db write failed'),
+    );
+    const syncService = createMockSyncService();
+    const notificationService = createMockNotificationService();
+
+    const {getByTestId} = render(
+      <SettingsScreen
+        habitService={service}
+        syncService={syncService}
+        notificationService={notificationService}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('toggle-notify-h1')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent(getByTestId('toggle-notify-h1'), 'valueChange', true);
+    });
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Habit Update Failed',
+      expect.stringContaining('db write failed'),
+    );
+    expect(notificationService.scheduleHabitReminder).not.toHaveBeenCalled();
+    expect(
+      getByTestId('toggle-notify-h1').props.accessibilityState.checked,
+    ).toBe(false);
   });
 
   it('reschedules each enabled habit reminder when the global reminder is toggled OFF', async () => {
