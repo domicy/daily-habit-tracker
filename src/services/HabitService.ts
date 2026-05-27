@@ -40,10 +40,19 @@ export default class HabitService {
   }
 
   getAllHabits(): Observable<Habit[]> {
+    // observeWithColumns (not observe) so the Settings list re-emits when a
+    // habit's active flag or per-habit notification fields change — plain
+    // observe() only fires when records are added/removed or change which
+    // rows match the query, so toggle-in-place updates would never reach
+    // the UI.
     return this.database
       .get<Habit>('habits')
       .query(Q.sortBy('created_at', Q.asc))
-      .observe();
+      .observeWithColumns([
+        'is_active',
+        'notifications_enabled',
+        'notification_time',
+      ]);
   }
 
   async toggleHabitActive(habitId: string): Promise<void> {

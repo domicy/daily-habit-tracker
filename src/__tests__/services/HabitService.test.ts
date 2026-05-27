@@ -688,6 +688,37 @@ describe('HabitService', () => {
     });
   });
 
+  describe('getAllHabits', () => {
+    it('re-emits when a habit\'s is_active, notifications_enabled, or notification_time changes', async () => {
+      const habit = await createTestHabit(database, 'Hydrate', true);
+
+      const emissions: number[] = [];
+      const sub = service.getAllHabits().subscribe(habits => {
+        emissions.push(habits.length);
+      });
+
+      // Initial emission lands synchronously.
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+      const initialEmissionCount = emissions.length;
+      expect(initialEmissionCount).toBeGreaterThan(0);
+
+      // is_active mutation must reach the observable. Plain .observe() would
+      // not fire here, leaving the Settings list visually stuck.
+      await service.toggleHabitActive(habit.id);
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+      expect(emissions.length).toBeGreaterThan(initialEmissionCount);
+
+      const afterActive = emissions.length;
+
+      // notifications_enabled + notification_time mutation must also fire.
+      await service.setHabitNotification(habit.id, true, '07:30');
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+      expect(emissions.length).toBeGreaterThan(afterActive);
+
+      sub.unsubscribe();
+    });
+  });
+
   describe('per-habit notifications', () => {
     it('createHabit sets sane defaults for the new notification fields', async () => {
       const habit = await service.createHabit('Stretch');

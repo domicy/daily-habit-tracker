@@ -379,7 +379,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       );
     },
     [
-      habits.length,
+      // Depend on `habits` (not `habits.length`) so the callback identity
+      // flips on every WatermelonDB emission. Habit models mutate in place,
+      // so without this the FlatList CellRenderer (PureComponent) keeps a
+      // stale render of item.isActive / item.notificationsEnabled even
+      // after toggleHabitActive or setHabitNotification.
+      habits,
       reminderEnabled,
       handleToggleActive,
       handleLongPressDeactivate,
