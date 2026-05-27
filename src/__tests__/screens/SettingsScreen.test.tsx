@@ -722,6 +722,54 @@ describe('SettingsScreen', () => {
     expect(notificationService.cancelAllHabitReminders).not.toHaveBeenCalled();
   });
 
+  it('re-enables habit NOTIFY toggles after the global reminder is turned OFF', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'reminder_enabled') return Promise.resolve('true');
+      if (key === 'reminder_time') return Promise.resolve('09:00');
+      return Promise.resolve(null);
+    });
+    const habits = [
+      {id: 'h1', name: 'Exercise', isActive: true, notificationsEnabled: true},
+    ];
+    const service = createMockHabitService(habits);
+    const syncService = createMockSyncService();
+    const notificationService = createMockNotificationService();
+
+    const {getByTestId} = render(
+      <SettingsScreen
+        habitService={service}
+        syncService={syncService}
+        notificationService={notificationService}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('toggle-notify-h1')).toBeTruthy();
+    });
+    expect(
+      getByTestId('toggle-notify-h1').props.accessibilityState.disabled,
+    ).toBe(true);
+
+    await act(async () => {
+      fireEvent(getByTestId('reminder-toggle'), 'valueChange', false);
+    });
+
+    await waitFor(() => {
+      expect(
+        getByTestId('toggle-notify-h1').props.accessibilityState.disabled,
+      ).toBe(false);
+    });
+
+    await act(async () => {
+      fireEvent(getByTestId('toggle-notify-h1'), 'valueChange', false);
+    });
+    expect(service.setHabitNotification).toHaveBeenCalledWith(
+      'h1',
+      false,
+      '08:00',
+    );
+  });
+
   it('cancels the per-habit reminder when an active habit is deactivated via the ACTIVE toggle', async () => {
     const habits = [
       {
