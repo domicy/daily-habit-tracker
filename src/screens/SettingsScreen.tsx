@@ -411,6 +411,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
               data={habits}
               renderItem={renderHabitRow}
               keyExtractor={item => item.id}
+              extraData={reminderEnabled}
               scrollEnabled={false}
               testID="habits-list"
             />
