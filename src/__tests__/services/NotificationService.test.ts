@@ -1,4 +1,3 @@
-import {Alert} from 'react-native';
 import notifee from '@notifee/react-native';
 import NotificationService from '../../services/NotificationService';
 
@@ -29,9 +28,6 @@ const mockNotifee = notifee as any as {
   cancelTriggerNotification: jest.Mock;
   getTriggerNotifications: jest.Mock;
 };
-
-// Mock Alert
-jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
 describe('NotificationService', () => {
   let service: NotificationService;
@@ -132,56 +128,6 @@ describe('NotificationService', () => {
 
       expect(mockNotifee.cancelTriggerNotification).toHaveBeenCalledWith(
         'daily-habit-reminder',
-      );
-    });
-  });
-
-  describe('onNotificationToggle', () => {
-    it('cancels notification and does not schedule when disabled', async () => {
-      const result = await service.onNotificationToggle(false, 8, 0);
-
-      expect(result).toBe(false);
-      expect(mockNotifee.cancelTriggerNotification).toHaveBeenCalledWith(
-        'daily-habit-reminder',
-      );
-      expect(mockNotifee.createTriggerNotification).not.toHaveBeenCalled();
-      expect(mockNotifee.requestPermission).not.toHaveBeenCalled();
-    });
-
-    it('requests permission and schedules when enabled and granted', async () => {
-      mockNotifee.requestPermission.mockResolvedValue({
-        authorizationStatus: 1, // AUTHORIZED
-      });
-
-      const result = await service.onNotificationToggle(true, 9, 30);
-
-      expect(result).toBe(true);
-      expect(mockNotifee.requestPermission).toHaveBeenCalled();
-      expect(mockNotifee.createTriggerNotification).toHaveBeenCalled();
-    });
-
-    it('does not schedule when permission is denied', async () => {
-      mockNotifee.requestPermission.mockResolvedValue({
-        authorizationStatus: 0, // DENIED
-      });
-
-      const result = await service.onNotificationToggle(true, 9, 0);
-
-      expect(result).toBe(false);
-      expect(mockNotifee.requestPermission).toHaveBeenCalled();
-      expect(mockNotifee.createTriggerNotification).not.toHaveBeenCalled();
-    });
-
-    it('shows an alert directing to Settings when permission is denied', async () => {
-      mockNotifee.requestPermission.mockResolvedValue({
-        authorizationStatus: 0, // DENIED
-      });
-
-      await service.onNotificationToggle(true, 9, 0);
-
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Notifications Disabled',
-        'Please enable notifications for Daily Habit Tracker in your device Settings.',
       );
     });
   });

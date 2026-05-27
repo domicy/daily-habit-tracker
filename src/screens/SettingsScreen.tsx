@@ -38,6 +38,10 @@ const REMINDER_ENABLED_KEY = 'reminder_enabled';
 const REMINDER_TIME_KEY = 'reminder_time';
 const LAST_SYNC_KEY = 'last_sync_timestamp';
 
+function errMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
 interface SettingsScreenProps {
   habitService?: HabitService;
   syncService?: SyncService;
@@ -170,28 +174,70 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     async (value: boolean) => {
       const hour = parseInt(reminderTime.split(':')[0], 10);
       const minute = parseInt(reminderTime.split(':')[1], 10);
-      const granted = await nService.onNotificationToggle(value, hour, minute);
 
-      const finalValue = value ? granted : false;
-      setReminderEnabled(finalValue);
-      await AsyncStorage.setItem(REMINDER_ENABLED_KEY, String(finalValue));
-
-      if (finalValue) {
-        // Global mode took over — drop any per-habit reminders. DB rows
-        // keep their values so toggling global OFF later restores them.
-        await nService.cancelAllHabitReminders();
+      if (value) {
+        let granted: boolean;
+        try {
+          granted = await nService.requestPermission();
+        } catch (err) {
+          Alert.alert(
+            'Notifications',
+            errMessage(err, 'Failed to request notification permission.'),
+          );
+          return;
+        }
+        if (!granted) {
+          Alert.alert(
+            'Notifications Disabled',
+            'Please enable notifications for Daily Habit Tracker in your device Settings.',
+          );
+          return;
+        }
+        try {
+          await nService.scheduleDailyReminder(hour, minute);
+          await nService.cancelAllHabitReminders();
+        } catch (err) {
+          Alert.alert(
+            'Notification Error',
+            errMessage(err, 'Failed to schedule daily reminder.'),
+          );
+          return;
+        }
+        setReminderEnabled(true);
+        await AsyncStorage.setItem(REMINDER_ENABLED_KEY, 'true');
       } else {
-        // Global mode off → reinstate each enabled habit's reminder.
-        // Concurrent dispatch avoids stutter on the Notifee bridge.
-        const enabledHabits = await hService.getHabitsWithNotifications();
-        await Promise.all(
-          enabledHabits.map(habit => {
-            const [h, m] = (habit.notificationTime || '08:00')
-              .split(':')
-              .map(Number);
-            return nService.scheduleHabitReminder(habit.id, habit.name, h, m);
-          }),
-        );
+        // Commit OFF state as soon as the daily reminder is actually cancelled,
+        // so the toggle and AsyncStorage always reflect notifee's actual state.
+        // The per-habit fan-out below is a best-effort secondary step with its
+        // own Alert.
+        try {
+          await nService.cancelDailyReminder();
+        } catch (err) {
+          Alert.alert(
+            'Notification Error',
+            errMessage(err, 'Failed to disable daily reminder.'),
+          );
+          return;
+        }
+        setReminderEnabled(false);
+        await AsyncStorage.setItem(REMINDER_ENABLED_KEY, 'false');
+
+        try {
+          const enabledHabits = await hService.getHabitsWithNotifications();
+          await Promise.all(
+            enabledHabits.map(habit => {
+              const [h, m] = (habit.notificationTime || '08:00')
+                .split(':')
+                .map(Number);
+              return nService.scheduleHabitReminder(habit.id, habit.name, h, m);
+            }),
+          );
+        } catch (err) {
+          Alert.alert(
+            'Per-Habit Reminders',
+            `Daily reminder is off, but resuming per-habit reminders failed: ${errMessage(err, 'unknown error')}. Toggle individual habits to retry.`,
+          );
+        }
       }
     },
     [nService, hService, reminderTime],
@@ -204,7 +250,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       await AsyncStorage.setItem(REMINDER_TIME_KEY, timeStr);
 
       if (reminderEnabled) {
-        await nService.scheduleDailyReminder(hour, 0);
+        try {
+          await nService.scheduleDailyReminder(hour, 0);
+        } catch (err) {
+          Alert.alert(
+            'Notification Error',
+            errMessage(err, 'Failed to update reminder time.'),
+          );
+        }
       }
     },
     [nService, reminderEnabled],
@@ -212,11 +265,17 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const handleHabitNotificationToggle = useCallback(
     async (habit: Habit, value: boolean) => {
-      if (reminderEnabled) {
-        return; // Defensive — UI also marks the toggle disabled.
-      }
       if (value) {
-        const granted = await nService.requestPermission();
+        let granted: boolean;
+        try {
+          granted = await nService.requestPermission();
+        } catch (err) {
+          Alert.alert(
+            'Notifications',
+            errMessage(err, 'Failed to request notification permission.'),
+          );
+          return;
+        }
         if (!granted) {
           Alert.alert(
             'Notifications Disabled',
@@ -225,24 +284,59 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
           return;
         }
       }
+
       const time = habit.notificationTime || '08:00';
-      await hService.setHabitNotification(habit.id, value, time);
-      if (value) {
-        const [h, m] = time.split(':').map(Number);
-        await nService.scheduleHabitReminder(habit.id, habit.name, h, m);
-      } else {
-        await nService.cancelHabitReminder(habit.id);
+      const prevEnabled = habit.notificationsEnabled;
+
+      try {
+        await hService.setHabitNotification(habit.id, value, time);
+      } catch (err) {
+        Alert.alert(
+          'Habit Update Failed',
+          errMessage(err, 'Could not save the notification preference.'),
+        );
+        return;
+      }
+
+      try {
+        if (value) {
+          const [h, m] = time.split(':').map(Number);
+          await nService.scheduleHabitReminder(habit.id, habit.name, h, m);
+        } else {
+          await nService.cancelHabitReminder(habit.id);
+        }
+      } catch (err) {
+        // Roll back the DB write so the toggle reflects what's actually
+        // scheduled. If the rollback itself fails, the toggle will desync
+        // from notifee until the user retries — surface the original error
+        // either way.
+        try {
+          await hService.setHabitNotification(habit.id, prevEnabled, time);
+        } catch {
+          // best-effort rollback
+        }
+        Alert.alert(
+          'Notification Error',
+          errMessage(err, 'Failed to schedule reminder.'),
+        );
       }
     },
-    [hService, nService, reminderEnabled],
+    [hService, nService],
   );
 
   const handleHabitTimeChange = useCallback(
     async (habit: Habit, hour: number) => {
       const time = `${String(hour).padStart(2, '0')}:00`;
-      await hService.setHabitNotification(habit.id, true, time);
-      if (!reminderEnabled) {
-        await nService.scheduleHabitReminder(habit.id, habit.name, hour, 0);
+      try {
+        await hService.setHabitNotification(habit.id, true, time);
+        if (!reminderEnabled) {
+          await nService.scheduleHabitReminder(habit.id, habit.name, hour, 0);
+        }
+      } catch (err) {
+        Alert.alert(
+          'Notification Error',
+          errMessage(err, 'Failed to update reminder time.'),
+        );
       }
     },
     [hService, nService, reminderEnabled],
