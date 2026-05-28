@@ -5,6 +5,7 @@ jest.mock('@notifee/react-native', () => ({
   __esModule: true,
   default: {
     requestPermission: jest.fn(),
+    getNotificationSettings: jest.fn(),
     createChannel: jest.fn().mockResolvedValue(''),
     createTriggerNotification: jest.fn().mockResolvedValue(''),
     cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
@@ -23,6 +24,7 @@ jest.mock('@notifee/react-native', () => ({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockNotifee = notifee as any as {
   requestPermission: jest.Mock;
+  getNotificationSettings: jest.Mock;
   createChannel: jest.Mock;
   createTriggerNotification: jest.Mock;
   cancelTriggerNotification: jest.Mock;
@@ -34,6 +36,12 @@ describe('NotificationService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default to DENIED so requestPermission tests still flow through to
+    // the actual notifee.requestPermission() prompt path. The
+    // already-granted short-circuit is exercised by its own tests.
+    mockNotifee.getNotificationSettings.mockResolvedValue({
+      authorizationStatus: 0, // DENIED
+    });
     service = new NotificationService();
   });
 
@@ -63,6 +71,35 @@ describe('NotificationService', () => {
 
       const result = await service.requestPermission();
       expect(result).toBe(false);
+    });
+
+    it('returns true without calling requestPermission when already authorized', async () => {
+      // The user's reported hang: notifee.requestPermission() never
+      // resolves when permission is already granted. Short-circuit via the
+      // non-interactive getNotificationSettings() read so it is never
+      // called.
+      mockNotifee.getNotificationSettings.mockResolvedValue({
+        authorizationStatus: 1, // AUTHORIZED
+      });
+
+      const result = await service.requestPermission();
+
+      expect(result).toBe(true);
+      expect(mockNotifee.requestPermission).not.toHaveBeenCalled();
+    });
+
+    it('prompts via requestPermission when status is not yet determined', async () => {
+      mockNotifee.getNotificationSettings.mockResolvedValue({
+        authorizationStatus: -1, // NOT_DETERMINED
+      });
+      mockNotifee.requestPermission.mockResolvedValue({
+        authorizationStatus: 1, // AUTHORIZED
+      });
+
+      const result = await service.requestPermission();
+
+      expect(result).toBe(true);
+      expect(mockNotifee.requestPermission).toHaveBeenCalledTimes(1);
     });
   });
 

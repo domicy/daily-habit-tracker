@@ -45,6 +45,26 @@ class NotificationService {
    * On older Android this is a no-op (granted at install).
    */
   async requestPermission(): Promise<boolean> {
+    // notifee.requestPermission() can hang forever on Android when no
+    // system dialog is shown (most commonly when permission is already
+    // granted): the onRequestPermissionsResult callback that resolves the
+    // promise never fires. getNotificationSettings() is a non-interactive
+    // read that resolves reliably, so check the current status first and
+    // short-circuit the already-granted case rather than calling the
+    // hanging request. NOTE: on Android this cannot distinguish "never
+    // asked" from "permanently blocked" (both report DENIED), so the
+    // blocked case still falls through to requestPermission() and relies
+    // on the withTimeout net.
+    const current = await withTimeout(
+      notifee.getNotificationSettings(),
+      'notifee.getNotificationSettings',
+    );
+    if (
+      current.authorizationStatus === AuthorizationStatus.AUTHORIZED ||
+      current.authorizationStatus === AuthorizationStatus.PROVISIONAL
+    ) {
+      return true;
+    }
     const settings = await withTimeout(
       notifee.requestPermission(),
       'notifee.requestPermission',
