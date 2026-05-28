@@ -1,5 +1,32 @@
 # Manual QA Scenarios
 
+## Notification Toggles (Android)
+
+The interaction between the global DAILY REMINDER and per-habit NOTIFY
+toggles can desync on real devices if a notifee call (e.g.
+`getTriggerNotifications`) transiently rejects. Verify on a real Android
+device after touching the Settings notification section.
+
+### Steps
+
+1. **Toggle Daily Reminder ON → OFF → ON**
+   - Open Settings. Toggle DAILY REMINDER on, then off, then on again.
+   - If any `Per-Habit Reminders` alert appears about a cleanup failure,
+     the DAILY REMINDER toggle must remain visibly **ON** afterwards.
+   - DAILY REMINDER must not snap back to OFF after a successful ON tap.
+
+2. **Per-habit toggles enable when Daily Reminder is OFF**
+   - With DAILY REMINDER ON, all per-habit NOTIFY toggles must be
+     grayed out (disabled).
+   - Toggle DAILY REMINDER OFF. Every per-habit NOTIFY toggle on an
+     active habit must become tappable immediately (no app restart, no
+     navigation away and back).
+
+3. **Per-habit ON/OFF cycle**
+   - With DAILY REMINDER OFF, tap a per-habit NOTIFY to ON, then OFF,
+     then ON again. The toggle must reflect each tap and the per-habit
+     time picker must appear when ON.
+
 ## 5. Multi-day Streak (Time Travel)
 
 Detox does not natively support mocking the system date on iOS simulators.

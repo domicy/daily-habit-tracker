@@ -2,7 +2,6 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   View,
   Text,
-  FlatList,
   TextInput,
   Pressable,
   StyleSheet,
@@ -195,7 +194,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
         try {
           await nService.scheduleDailyReminder(hour, minute);
-          await nService.cancelAllHabitReminders();
         } catch (err) {
           Alert.alert(
             'Notification Error',
@@ -203,8 +201,22 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
           );
           return;
         }
+        // Commit ON state as soon as the daily reminder is actually scheduled,
+        // so the toggle and AsyncStorage always reflect notifee's actual state.
+        // The per-habit cleanup below is a best-effort secondary step with its
+        // own Alert — if it fails the daily reminder is still active and the
+        // user is not stuck on the global toggle.
         setReminderEnabled(true);
         await AsyncStorage.setItem(REMINDER_ENABLED_KEY, 'true');
+
+        try {
+          await nService.cancelAllHabitReminders();
+        } catch (err) {
+          Alert.alert(
+            'Per-Habit Reminders',
+            `Daily reminder is on, but cleaning up per-habit reminders failed: ${errMessage(err, 'unknown error')}. They may still fire alongside the daily reminder.`,
+          );
+        }
       } else {
         // Commit OFF state as soon as the daily reminder is actually cancelled,
         // so the toggle and AsyncStorage always reflect notifee's actual state.
@@ -386,107 +398,91 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const hours = useMemo(() => Array.from({length: 24}, (_, i) => i), []);
 
-  const renderHabitRow = useCallback(
-    ({item, index}: {item: Habit; index: number}) => {
-      const isLast = index === habits.length - 1;
-      const showPicker =
-        item.notificationsEnabled && !reminderEnabled && item.isActive;
-      const habitTime = item.notificationTime || '08:00';
-      return (
-        <View>
-          <Pressable
-            testID={`habit-row-${item.id}`}
-            onLongPress={() => handleLongPressDeactivate(item)}
-            accessibilityLabel={`${item.name} habit`}>
-            <NBSettingsRow
-              label={item.name}
-              hint={`CREATED ${format(new Date(item.createdAt), 'MMM d, yyyy').toUpperCase()}`}
-              right={
-                <View style={styles.habitToggleGroup}>
-                  <View style={styles.habitToggleCol}>
-                    <Text style={styles.habitToggleLabel}>ACTIVE</Text>
-                    <NBToggle
-                      testID={`toggle-active-${item.id}`}
-                      value={item.isActive}
-                      onValueChange={() => handleToggleActive(item)}
-                      color={colors.tiger}
-                    />
-                  </View>
-                  <View style={styles.habitToggleCol}>
-                    <Text style={styles.habitToggleLabel}>NOTIFY</Text>
-                    <NBToggle
-                      testID={`toggle-notify-${item.id}`}
-                      value={item.notificationsEnabled}
-                      onValueChange={v =>
-                        handleHabitNotificationToggle(item, v)
-                      }
-                      disabled={reminderEnabled || !item.isActive}
-                      color={colors.tiger}
-                    />
-                  </View>
+  const renderHabitRow = (item: Habit, index: number) => {
+    const isLast = index === habits.length - 1;
+    const showPicker =
+      item.notificationsEnabled && !reminderEnabled && item.isActive;
+    const habitTime = item.notificationTime || '08:00';
+    return (
+      <View key={item.id}>
+        <Pressable
+          testID={`habit-row-${item.id}`}
+          onLongPress={() => handleLongPressDeactivate(item)}
+          accessibilityLabel={`${item.name} habit`}>
+          <NBSettingsRow
+            label={item.name}
+            hint={`CREATED ${format(new Date(item.createdAt), 'MMM d, yyyy').toUpperCase()}`}
+            right={
+              <View style={styles.habitToggleGroup}>
+                <View style={styles.habitToggleCol}>
+                  <Text style={styles.habitToggleLabel}>ACTIVE</Text>
+                  <NBToggle
+                    testID={`toggle-active-${item.id}`}
+                    value={item.isActive}
+                    onValueChange={() => handleToggleActive(item)}
+                    color={colors.tiger}
+                  />
                 </View>
-              }
-              isLast={isLast && !showPicker}
-            />
-          </Pressable>
-          {showPicker && (
-            <View
-              style={[
-                styles.timePickerContainer,
-                !isLast && styles.habitPickerDivider,
-              ]}
-              testID={`habit-time-picker-${item.id}`}>
-              <Text style={styles.rowLabel}>REMINDER TIME</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.timePicker}>
-                {hours.map(hour => {
-                  const selected =
-                    habitTime === `${String(hour).padStart(2, '0')}:00`;
-                  return (
-                    <Pressable
-                      key={hour}
-                      testID={`habit-time-option-${item.id}-${hour}`}
-                      style={[
-                        styles.timeOption,
-                        {
-                          backgroundColor: selected
-                            ? colors.tiger
-                            : colors.card,
-                          borderColor: selected
-                            ? colors.tigerDeep
-                            : colors.line,
-                        },
-                      ]}
-                      onPress={() => handleHabitTimeChange(item, hour)}>
-                      <Text style={styles.timeOptionText}>
-                        {formatHour(hour)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-      );
-    },
-    [
-      // Depend on `habits` (not `habits.length`) so the callback identity
-      // flips on every WatermelonDB emission. Habit models mutate in place,
-      // so without this the FlatList CellRenderer (PureComponent) keeps a
-      // stale render of item.isActive / item.notificationsEnabled even
-      // after toggleHabitActive or setHabitNotification.
-      habits,
-      reminderEnabled,
-      handleToggleActive,
-      handleLongPressDeactivate,
-      handleHabitNotificationToggle,
-      handleHabitTimeChange,
-      hours,
-    ],
-  );
+                <View style={styles.habitToggleCol}>
+                  <Text style={styles.habitToggleLabel}>NOTIFY</Text>
+                  <NBToggle
+                    testID={`toggle-notify-${item.id}`}
+                    value={item.notificationsEnabled}
+                    onValueChange={v =>
+                      handleHabitNotificationToggle(item, v)
+                    }
+                    disabled={reminderEnabled || !item.isActive}
+                    color={colors.tiger}
+                  />
+                </View>
+              </View>
+            }
+            isLast={isLast && !showPicker}
+          />
+        </Pressable>
+        {showPicker && (
+          <View
+            style={[
+              styles.timePickerContainer,
+              !isLast && styles.habitPickerDivider,
+            ]}
+            testID={`habit-time-picker-${item.id}`}>
+            <Text style={styles.rowLabel}>REMINDER TIME</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.timePicker}>
+              {hours.map(hour => {
+                const selected =
+                  habitTime === `${String(hour).padStart(2, '0')}:00`;
+                return (
+                  <Pressable
+                    key={hour}
+                    testID={`habit-time-option-${item.id}-${hour}`}
+                    style={[
+                      styles.timeOption,
+                      {
+                        backgroundColor: selected
+                          ? colors.tiger
+                          : colors.card,
+                        borderColor: selected
+                          ? colors.tigerDeep
+                          : colors.line,
+                      },
+                    ]}
+                    onPress={() => handleHabitTimeChange(item, hour)}>
+                    <Text style={styles.timeOptionText}>
+                      {formatHour(hour)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+      </View>
+    );
+  };
 
   return (
     <NBSurface testID="settings-screen">
@@ -506,14 +502,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
           {habits.length === 0 ? (
             <Text style={styles.emptyText}>No habits yet.</Text>
           ) : (
-            <FlatList
-              data={habits}
-              renderItem={renderHabitRow}
-              keyExtractor={item => item.id}
-              extraData={reminderEnabled}
-              scrollEnabled={false}
-              testID="habits-list"
-            />
+            // Render with .map (not FlatList) — scrollEnabled would be false
+            // inside this parent ScrollView so virtualization is off either
+            // way, and plain .map sidesteps FlatList CellRenderer caching
+            // when WatermelonDB row instances mutate in place across
+            // observable emissions. Do not "optimize" this back to FlatList.
+            <View testID="habits-list">{habits.map(renderHabitRow)}</View>
           )}
         </NBCard>
 
