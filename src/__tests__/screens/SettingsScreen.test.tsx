@@ -675,6 +675,50 @@ describe('SettingsScreen', () => {
     );
   });
 
+  it('commits the global ON state even when cancelAllHabitReminders rejects', async () => {
+    // Real-device failure mode: notifee.getTriggerNotifications (called
+    // inside cancelAllHabitReminders) rejects on some Android OEM builds
+    // or after a transient bridge hiccup. The daily reminder itself was
+    // scheduled successfully — the toggle must commit ON so the user is
+    // not stuck unable to re-enable the daily reminder.
+    const habits = [{id: 'h1', name: 'Exercise', isActive: true}];
+    const service = createMockHabitService(habits);
+    const syncService = createMockSyncService();
+    const notificationService = createMockNotificationService();
+    (
+      notificationService.cancelAllHabitReminders as jest.Mock
+    ).mockRejectedValueOnce(new Error('getTriggerNotifications failed'));
+
+    const {getByTestId} = render(
+      <SettingsScreen
+        habitService={service}
+        syncService={syncService}
+        notificationService={notificationService}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('reminder-toggle')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent(getByTestId('reminder-toggle'), 'valueChange', true);
+    });
+
+    expect(notificationService.scheduleDailyReminder).toHaveBeenCalled();
+    expect(
+      getByTestId('reminder-toggle').props.accessibilityState.checked,
+    ).toBe(true);
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      'reminder_enabled',
+      'true',
+    );
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Per-Habit Reminders',
+      expect.stringContaining('cleaning up per-habit reminders failed'),
+    );
+  });
+
   it('surfaces a schedule failure as an Alert and leaves the global toggle off', async () => {
     const habits = [{id: 'h1', name: 'Exercise', isActive: true}];
     const service = createMockHabitService(habits);
