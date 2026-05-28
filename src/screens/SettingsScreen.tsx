@@ -37,10 +37,6 @@ const REMINDER_ENABLED_KEY = 'reminder_enabled';
 const REMINDER_TIME_KEY = 'reminder_time';
 const LAST_SYNC_KEY = 'last_sync_timestamp';
 
-function errMessage(err: unknown, fallback: string): string {
-  return err instanceof Error && err.message ? err.message : fallback;
-}
-
 interface SettingsScreenProps {
   habitService?: HabitService;
   syncService?: SyncService;
@@ -100,6 +96,38 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   // Clear the system status bar so the first row ("Your Habits") and any
   // content the user scrolls to (e.g. the Version row) don't slide under it.
   const contentPaddingTop = Math.max(insets.top + spacing.md, spacing.xl);
+
+  // notifee bridge calls are now timeout-capped (5s) at the service layer.
+  // If a call hangs and the user has navigated away before it surfaces,
+  // late Alert/state updates would warn. Gate diagnostic side effects on
+  // mount state.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const reportError = useCallback(
+    (where: string, err: unknown, title: string, context: string) => {
+      // Always log so adb logcat captures the cause even when the user
+      // has dismissed or never sees the alert.
+      console.error(`[SettingsScreen] ${where}:`, err);
+      if (mountedRef.current) {
+        // Always show the contextual message; append the underlying error
+        // detail when available so the user sees both "what we tried to
+        // do" and "what actually failed". This is critical for diagnosing
+        // the timeout-wrapped notifee labels (e.g. "Timed out waiting for
+        // notifee.createTriggerNotification(daily) (5000ms)").
+        const detail =
+          err instanceof Error && err.message ? err.message : '';
+        const body = detail ? `${context}\n\n${detail}` : context;
+        Alert.alert(title, body);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     (async () => {
@@ -179,25 +207,31 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         try {
           granted = await nService.requestPermission();
         } catch (err) {
-          Alert.alert(
+          reportError(
+            'handleReminderToggle.requestPermission',
+            err,
             'Notifications',
-            errMessage(err, 'Failed to request notification permission.'),
+            'Failed to request notification permission.',
           );
           return;
         }
         if (!granted) {
-          Alert.alert(
-            'Notifications Disabled',
-            'Please enable notifications for Daily Habit Tracker in your device Settings.',
-          );
+          if (mountedRef.current) {
+            Alert.alert(
+              'Notifications Disabled',
+              'Please enable notifications for Daily Habit Tracker in your device Settings.',
+            );
+          }
           return;
         }
         try {
           await nService.scheduleDailyReminder(hour, minute);
         } catch (err) {
-          Alert.alert(
+          reportError(
+            'handleReminderToggle.scheduleDailyReminder',
+            err,
             'Notification Error',
-            errMessage(err, 'Failed to schedule daily reminder.'),
+            'Failed to schedule daily reminder.',
           );
           return;
         }
@@ -206,15 +240,20 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         // The per-habit cleanup below is a best-effort secondary step with its
         // own Alert — if it fails the daily reminder is still active and the
         // user is not stuck on the global toggle.
+        if (!mountedRef.current) {
+          return;
+        }
         setReminderEnabled(true);
         await AsyncStorage.setItem(REMINDER_ENABLED_KEY, 'true');
 
         try {
           await nService.cancelAllHabitReminders();
         } catch (err) {
-          Alert.alert(
+          reportError(
+            'handleReminderToggle.cancelAllHabitReminders',
+            err,
             'Per-Habit Reminders',
-            `Daily reminder is on, but cleaning up per-habit reminders failed: ${errMessage(err, 'unknown error')}. They may still fire alongside the daily reminder.`,
+            'Daily reminder is on, but cleaning up per-habit reminders failed. They may still fire alongside the daily reminder.',
           );
         }
       } else {
@@ -225,10 +264,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         try {
           await nService.cancelDailyReminder();
         } catch (err) {
-          Alert.alert(
+          reportError(
+            'handleReminderToggle.cancelDailyReminder',
+            err,
             'Notification Error',
-            errMessage(err, 'Failed to disable daily reminder.'),
+            'Failed to disable daily reminder.',
           );
+          return;
+        }
+        if (!mountedRef.current) {
           return;
         }
         setReminderEnabled(false);
@@ -245,14 +289,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             }),
           );
         } catch (err) {
-          Alert.alert(
+          reportError(
+            'handleReminderToggle.scheduleHabitReminder(fanout)',
+            err,
             'Per-Habit Reminders',
-            `Daily reminder is off, but resuming per-habit reminders failed: ${errMessage(err, 'unknown error')}. Toggle individual habits to retry.`,
+            'Daily reminder is off, but resuming per-habit reminders failed. Toggle individual habits to retry.',
           );
         }
       }
     },
-    [nService, hService, reminderTime],
+    [nService, hService, reminderTime, reportError],
   );
 
   const handleTimeChange = useCallback(
@@ -265,34 +311,48 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         try {
           await nService.scheduleDailyReminder(hour, 0);
         } catch (err) {
-          Alert.alert(
+          reportError(
+            'handleTimeChange.scheduleDailyReminder',
+            err,
             'Notification Error',
-            errMessage(err, 'Failed to update reminder time.'),
+            'Failed to update reminder time.',
           );
         }
       }
     },
-    [nService, reminderEnabled],
+    [nService, reminderEnabled, reportError],
   );
 
   const handleHabitNotificationToggle = useCallback(
     async (habit: Habit, value: boolean) => {
-      if (value) {
+      // Only prompt for permission when we're about to actually schedule
+      // something. When the global Daily Reminder is on, the per-habit
+      // preference is persisted but no per-habit notifee trigger is created
+      // (the global trigger already covers the user — a per-habit one would
+      // be redundant noise). The preference is picked up by
+      // getHabitsWithNotifications when the user later turns the global
+      // reminder off.
+      const willSchedule = value && !reminderEnabled;
+      if (willSchedule) {
         let granted: boolean;
         try {
           granted = await nService.requestPermission();
         } catch (err) {
-          Alert.alert(
+          reportError(
+            'handleHabitNotificationToggle.requestPermission',
+            err,
             'Notifications',
-            errMessage(err, 'Failed to request notification permission.'),
+            'Failed to request notification permission.',
           );
           return;
         }
         if (!granted) {
-          Alert.alert(
-            'Notifications Disabled',
-            'Please enable notifications for Daily Habit Tracker in your device Settings.',
-          );
+          if (mountedRef.current) {
+            Alert.alert(
+              'Notifications Disabled',
+              'Please enable notifications for Daily Habit Tracker in your device Settings.',
+            );
+          }
           return;
         }
       }
@@ -303,10 +363,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       try {
         await hService.setHabitNotification(habit.id, value, time);
       } catch (err) {
-        Alert.alert(
+        reportError(
+          'handleHabitNotificationToggle.setHabitNotification',
+          err,
           'Habit Update Failed',
-          errMessage(err, 'Could not save the notification preference.'),
+          'Could not save the notification preference.',
         );
+        return;
+      }
+
+      // When the global reminder is on, we deliberately skip per-habit
+      // notifee scheduling — the preference is saved and will activate
+      // the next time the global reminder is turned off.
+      if (reminderEnabled) {
         return;
       }
 
@@ -327,13 +396,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         } catch {
           // best-effort rollback
         }
-        Alert.alert(
+        reportError(
+          'handleHabitNotificationToggle.scheduleHabitReminder',
+          err,
           'Notification Error',
-          errMessage(err, 'Failed to schedule reminder.'),
+          'Failed to schedule reminder.',
         );
       }
     },
-    [hService, nService],
+    [hService, nService, reminderEnabled, reportError],
   );
 
   const handleHabitTimeChange = useCallback(
@@ -345,13 +416,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
           await nService.scheduleHabitReminder(habit.id, habit.name, hour, 0);
         }
       } catch (err) {
-        Alert.alert(
+        reportError(
+          'handleHabitTimeChange',
+          err,
           'Notification Error',
-          errMessage(err, 'Failed to update reminder time.'),
+          'Failed to update reminder time.',
         );
       }
     },
-    [hService, nService, reminderEnabled],
+    [hService, nService, reminderEnabled, reportError],
   );
 
   const handleSyncNow = useCallback(async () => {
@@ -431,7 +504,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     onValueChange={v =>
                       handleHabitNotificationToggle(item, v)
                     }
-                    disabled={reminderEnabled || !item.isActive}
+                    // Intentionally NOT gated on reminderEnabled. Toggling
+                    // disabled true->false on a Pressable on Android can
+                    // leave the native View's touch responder stuck — taps
+                    // stop firing even after disabled flips back to false.
+                    // Decouple: the per-habit toggle just reflects the
+                    // user's preference. When the global Daily Reminder is
+                    // on, the per-habit handler persists the preference but
+                    // skips per-habit notifee scheduling (global covers it).
+                    disabled={!item.isActive}
                     color={colors.tiger}
                   />
                 </View>

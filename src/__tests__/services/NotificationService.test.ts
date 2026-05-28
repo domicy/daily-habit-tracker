@@ -218,4 +218,71 @@ describe('NotificationService', () => {
       expect(mockNotifee.cancelTriggerNotification).not.toHaveBeenCalled();
     });
   });
+
+  describe('withTimeout (notifee bridge hang protection)', () => {
+    // Each test that fakes timers must also restore real timers afterwards
+    // so other tests in the suite aren't poisoned.
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('rejects requestPermission with a labelled error when notifee never resolves', async () => {
+      jest.useFakeTimers();
+      // Forever-pending promise simulates the silent Android bridge hang.
+      mockNotifee.requestPermission.mockReturnValue(new Promise(() => {}));
+
+      const pending = service.requestPermission();
+      // Catch the rejection up front so the unhandled-rejection tracker
+      // doesn't flag it before the assertion below runs.
+      const settled = pending.catch(err => err);
+      // advanceTimersByTimeAsync both fires the 5s timer AND flushes the
+      // microtasks needed for the rejection to propagate through
+      // Promise.race -> .finally -> await.
+      await jest.advanceTimersByTimeAsync(5000);
+      const err = await settled;
+
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toMatch(/notifee\.requestPermission/);
+      expect((err as Error).message).toMatch(/5000ms/);
+    });
+
+    it('rejects scheduleDailyReminder when notifee.createTriggerNotification never resolves', async () => {
+      jest.useFakeTimers();
+      // cancel + createChannel succeed; createTriggerNotification hangs.
+      mockNotifee.cancelTriggerNotification.mockResolvedValue(undefined);
+      mockNotifee.createChannel.mockResolvedValue('');
+      mockNotifee.createTriggerNotification.mockReturnValue(
+        new Promise(() => {}),
+      );
+
+      const pending = service.scheduleDailyReminder(9, 0);
+      const settled = pending.catch(err => err);
+      // scheduleDailyReminder has three sequential withTimeout calls. The
+      // first two settle as microtasks (mockResolvedValue) but each one
+      // needs the prior to flush before its timer is registered/cleared.
+      // advanceTimersByTimeAsync interleaves microtask flushes with timer
+      // advancement, so a single call past the hanging-call's timeout
+      // window settles the entire chain.
+      await jest.advanceTimersByTimeAsync(5000);
+      const err = await settled;
+
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toMatch(
+        /notifee\.createTriggerNotification\(daily\)/,
+      );
+    });
+
+    it('does not leave a pending timer after a successful resolution', async () => {
+      jest.useFakeTimers();
+      mockNotifee.requestPermission.mockResolvedValue({
+        authorizationStatus: 1, // AUTHORIZED
+      });
+
+      const result = await service.requestPermission();
+      expect(result).toBe(true);
+      // If the timer wasn't cleared in .finally, jest would see one
+      // pending; we assert zero so withTimeout doesn't leak.
+      expect(jest.getTimerCount()).toBe(0);
+    });
+  });
 });
