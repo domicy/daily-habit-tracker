@@ -1,57 +1,77 @@
+// src/navigation/AppNavigator.tsx
 import React from 'react';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import DashboardScreen from '../screens/DashboardScreen';
-import StatsScreen from '../screens/StatsScreen';
-import StatsListScreen from '../screens/StatsListScreen';
-import StreaksScreen from '../screens/StreaksScreen';
-import SettingsScreen from '../screens/SettingsScreen';
-import CreateHabitModal from '../screens/CreateHabitModal';
-import NBTabBar from '../components/atoms/NBTabBar';
-import {HabitsProvider} from '../hooks/useHabitsContext';
-import {getDefaultHabitService} from '../services/defaultHabitService';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-const HomeStack = createNativeStackNavigator();
-const StatsStack = createNativeStackNavigator();
-const SettingsStack = createNativeStackNavigator();
+import { AuthProvider, useAuth } from '../context/AuthContext';
+import { HabitsProvider } from '../hooks/useHabitsContext';
+
+import { LoginScreen } from '../screens/LoginScreen';
+import { RegisterScreen } from '../screens/RegisterScreen';
+import DashboardScreen from '../screens/DashboardScreen';
+import StreaksScreen from '../screens/StreaksScreen';
+import StatsListScreen from '../screens/StatsListScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+
+const AuthStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const HomeStackScreen: React.FC = () => (
-  <HomeStack.Navigator screenOptions={{headerShown: false}}>
-    <HomeStack.Screen name="Dashboard" component={DashboardScreen} />
-    <HomeStack.Screen name="Stats" component={StatsScreen} />
-    <HomeStack.Screen
-      name="CreateHabit"
-      component={CreateHabitModal}
-      options={{presentation: 'modal'}}
-    />
-  </HomeStack.Navigator>
+const AuthNavigator = () => (
+  <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+    <AuthStack.Screen name="Login" component={LoginScreen} />
+    <AuthStack.Screen name="Register" component={RegisterScreen} />
+  </AuthStack.Navigator>
 );
 
-const StatsStackScreen: React.FC = () => (
-  <StatsStack.Navigator screenOptions={{headerShown: false}}>
-    <StatsStack.Screen name="StatsList" component={StatsListScreen} />
-    <StatsStack.Screen name="Stats" component={StatsScreen} />
-  </StatsStack.Navigator>
+const MainTabNavigator = () => (
+  <Tab.Navigator>
+    <Tab.Screen name="Dashboard" component={DashboardScreen} />
+    <Tab.Screen name="Streaks" component={StreaksScreen} />
+    <Tab.Screen name="Stats" component={StatsListScreen} />
+    <Tab.Screen name="Settings" component={SettingsScreen} />
+  </Tab.Navigator>
 );
 
-const SettingsStackScreen: React.FC = () => (
-  <SettingsStack.Navigator screenOptions={{headerShown: false}}>
-    <SettingsStack.Screen name="SettingsScreen" component={SettingsScreen} />
-  </SettingsStack.Navigator>
-);
+export const RootNavigator = () => {
+  const { isAuthenticated, isLoading } = useAuth();
 
-const AppNavigator: React.FC = () => (
-  <HabitsProvider habitService={getDefaultHabitService()}>
-    <Tab.Navigator
-      screenOptions={{headerShown: false}}
-      tabBar={props => <NBTabBar {...props} />}>
-      <Tab.Screen name="Today" component={HomeStackScreen} />
-      <Tab.Screen name="Streaks" component={StreaksScreen} />
-      <Tab.Screen name="Stats" component={StatsStackScreen} />
-      <Tab.Screen name="Me" component={SettingsStackScreen} />
-    </Tab.Navigator>
-  </HabitsProvider>
-);
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0000ff" testID="auth-loading-indicator" />
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      {isAuthenticated ? (
+        <HabitsProvider>
+          <MainTabNavigator />
+        </HabitsProvider>
+      ) : (
+        <AuthNavigator />
+      )}
+    </NavigationContainer>
+  );
+};
+
+export const AppNavigator: React.FC = () => {
+  return (
+    <AuthProvider>
+      <RootNavigator />
+    </AuthProvider>
+  );
+};
 
 export default AppNavigator;
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

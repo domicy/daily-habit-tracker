@@ -9,24 +9,45 @@ jest.mock('../../context/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 
-// Mock HabitsProvider to verify lifecycle mounting
-jest.mock('../../hooks/useHabitsContext', () => ({
-  HabitsProvider: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
-}));
+// Mock HabitsProvider using inline require for View
+jest.mock('../../hooks/useHabitsContext', () => {
+  const { View } = require('react-native');
+  return {
+    HabitsProvider: ({ children }: { children: React.ReactNode }) => (
+      <View testID="habits-provider-mock">{children}</View>
+    ),
+  };
+});
 
-// Mock Navigation Screens
-jest.mock('../../screens/LoginScreen', () => ({
-  LoginScreen: () => 'LoginScreenMock',
-}));
-jest.mock('../../screens/RegisterScreen', () => ({
-  RegisterScreen: () => 'RegisterScreenMock',
-}));
-jest.mock('../../screens/DashboardScreen', () => () => 'DashboardScreenMock');
-jest.mock('../../screens/StreaksScreen', () => () => 'StreaksScreenMock');
-jest.mock('../../screens/StatsListScreen', () => () => 'StatsListScreenMock');
-jest.mock('../../screens/SettingsScreen', () => () => 'SettingsScreenMock');
+// Mock Navigation Screens using inline require for Text
+jest.mock('../../screens/LoginScreen', () => {
+  const { Text } = require('react-native');
+  return {
+    LoginScreen: () => <Text>LoginScreenMock</Text>,
+  };
+});
+jest.mock('../../screens/RegisterScreen', () => {
+  const { Text } = require('react-native');
+  return {
+    RegisterScreen: () => <Text>RegisterScreenMock</Text>,
+  };
+});
+jest.mock('../../screens/DashboardScreen', () => {
+  const { Text } = require('react-native');
+  return () => <Text>DashboardScreenMock</Text>;
+});
+jest.mock('../../screens/StreaksScreen', () => {
+  const { Text } = require('react-native');
+  return () => <Text>StreaksScreenMock</Text>;
+});
+jest.mock('../../screens/StatsListScreen', () => {
+  const { Text } = require('react-native');
+  return () => <Text>StatsListScreenMock</Text>;
+});
+jest.mock('../../screens/SettingsScreen', () => {
+  const { Text } = require('react-native');
+  return () => <Text>SettingsScreenMock</Text>;
+});
 
 describe('AppNavigator Conditional Routing', () => {
   it('renders loading indicator while authentication status is restoring', () => {

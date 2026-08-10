@@ -1,10 +1,11 @@
 // src/__tests__/context/AuthContext.test.tsx
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AuthProvider, useAuth } from '../../context/AuthContext';
-import { AUTH_TOKEN_KEY, hydrateToken, setAuthToken } from '../../services/api';
-import { database } from '../../models';
+
+// Mock native AsyncStorage using official Jest mock
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
 
 // Mocks for API service helpers and WatermelonDB
 jest.mock('../../services/api', () => ({
@@ -15,10 +16,15 @@ jest.mock('../../services/api', () => ({
 
 jest.mock('../../models', () => ({
   database: {
-    write: jest.fn(cb => cb()),
+    write: jest.fn((cb: () => void) => cb()),
     unsafeResetDatabase: jest.fn().mockResolvedValue(undefined),
   },
 }));
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthProvider, useAuth } from '../../context/AuthContext';
+import { AUTH_TOKEN_KEY, hydrateToken, setAuthToken } from '../../services/api';
+import { database } from '../../models';
 
 describe('AuthContext', () => {
   beforeEach(() => {
@@ -34,7 +40,6 @@ describe('AuthContext', () => {
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    // Initial state check
     expect(result.current.isLoading).toBe(true);
 
     await waitFor(() => {
