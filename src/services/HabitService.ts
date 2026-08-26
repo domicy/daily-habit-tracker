@@ -27,15 +27,20 @@ export function backoffMsFor(retryCount: number): number {
 
 export default class HabitService {
   private database: Database;
+  private userId = 'user';
 
   constructor(database: Database) {
     this.database = database;
   }
 
+  setUserId(userId: string): void {
+    this.userId = userId;
+  }
+
   getActiveHabits(): Observable<Habit[]> {
     return this.database
       .get<Habit>('habits')
-      .query(Q.where('is_active', true), Q.sortBy('created_at', Q.asc))
+      .query(Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')), Q.where('is_active', true), Q.sortBy('created_at', Q.asc))
       .observe();
   }
 
@@ -47,7 +52,7 @@ export default class HabitService {
     // the UI.
     return this.database
       .get<Habit>('habits')
-      .query(Q.sortBy('created_at', Q.asc))
+      .query(Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')), Q.sortBy('created_at', Q.asc))
       .observeWithColumns([
         'is_active',
         'notifications_enabled',
@@ -79,6 +84,7 @@ export default class HabitService {
     return this.database.write(async () => {
       return this.database.get<Habit>('habits').create(habit => {
         habit.name = trimmed;
+        habit.userId = this.userId;
         habit.createdAt = Date.now();
         habit.isActive = true;
         habit.synced = false;
@@ -111,6 +117,7 @@ export default class HabitService {
       .query(
         Q.where('notifications_enabled', true),
         Q.where('is_active', true),
+        Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
       )
       .fetch();
   }
@@ -125,6 +132,7 @@ export default class HabitService {
         .query(
           Q.where('habit_id', habitId),
           Q.where('completed_date', date),
+          Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
         )
         .fetch();
 
@@ -164,6 +172,7 @@ export default class HabitService {
 
       await this.database.get<HabitLog>('habit_logs').create(log => {
         log.habitId = habitId;
+        log.userId = this.userId;
         log.completedDate = date;
         log.synced = false;
         log.deletedAt = null;
@@ -174,7 +183,9 @@ export default class HabitService {
   }
 
   async getHabitById(habitId: string): Promise<Habit> {
-    return this.database.get<Habit>('habits').find(habitId);
+    const habits = await this.database.get<Habit>('habits').query(Q.where('id', habitId), Q.or(Q.where('user_id', this.userId), Q.where('user_id', ''))).fetch();
+    if (!habits[0]) throw new Error('Habit not found');
+    return habits[0];
   }
 
   async getLogsForHabit(
@@ -186,6 +197,7 @@ export default class HabitService {
       .get<HabitLog>('habit_logs')
       .query(
         Q.where('habit_id', habitId),
+        Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
         Q.where('completed_date', Q.gte(startDate)),
         Q.where('completed_date', Q.lte(endDate)),
         Q.where('deleted_at', null),
@@ -202,6 +214,7 @@ export default class HabitService {
       .get<HabitLog>('habit_logs')
       .query(
         Q.where('synced', false),
+        Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
         Q.where('retry_count', Q.lt(MAX_LOG_RETRIES)),
       )
       .fetch();
@@ -221,7 +234,7 @@ export default class HabitService {
   async getUnsyncedHabits(): Promise<Habit[]> {
     return this.database
       .get<Habit>('habits')
-      .query(Q.where('synced', false))
+      .query(Q.where('synced', false), Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')))
       .fetch();
   }
 
@@ -307,6 +320,53 @@ export default class HabitService {
     }
   }
 
+  async applyPulledHabits(habits: Array<{id: string; name: string; created_at: string; is_active: boolean}>): Promise<void> {
+    await this.database.write(async () => {
+      for (const remote of habits) {
+        let local: Habit | null = null;
+        try { local = await this.database.get<Habit>('habits').find(remote.id); } catch { /* new row */ }
+        if (local) {
+          if (!local.synced) continue; // never overwrite offline work
+          await local.update(h => { h.name = remote.name; h.isActive = remote.is_active; });
+        } else {
+          await this.database.get<Habit>('habits').create(h => {
+            h._raw.id = remote.id;
+            h.userId = this.userId;
+            h.name = remote.name;
+            h.createdAt = Date.parse(remote.created_at);
+            h.isActive = remote.is_active;
+            h.synced = true;
+            h.notificationsEnabled = false;
+            h.notificationTime = '08:00';
+          });
+        }
+      }
+    });
+  }
+
+  async applyPulledLogs(logs: Array<{id: string; habit_id: string; completed_date: string}>): Promise<void> {
+    await this.database.write(async () => {
+      for (const remote of logs) {
+        const existing = await this.database.get<HabitLog>('habit_logs').query(
+          Q.where('habit_id', remote.habit_id), Q.where('completed_date', remote.completed_date),
+          Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
+        ).fetch();
+        if (existing.some(log => log.deletedAt == null)) continue;
+        const tombstone = existing[0];
+        if (tombstone) {
+          await tombstone.update(log => { log.deletedAt = null; log.synced = true; });
+        } else {
+          await this.database.get<HabitLog>('habit_logs').create(log => {
+            log._raw.id = remote.id;
+            log.userId = this.userId; log.habitId = remote.habit_id;
+            log.completedDate = remote.completed_date; log.synced = true;
+            log.deletedAt = null; log.retryCount = 0; log.lastAttemptAt = null;
+          });
+        }
+      }
+    });
+  }
+
   observeUnsyncedCount(): Observable<number> {
     // Match getUnsyncedLogs: exclude rows past the permanent-failure cap so
     // the UI doesn't show a forever-growing "N pending" for dead-end logs.
@@ -314,6 +374,7 @@ export default class HabitService {
       .get<HabitLog>('habit_logs')
       .query(
         Q.where('synced', false),
+        Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
         Q.where('retry_count', Q.lt(MAX_LOG_RETRIES)),
       )
       .observe();

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import apiClient from '../services/api';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/types';
 
@@ -13,9 +14,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
   const { login } = useAuth();
 
   const handleRegister = async () => {
-    // TODO: Replace with backend API register call
-    const mockToken = 'jwt-token-placeholder';
-    await login(mockToken);
+    const response = await apiClient.post('/auth/register', {email, password});
+    await login(response.data.access_token);
   };
 
   return (

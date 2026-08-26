@@ -27,19 +27,32 @@ const AuthNavigator = () => (
   </AuthStack.Navigator>
 );
 
-const MainTabNavigator = () => (
-  <Tab.Navigator>
+const MainTabNavigator = () => {
+  const {logout} = useAuth();
+  return <Tab.Navigator>
     <Tab.Screen name="Dashboard" component={DashboardScreen} />
     <Tab.Screen name="Streaks" component={StreaksScreen} />
     <Tab.Screen name="Stats" component={StatsListScreen} />
-    <Tab.Screen name="Settings" component={SettingsScreen} />
-  </Tab.Navigator>
-);
+    <Tab.Screen name="Settings">
+      {props => <SettingsScreen {...props} onLogout={logout} />}
+    </Tab.Screen>
+  </Tab.Navigator>;
+};
 
 export const RootNavigator: React.FC<{habitService?: HabitService}> = ({
   habitService,
 }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, userId } = useAuth();
+
+  // Set ownership before the provider mounts so its first query cannot expose
+  // the previous account's local rows during an account switch.
+  if (habitService && userId) {
+    habitService.setUserId(userId);
+  }
+
+  React.useEffect(() => {
+    if (habitService && userId) habitService.setUserId(userId);
+  }, [habitService, userId]);
 
   if (isLoading) {
     return (
@@ -51,10 +64,12 @@ export const RootNavigator: React.FC<{habitService?: HabitService}> = ({
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? (
-        <HabitsProvider habitService={habitService!}>
+      {isAuthenticated && habitService ? (
+        <HabitsProvider key={userId ?? 'user'} habitService={habitService}>
           <MainTabNavigator />
         </HabitsProvider>
+      ) : isAuthenticated ? (
+        <MainTabNavigator />
       ) : (
         <AuthNavigator />
       )}

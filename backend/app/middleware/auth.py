@@ -22,3 +22,10 @@ async def require_token(
             detail="Invalid or expired token",
         )
     return payload
+
+
+def user_id_from_token(payload: dict) -> str:
+    user_id = payload.get("sub")
+    if not isinstance(user_id, str) or not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token subject missing")
+    return user_id

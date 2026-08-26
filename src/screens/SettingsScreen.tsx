@@ -41,6 +41,7 @@ interface SettingsScreenProps {
   habitService?: HabitService;
   syncService?: SyncService;
   notificationService?: NotificationService;
+  onLogout?: () => Promise<void>;
 }
 
 const SectionHeader: React.FC<{label: string; count?: string | number}> = ({
@@ -59,6 +60,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   habitService,
   syncService,
   notificationService,
+  onLogout,
 }) => {
   const ctxServices = useServices();
   const hService = habitService ?? ctxServices?.habitService;
@@ -758,6 +760,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             }
           />
         </NBCard>
+
+        {onLogout && (
+          <NBButton
+            variant="secondary"
+            testID="logout-button"
+            onPress={onLogout}
+            style={styles.connectButton}>
+            LOG OUT
+          </NBButton>
+        )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>

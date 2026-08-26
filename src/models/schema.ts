@@ -1,12 +1,13 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 4,
+  version: 5,
   tables: [
     tableSchema({
       name: 'habits',
       columns: [
         {name: 'name', type: 'string'},
+        {name: 'user_id', type: 'string', isIndexed: true},
         {name: 'created_at', type: 'number'},
         {name: 'is_active', type: 'boolean'},
         {name: 'synced', type: 'boolean', isIndexed: true},
@@ -22,6 +23,7 @@ export const schema = appSchema({
       name: 'habit_logs',
       columns: [
         {name: 'habit_id', type: 'string', isIndexed: true},
+        {name: 'user_id', type: 'string', isIndexed: true},
         // Stored as "YYYY-MM-DD" string to avoid timezone issues.
         // NOTE: The pair (habit_id, completed_date) should be treated as
         // logically unique among non-tombstoned rows. Enforce this in the

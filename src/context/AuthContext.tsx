@@ -6,6 +6,7 @@ import { database } from '../models'; // Adjust import based on your WatermelonD
 
 interface AuthContextType {
   token: string | null;
+  userId: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (newToken: string) => Promise<void>;
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setTokenState] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -26,6 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const storedToken = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
         if (storedToken) {
           setTokenState(storedToken);
+          setUserId(decodeSubject(storedToken));
         }
       } catch (error) {
         console.error('Failed to hydrate auth token:', error);
@@ -40,6 +43,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (newToken: string) => {
     await setAuthToken(newToken);
     setTokenState(newToken);
+    setUserId(decodeSubject(newToken));
   };
 
   const logout = async () => {
@@ -47,6 +51,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 1. Clear token in persistent storage & Axios interceptor memory
       await setAuthToken(null);
       setTokenState(null);
+      setUserId(null);
 
       // 2. Wipe local WatermelonDB so no user data remains on device
       await database.write(async () => {
@@ -61,6 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     <AuthContext.Provider
       value={{
         token,
+        userId,
         isAuthenticated: !!token,
         isLoading,
         login,
@@ -71,6 +77,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     </AuthContext.Provider>
   );
 };
+
+function decodeSubject(token: string): string | null {
+  try {
+    const part = token.split('.')[1];
+    if (!part) return null;
+    const payload = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.sub === 'string' ? payload.sub : null;
+  } catch { return null; }
+}
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);

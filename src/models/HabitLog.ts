@@ -17,6 +17,7 @@ export default class HabitLog extends Model {
   };
 
   @field('habit_id') habitId!: string;
+  @field('user_id') userId!: string;
   // Plain string in "YYYY-MM-DD" format to avoid timezone issues.
   @field('completed_date') completedDate!: string;
   @field('synced') synced!: boolean;

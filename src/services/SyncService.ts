@@ -108,6 +108,7 @@ export default class SyncService {
     }
     this.inFlight = true;
     try {
+      await this.pullHabits();
       // If auth previously failed permanently, don't retry
       const authFailed = await AsyncStorage.getItem(SYNC_AUTH_FAILED_KEY);
       if (authFailed === 'true') {
@@ -139,6 +140,17 @@ export default class SyncService {
       return await this.pushBatch(unsyncedLogs);
     } finally {
       this.inFlight = false;
+    }
+  }
+
+  private async pullHabits(): Promise<void> {
+    try {
+      const response = await apiClient.get('/habits/sync');
+      await this.habitService.applyPulledHabits(response.data?.habits ?? []);
+      const logs = await apiClient.get('/logs/sync');
+      await this.habitService.applyPulledLogs(logs.data ?? []);
+    } catch {
+      // Pull is best-effort; local-first writes remain available offline.
     }
   }
 
