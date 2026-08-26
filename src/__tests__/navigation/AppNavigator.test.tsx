@@ -11,7 +11,7 @@ jest.mock('../../context/AuthContext', () => ({
 
 // Mock HabitsProvider using inline require for View
 jest.mock('../../hooks/useHabitsContext', () => {
-  const { View } = require('react-native');
+  const { View } = jest.requireActual('react-native') as typeof import('react-native');
   return {
     HabitsProvider: ({ children }: { children: React.ReactNode }) => (
       <View testID="habits-provider-mock">{children}</View>
@@ -21,31 +21,31 @@ jest.mock('../../hooks/useHabitsContext', () => {
 
 // Mock Navigation Screens using inline require for Text
 jest.mock('../../screens/LoginScreen', () => {
-  const { Text } = require('react-native');
+  const { Text } = jest.requireActual('react-native') as typeof import('react-native');
   return {
     LoginScreen: () => <Text>LoginScreenMock</Text>,
   };
 });
 jest.mock('../../screens/RegisterScreen', () => {
-  const { Text } = require('react-native');
+  const { Text } = jest.requireActual('react-native') as typeof import('react-native');
   return {
     RegisterScreen: () => <Text>RegisterScreenMock</Text>,
   };
 });
 jest.mock('../../screens/DashboardScreen', () => {
-  const { Text } = require('react-native');
+  const { Text } = jest.requireActual('react-native') as typeof import('react-native');
   return () => <Text>DashboardScreenMock</Text>;
 });
 jest.mock('../../screens/StreaksScreen', () => {
-  const { Text } = require('react-native');
+  const { Text } = jest.requireActual('react-native') as typeof import('react-native');
   return () => <Text>StreaksScreenMock</Text>;
 });
 jest.mock('../../screens/StatsListScreen', () => {
-  const { Text } = require('react-native');
+  const { Text } = jest.requireActual('react-native') as typeof import('react-native');
   return () => <Text>StatsListScreenMock</Text>;
 });
 jest.mock('../../screens/SettingsScreen', () => {
-  const { Text } = require('react-native');
+  const { Text } = jest.requireActual('react-native') as typeof import('react-native');
   return () => <Text>SettingsScreenMock</Text>;
 });
 

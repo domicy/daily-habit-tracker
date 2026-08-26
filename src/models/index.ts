@@ -17,4 +17,4 @@ const database = new Database({
 });
 
 export default database;
-export {Habit, HabitLog};
+export {database, Habit, HabitLog};

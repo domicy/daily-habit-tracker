@@ -70,6 +70,14 @@ const SyncBootstrap: React.FC = () => {
   return null;
 };
 
+const NavigationBootstrap: React.FC = () => {
+  const services = useServices();
+  if (!services) {
+    return null;
+  }
+  return <AppNavigator habitService={services.habitService} />;
+};
+
 const App: React.FC = () => {
   return (
     <ServicesProvider>
@@ -77,7 +85,7 @@ const App: React.FC = () => {
         <NotificationBootstrap />
         <SyncBootstrap />
         <NavigationContainer>
-          <AppNavigator />
+          <NavigationBootstrap />
         </NavigationContainer>
       </SafeAreaProvider>
     </ServicesProvider>

@@ -7,6 +7,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { HabitsProvider } from '../hooks/useHabitsContext';
+import type HabitService from '../services/HabitService';
+import type { AuthStackParamList } from './types';
 
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
@@ -15,7 +17,7 @@ import StreaksScreen from '../screens/StreaksScreen';
 import StatsListScreen from '../screens/StatsListScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
-const AuthStack = createNativeStackNavigator();
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const Tab = createBottomTabNavigator();
 
 const AuthNavigator = () => (
@@ -34,7 +36,9 @@ const MainTabNavigator = () => (
   </Tab.Navigator>
 );
 
-export const RootNavigator = () => {
+export const RootNavigator: React.FC<{habitService?: HabitService}> = ({
+  habitService,
+}) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -48,7 +52,7 @@ export const RootNavigator = () => {
   return (
     <NavigationContainer>
       {isAuthenticated ? (
-        <HabitsProvider>
+        <HabitsProvider habitService={habitService!}>
           <MainTabNavigator />
         </HabitsProvider>
       ) : (
@@ -58,10 +62,10 @@ export const RootNavigator = () => {
   );
 };
 
-export const AppNavigator: React.FC = () => {
+const AppNavigator: React.FC<{habitService: HabitService}> = ({habitService}) => {
   return (
     <AuthProvider>
-      <RootNavigator />
+      <RootNavigator habitService={habitService} />
     </AuthProvider>
   );
 };
