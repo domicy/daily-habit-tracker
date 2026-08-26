@@ -17,12 +17,22 @@ class Base(DeclarativeBase):
     pass
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class Habit(Base):
     __tablename__ = "habits"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
+    user_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False, default="user")
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -35,12 +45,13 @@ class Habit(Base):
 class HabitLog(Base):
     __tablename__ = "habit_logs"
     __table_args__ = (
-        UniqueConstraint("habit_id", "completed_date", name="uq_habit_date"),
+        UniqueConstraint("user_id", "habit_id", "completed_date", name="uq_user_habit_date"),
     )
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
+    user_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False, default="user")
     habit_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("habits.id"), index=True, nullable=False
     )

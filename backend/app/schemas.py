@@ -69,6 +69,10 @@ class HabitSyncResponse(BaseModel):
     synced_ids: list[str]
 
 
+class HabitSyncPullResponse(BaseModel):
+    habits: list[HabitRead]
+
+
 # ── Habit Logs ──────────────────────────────────────────
 
 class HabitLogCreate(BaseModel):
@@ -106,7 +110,14 @@ class SyncResponse(BaseModel):
 # ── Auth ────────────────────────────────────────────────
 
 class TokenRequest(BaseModel):
-    secret: str
+    secret: str | None = None
+    email: str | None = None
+    password: str | None = None
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str = Field(..., min_length=8)
 
 
 class TokenResponse(BaseModel):

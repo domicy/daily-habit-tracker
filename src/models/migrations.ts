@@ -51,5 +51,12 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 5,
+      steps: [
+        addColumns({table: 'habits', columns: [{name: 'user_id', type: 'string', isIndexed: true}]}),
+        addColumns({table: 'habit_logs', columns: [{name: 'user_id', type: 'string', isIndexed: true}]}),
+      ],
+    },
   ],
 });

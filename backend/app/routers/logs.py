@@ -8,15 +8,11 @@ from sqlalchemy.dialects import mysql, postgresql, sqlite
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import require_token
+from app.middleware.auth import require_token, user_id_from_token
 from app.models import Habit, HabitLog
 from app.schemas import HabitLogRead, SyncError, SyncRequest, SyncResponse
 
-router = APIRouter(
-    prefix="/logs",
-    tags=["logs"],
-    dependencies=[Depends(require_token)],
-)
+router = APIRouter(prefix="/logs", tags=["logs"])
 
 
 def _upsert_habit_log_stmt(dialect_name: str, values: list[dict[str, Any]]):
@@ -35,7 +31,7 @@ def _upsert_habit_log_stmt(dialect_name: str, values: list[dict[str, Any]]):
     if dialect_name == "postgresql":
         stmt = postgresql.insert(HabitLog).values(values)
         return stmt.on_conflict_do_update(
-            constraint="uq_habit_date",
+            constraint="uq_user_habit_date",
             set_={
                 "synced_at": stmt.excluded.synced_at,
                 "deleted_at": stmt.excluded.deleted_at,
@@ -44,7 +40,7 @@ def _upsert_habit_log_stmt(dialect_name: str, values: list[dict[str, Any]]):
     if dialect_name == "sqlite":
         stmt = sqlite.insert(HabitLog).values(values)
         return stmt.on_conflict_do_update(
-            index_elements=["habit_id", "completed_date"],
+            index_elements=["user_id", "habit_id", "completed_date"],
             set_={
                 "synced_at": stmt.excluded.synced_at,
                 "deleted_at": stmt.excluded.deleted_at,
@@ -54,8 +50,9 @@ def _upsert_habit_log_stmt(dialect_name: str, values: list[dict[str, Any]]):
 
 
 @router.post("/sync", response_model=SyncResponse)
-async def sync_logs(body: SyncRequest, db: AsyncSession = Depends(get_db)):
+async def sync_logs(body: SyncRequest, token: dict = Depends(require_token), db: AsyncSession = Depends(get_db)):
     errors: list[SyncError] = []
+    user_id = user_id_from_token(token)
 
     if not body.logs:
         return SyncResponse(synced=0, errors=errors)
@@ -63,7 +60,7 @@ async def sync_logs(body: SyncRequest, db: AsyncSession = Depends(get_db)):
     habit_ids = {entry.habit_id for entry in body.logs}
     existing_habits = set(
         (
-            await db.execute(select(Habit.id).where(Habit.id.in_(habit_ids)))
+            await db.execute(select(Habit.id).where(Habit.id.in_(habit_ids), Habit.user_id == user_id))
         ).scalars()
     )
 
@@ -84,6 +81,7 @@ async def sync_logs(body: SyncRequest, db: AsyncSession = Depends(get_db)):
             continue
         deduped[(entry.habit_id, entry.completed_date)] = {
             "id": str(uuid.uuid4()),
+            "user_id": user_id,
             "habit_id": entry.habit_id,
             "completed_date": entry.completed_date,
             "synced_at": now,
@@ -102,15 +100,27 @@ async def sync_logs(body: SyncRequest, db: AsyncSession = Depends(get_db)):
     return SyncResponse(synced=synced, errors=errors)
 
 
+@router.get("/sync", response_model=list[HabitLogRead])
+async def pull_logs(token: dict = Depends(require_token), db: AsyncSession = Depends(get_db)):
+    result = await db.scalars(
+        select(HabitLog)
+        .where(HabitLog.user_id == user_id_from_token(token), HabitLog.deleted_at.is_(None))
+        .order_by(HabitLog.completed_date)
+    )
+    return list(result)
+
+
 @router.get("/{habit_id}", response_model=list[HabitLogRead])
 async def get_logs(
     habit_id: str,
     start: date = Query(...),
     end: date = Query(...),
+    token: dict = Depends(require_token),
     db: AsyncSession = Depends(get_db),
 ):
     # Verify habit exists
-    habit = await db.get(Habit, habit_id)
+    user_id = user_id_from_token(token)
+    habit = await db.scalar(select(Habit).where(Habit.id == habit_id, Habit.user_id == user_id))
     if not habit:
         raise HTTPException(status_code=404, detail="Habit not found")
 
@@ -118,6 +128,7 @@ async def get_logs(
         select(HabitLog)
         .where(
             HabitLog.habit_id == habit_id,
+            HabitLog.user_id == user_id,
             HabitLog.completed_date >= start,
             HabitLog.completed_date <= end,
             HabitLog.deleted_at.is_(None),

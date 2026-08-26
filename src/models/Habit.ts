@@ -11,6 +11,7 @@ export default class Habit extends Model {
   };
 
   @field('name') name!: string;
+  @field('user_id') userId!: string;
   @field('created_at') createdAt!: number;
   @field('is_active') isActive!: boolean;
   @field('synced') synced!: boolean;
