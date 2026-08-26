@@ -21,10 +21,12 @@ export function useHabits(habitService: HabitService) {
   const [, setDateVersion] = useState(0);
   const rawHabitsRef = useRef<Habit[]>([]);
   const toggleChainRef = useRef<Map<string, Promise<void>>>(new Map());
+  const displayComputationRef = useRef(0);
   const isMounted = useSubscriptionLeakDetector('useHabits');
 
   const computeDisplayData = useCallback(
     async (rawHabits: Habit[]) => {
+      const computationId = ++displayComputationRef.current;
       const today = todayRef.current;
       const cache = streakCacheRef.current;
 
@@ -41,7 +43,12 @@ export function useHabits(habitService: HabitService) {
           let streak = cache.get(habit.id);
           if (streak === undefined) {
             streak = await habitService.calculateStreak(habit.id, today);
-            cache.set(habit.id, streak);
+            // A newer WatermelonDB emission may have started while this
+            // calculation was pending. Do not let an obsolete pass populate
+            // the shared cache used by the current pass.
+            if (computationId === displayComputationRef.current) {
+              cache.set(habit.id, streak);
+            }
           }
 
           return {
@@ -53,10 +60,26 @@ export function useHabits(habitService: HabitService) {
         }),
       );
 
+      // WatermelonDB can emit again while the per-habit reads above are
+      // pending (notably immediately after create()). Only render the result
+      // for the most recent snapshot, and never update state after unmount.
+      if (computationId !== displayComputationRef.current || !isMounted()) {
+        return;
+      }
       setHabits(displayData);
       setLoading(false);
     },
-    [habitService],
+    [habitService, isMounted],
+  );
+
+  const refreshDisplayData = useCallback(
+    (rawHabits: Habit[]) => {
+      // Observable callbacks cannot await this work. Consume failures here
+      // so a transient read failure does not become an unhandled rejection
+      // that crashes the app.
+      computeDisplayData(rawHabits).catch(() => undefined);
+    },
+    [computeDisplayData],
   );
 
   useEffect(() => {
@@ -66,12 +89,12 @@ export function useHabits(habitService: HabitService) {
           return;
         }
         rawHabitsRef.current = rawHabits;
-        computeDisplayData(rawHabits);
+        refreshDisplayData(rawHabits);
       },
     });
 
     return () => subscription.unsubscribe();
-  }, [habitService, computeDisplayData, isMounted]);
+  }, [habitService, refreshDisplayData, isMounted]);
 
   // Midnight rollover: when the app comes to the foreground, check if the
   // date has changed. If so, invalidate the streak cache and recompute
@@ -85,7 +108,7 @@ export function useHabits(habitService: HabitService) {
           streakCacheRef.current.clear();
           setDateVersion(v => v + 1);
           if (rawHabitsRef.current.length > 0) {
-            computeDisplayData(rawHabitsRef.current);
+            refreshDisplayData(rawHabitsRef.current);
           }
         }
       }
@@ -96,7 +119,7 @@ export function useHabits(habitService: HabitService) {
       handleAppStateChange,
     );
     return () => subscription.remove();
-  }, [computeDisplayData]);
+  }, [refreshDisplayData]);
 
   const toggleHabit = useCallback(
     (habitId: string) => {
