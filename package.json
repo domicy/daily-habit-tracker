@@ -7,7 +7,8 @@
     "android": "react-native run-android",
     "lint": "eslint .",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "validate": "npm run lint && npm run typecheck"
   },
   "dependencies": {
     "@notifee/react-native": "^9.1.0",

@@ -35,7 +35,7 @@ const apiClient = axios.create({
 let cachedToken: string | null = null;
 let tokenHydrated = false;
 
-async function hydrateToken(): Promise<void> {
+export async function hydrateToken(): Promise<void> {
   if (tokenHydrated) {
     return;
   }

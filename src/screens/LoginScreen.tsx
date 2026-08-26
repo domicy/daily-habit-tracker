@@ -2,8 +2,12 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AuthStackParamList } from '../navigation/types';
 
-export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
+
+export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login } = useAuth();
