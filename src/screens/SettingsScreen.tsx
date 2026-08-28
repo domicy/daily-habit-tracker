@@ -2,12 +2,10 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   StyleSheet,
   Alert,
   ScrollView,
-  TouchableOpacity,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {format} from 'date-fns';
@@ -15,9 +13,9 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors} from '../theme/colors';
 import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
-import {radii, borders, shadowOffsets} from '../theme';
+import {radii, borders} from '../theme';
 import HabitService from '../services/HabitService';
-import SyncService, {AuthenticationError} from '../services/SyncService';
+import SyncService from '../services/SyncService';
 import NotificationService from '../services/NotificationService';
 import {API_BASE_URL} from '../services/api';
 import {useServices} from '../services/ServicesContext';
@@ -28,7 +26,6 @@ import NBCard from '../components/atoms/NBCard';
 import NBChip from '../components/atoms/NBChip';
 import NBToggle from '../components/atoms/NBToggle';
 import NBButton from '../components/atoms/NBButton';
-import NBShadow from '../components/atoms/NBShadow';
 import NBSettingsRow from '../components/atoms/NBSettingsRow';
 import {getAppReleaseString} from '../utils/appVersion';
 
@@ -90,10 +87,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   >('online');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [secretInput, setSecretInput] = useState('');
-  const [connecting, setConnecting] = useState(false);
-  const [showSecret, setShowSecret] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
   // Clear the system status bar so the first row ("Your Habits") and any
   // content the user scrolls to (e.g. the Version row) don't slide under it.
@@ -448,29 +441,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     }
   }, [sService]);
 
-  const handleConnect = useCallback(async () => {
-    const secret = secretInput.trim();
-    if (!secret) {
-      return;
-    }
-    setConnecting(true);
-    try {
-      await sService.authenticate(secret);
-      setSecretInput('');
-      const status = await sService.getSyncStatus();
-      setSyncStatus(status.status);
-      Alert.alert('Connected', 'Sync is now enabled on this device.');
-    } catch (err: unknown) {
-      const message =
-        err instanceof AuthenticationError
-          ? err.message
-          : 'Could not reach the server. Check your connection and try again.';
-      Alert.alert('Connection failed', message);
-    } finally {
-      setConnecting(false);
-    }
-  }, [sService, secretInput]);
-
   const hours = useMemo(() => Array.from({length: 24}, (_, i) => i), []);
 
   const renderHabitRow = (item: Habit, index: number) => {
@@ -570,7 +540,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   return (
     <NBSurface testID="settings-screen">
       <ScrollView
-        ref={scrollRef}
         contentContainerStyle={[styles.content, {paddingTop: contentPaddingTop}]}
         keyboardShouldPersistTaps="handled">
         {/* Header */}
@@ -683,56 +652,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </Text>
             )}
 
-            <View style={styles.connectBlock}>
-              <View style={styles.connectLabelRow}>
-                <Text style={styles.connectLabel}>SYNC SECRET</Text>
-                <TouchableOpacity
-                  onPress={() => setShowSecret(s => !s)}
-                  testID="toggle-secret-visibility">
-                  <Text style={styles.connectToggle}>
-                    {showSecret ? 'HIDE' : 'SHOW'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <NBShadow
-                offsetX={shadowOffsets.xs}
-                offsetY={shadowOffsets.xs}
-                color={colors.shadow}
-                borderRadius={radii.pill}>
-                <TextInput
-                  testID="sync-secret-input"
-                  style={styles.connectInput}
-                  value={secretInput}
-                  onChangeText={setSecretInput}
-                  placeholder="Paste your server secret"
-                  placeholderTextColor={colors.textSoft}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  secureTextEntry={!showSecret}
-                  editable={!connecting}
-                  // Android's adjustResize shrinks the window but doesn't
-                  // scroll the ScrollView. Without this, the focused input
-                  // sits behind the keyboard on tall keyboards (e.g.
-                  // Pixel 10a).
-                  onFocus={() => {
-                    // Delay one tick so layout settles after the keyboard appears.
-                    setTimeout(
-                      () => scrollRef.current?.scrollToEnd({animated: true}),
-                      50,
-                    );
-                  }}
-                />
-              </NBShadow>
-              <NBButton
-                variant="secondary"
-                testID="connect-button"
-                onPress={handleConnect}
-                disabled={connecting || secretInput.trim().length === 0}
-                loading={connecting}
-                style={styles.connectButton}>
-                CONNECT
-              </NBButton>
-            </View>
           </View>
         </NBCard>
 
@@ -766,7 +685,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             variant="secondary"
             testID="logout-button"
             onPress={onLogout}
-            style={styles.connectButton}>
+            style={styles.logoutButton}>
             LOG OUT
           </NBButton>
         )}
@@ -901,47 +820,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.textSoft,
   },
-  connectBlock: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: borders.thin,
-    borderTopColor: colors.regaliaSoft,
-  },
-  connectLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  connectLabel: {
-    fontFamily: fontFamily.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.text,
-    letterSpacing: 0.5,
-  },
-  connectToggle: {
-    fontFamily: fontFamily.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.tiger,
-    letterSpacing: 0.5,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  connectInput: {
-    fontFamily: fontFamily.mono,
-    fontSize: 13,
-    color: colors.text,
-    backgroundColor: colors.card,
-    borderRadius: radii.pill,
-    borderWidth: borders.thick,
-    borderColor: colors.line,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  connectButton: {
+  logoutButton: {
     alignSelf: 'stretch',
   },
   bottomSpacer: {

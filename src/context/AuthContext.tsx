@@ -11,6 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (newToken: string) => Promise<void>;
   logout: () => Promise<void>;
+  sessionExpired: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +47,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUserId(decodeSubject(newToken));
   };
 
+  // End the session without touching local data. A background sync that gets a
+  // 401 has no way to re-authenticate any more (see issue #125), so it calls
+  // this — and it must not behave like `logout`, whose database reset would
+  // destroy logs the user has recorded but not yet pushed.
+  const sessionExpired = async () => {
+    await setAuthToken(null);
+    setTokenState(null);
+    setUserId(null);
+  };
+
   const logout = async () => {
     try {
       // 1. Clear token in persistent storage & Axios interceptor memory
@@ -71,6 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isLoading,
         login,
         logout,
+        sessionExpired,
       }}
     >
       {children}

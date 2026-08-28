@@ -5,8 +5,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import require_token, user_id_from_token
-from app.models import Habit, HabitLog
+from app.middleware.auth import current_user
+from app.models import Habit, HabitLog, User
 from app.schemas import (
     HabitCreate,
     HabitRead,
@@ -40,10 +40,10 @@ def _read_habit(habit: Habit) -> HabitRead:
 @router.get("/", response_model=list[HabitRead])
 async def list_habits(
     active: bool | None = Query(None),
-    token: dict = Depends(require_token),
+    user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(Habit).where(Habit.user_id == user_id_from_token(token)).order_by(Habit.created_at)
+    stmt = select(Habit).where(Habit.user_id == user.id).order_by(Habit.created_at)
     if active is not None:
         stmt = stmt.where(Habit.is_active == active)
     result = await db.execute(stmt)
@@ -51,9 +51,9 @@ async def list_habits(
 
 
 @router.post("/", response_model=HabitRead, status_code=status.HTTP_201_CREATED)
-async def create_habit(body: HabitCreate, token: dict = Depends(require_token), db: AsyncSession = Depends(get_db)):
+async def create_habit(body: HabitCreate, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
     habit = Habit(
-        name=body.name, user_id=user_id_from_token(token), impact=body.impact,
+        name=body.name, user_id=user.id, impact=body.impact,
         friction=body.friction, keystone=body.keystone, time_cost=body.time_cost,
     )
     db.add(habit)
@@ -63,16 +63,16 @@ async def create_habit(body: HabitCreate, token: dict = Depends(require_token), 
 
 
 @router.get("/sync", response_model=HabitSyncPullResponse)
-async def pull_habits(token: dict = Depends(require_token), db: AsyncSession = Depends(get_db)):
-    result = await db.scalars(select(Habit).where(Habit.user_id == user_id_from_token(token)).order_by(Habit.created_at))
+async def pull_habits(user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.scalars(select(Habit).where(Habit.user_id == user.id).order_by(Habit.created_at))
     return HabitSyncPullResponse(habits=[_read_habit(habit) for habit in result])
 
 
 @router.patch("/{habit_id}", response_model=HabitRead)
 async def update_habit(
-    habit_id: str, body: HabitUpdate, token: dict = Depends(require_token), db: AsyncSession = Depends(get_db)
+    habit_id: str, body: HabitUpdate, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
 ):
-    habit = await db.scalar(select(Habit).where(Habit.id == habit_id, Habit.user_id == user_id_from_token(token)))
+    habit = await db.scalar(select(Habit).where(Habit.id == habit_id, Habit.user_id == user.id))
     if not habit:
         raise HTTPException(status_code=404, detail="Habit not found")
     for field, value in body.model_dump(exclude_unset=True).items():
@@ -83,13 +83,13 @@ async def update_habit(
 
 
 @router.post("/sync", response_model=HabitSyncResponse)
-async def sync_habits(body: HabitSyncRequest, token: dict = Depends(require_token), db: AsyncSession = Depends(get_db)):
+async def sync_habits(body: HabitSyncRequest, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
     """
     Upsert habits using client-supplied IDs. The local-first client owns IDs
     and pushes habit creates/updates here so subsequent log syncs can resolve
     their habit_id references.
     """
-    user_id = user_id_from_token(token)
+    user_id = user.id
     synced_ids: list[str] = []
     for entry in body.habits:
         existing = await db.scalar(select(Habit).where(Habit.id == entry.id, Habit.user_id == user_id))
@@ -128,13 +128,13 @@ async def get_habit_metrics(
     start: date = Query(...),
     end: date = Query(...),
     as_of: date = Query(...),
-    token: dict = Depends(require_token),
+    user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
     if start > end:
         raise HTTPException(status_code=422, detail="start must not be after end")
 
-    user_id = user_id_from_token(token)
+    user_id = user.id
     habit = await db.scalar(select(Habit).where(Habit.id == habit_id, Habit.user_id == user_id))
     if not habit:
         raise HTTPException(status_code=404, detail="Habit not found")

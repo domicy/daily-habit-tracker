@@ -9,7 +9,9 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import get_db
 from app.main import app
-from app.models import Base
+from app.models import Base, User
+
+from tests.conftest import TEST_USER_ID
 
 
 # ── Helper ──────────────────────────────────────────────
@@ -252,6 +254,19 @@ async def concurrent_client():
     session_factory = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
+    # This fixture builds its own engine, so the account the auth_header token
+    # names has to exist here too -- the API rejects a token whose subject is
+    # not a real users row.
+    async with session_factory() as session:
+        session.add(
+            User(
+                id=TEST_USER_ID,
+                email="user@test.invalid",
+                username="user",
+                password_hash="x",
+            )
+        )
+        await session.commit()
 
     async def _override_get_db():
         async with session_factory() as session:

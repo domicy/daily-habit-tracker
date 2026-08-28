@@ -67,13 +67,22 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)) ->
     return _token(user.id)
 
 
-@router.post("/token", response_model=TokenResponse)
-async def issue_token(body: TokenRequest) -> TokenResponse:
-    if body.secret is not None:
-        if not hmac.compare_digest(body.secret, settings.jwt_secret):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid secret")
-        return _token("user")
-    raise HTTPException(status_code=422, detail="Email and password are required")
+# Retired. This endpoint used to mint a token whose ``sub`` was the literal
+# string "user" in exchange for the server's JWT secret. That subject names no
+# row in ``users``, so everything synced under it was owned by an account that
+# does not exist -- and the mobile client re-minted one on any background 401,
+# overwriting a signed-in user's real token. The route is kept as a 410 for one
+# release so builds still in the field get a diagnosable answer rather than a
+# bare 404. See issue #125.
+@router.post("/token")
+async def issue_token() -> None:
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail=(
+            "The shared-secret token endpoint has been retired. "
+            "Sign in with POST /auth/login using email and password."
+        ),
+    )
 
 
 @router.post("/login", response_model=TokenResponse)

@@ -99,4 +99,35 @@ describe('AuthContext', () => {
     expect(result.current.token).toBeNull();
     expect(result.current.isAuthenticated).toBe(false);
   });
+
+  it('sessionExpired ends the session but keeps local data', async () => {
+    // A background 401 can no longer re-authenticate on the user's behalf
+    // (issue #125), so it ends the session — but wiping the database here
+    // would destroy logs recorded offline and never pushed.
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(
+      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2NvdW50LTEifQ.sig',
+    );
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider>{children}</AuthProvider>
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isAuthenticated).toBe(true);
+    });
+    expect(result.current.userId).toBe('account-1');
+
+    await act(async () => {
+      await result.current.sessionExpired();
+    });
+
+    expect(setAuthToken).toHaveBeenCalledWith(null);
+    expect(result.current.token).toBeNull();
+    expect(result.current.userId).toBeNull();
+    // Back at the sign-in screen with everything still on the device.
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(database.unsafeResetDatabase).not.toHaveBeenCalled();
+  });
 });

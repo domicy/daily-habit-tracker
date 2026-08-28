@@ -1,7 +1,7 @@
 import {AppState} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient, {AUTH_TOKEN_KEY} from '../../services/api';
-import SyncService, {AuthenticationError} from '../../services/SyncService';
+import SyncService, {SYNC_AUTH_FAILED_KEY} from '../../services/SyncService';
 import type HabitService from '../../services/HabitService';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -435,37 +435,49 @@ describe('SyncService', () => {
     });
   });
 
-  describe('authenticate', () => {
-    it('stores the token in AsyncStorage on success', async () => {
-      const habitService = createMockHabitService();
+  describe('session expiry', () => {
+    it('reports auth_failed and hands the session back to the app on a 401', async () => {
+      const habitService = createMockHabitService([
+        createMockLog('habit-1', '2025-01-01'),
+      ]);
       const syncService = new SyncService(habitService);
+      const onSessionExpired = jest.fn();
+      syncService.setOnSessionExpired(onSessionExpired);
 
-      (apiClient.post as jest.Mock).mockResolvedValueOnce({
-        data: {access_token: 'test-jwt-token', token_type: 'bearer'},
+      (apiClient.post as jest.Mock).mockRejectedValue({
+        response: {status: 401, data: {detail: 'Token expired'}},
       });
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
-      await syncService.authenticate('my-secret');
+      const result = await syncService.pushUnsyncedLogs();
 
-      expect(apiClient.post).toHaveBeenCalledWith('/auth/token', {
-        secret: 'my-secret',
-      });
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      expect(result).toEqual({pushed: 0, failed: 0});
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
+      expect(onSessionExpired).toHaveBeenCalledTimes(1);
+      // It cannot mint a replacement token any more (issue #125).
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
         AUTH_TOKEN_KEY,
-        'test-jwt-token',
+        expect.anything(),
       );
     });
 
-    it('throws AuthenticationError on failure', async () => {
-      const habitService = createMockHabitService();
+    it('stops calling back once the callback is cleared', async () => {
+      const habitService = createMockHabitService([
+        createMockLog('habit-1', '2025-01-01'),
+      ]);
       const syncService = new SyncService(habitService);
+      const onSessionExpired = jest.fn();
+      syncService.setOnSessionExpired(onSessionExpired);
+      syncService.setOnSessionExpired(null);
 
-      (apiClient.post as jest.Mock).mockRejectedValueOnce({
-        response: {status: 401, data: {detail: 'Invalid secret'}},
+      (apiClient.post as jest.Mock).mockRejectedValue({
+        response: {status: 401, data: {detail: 'Token expired'}},
       });
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
-      await expect(syncService.authenticate('wrong-secret')).rejects.toThrow(
-        AuthenticationError,
-      );
+      await syncService.pushUnsyncedLogs();
+
+      expect(onSessionExpired).not.toHaveBeenCalled();
     });
   });
 

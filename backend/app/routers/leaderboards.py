@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import require_token, user_id_from_token
+from app.middleware.auth import current_user
 from app.models import Habit, HabitLog, User
 from app.schemas import (
     HeadToHeadResponse,
@@ -42,10 +42,10 @@ async def head_to_head(
     opponent_id: str = Query(..., min_length=1),
     start: int = Query(..., description="UTC epoch boundary in milliseconds"),
     end: int = Query(..., description="UTC epoch boundary in milliseconds"),
-    token: dict = Depends(require_token),
+    user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ) -> HeadToHeadResponse:
-    current_user_id = user_id_from_token(token)
+    current_user_id = user.id
     if opponent_id == current_user_id:
         raise HTTPException(status_code=422, detail="opponent_id must identify another user")
 

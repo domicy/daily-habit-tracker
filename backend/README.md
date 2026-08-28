@@ -68,11 +68,33 @@ cp .env.example .env
 docker compose up -d
 ```
 
+### Authentication: one path, and it belongs to a real account
+
+`POST /auth/token` — the shared-secret endpoint — is **retired and returns 410
+Gone**. It used to mint a token whose `sub` was the literal string `"user"`, an
+owner that is not a row in `users`, so everything synced under it was invisible
+to every real account; the mobile client also re-minted one on any background
+401, silently replacing a signed-in user's real token. See issue #125.
+
+The only ways to obtain a token are now `POST /auth/register` and
+`POST /auth/login`, both of which return the account's own UUID as `sub`. Two
+guards keep it that way:
+
+* every authenticated route resolves `sub` against `users` and returns 401 if
+  it names no account (`app/middleware/auth.py`, `current_user`);
+* `habits.user_id` and `habit_logs.user_id` are foreign keys to `users.id`
+  (migration `007`).
+
+**This is a breaking change for any client that authenticates with the shared
+secret.** Such a client cannot sync after this deploys until it is updated and
+the user signs in. Sequence the rollout accordingly: migrate, register, claim,
+then ship the new app build.
+
 ### Legacy data: claiming pre-multi-user habits and logs
 
 **This applies to any deployment that ran before the multi-user migration (004),
-including production, which held real habits and logs at the time of this change.
-Skip it only for a brand-new, empty database.**
+including production, which held 14 habits and 150 habit_logs at revision `003`
+when this was written. Skip it only for a brand-new, empty database.**
 
 Migration `004` adds ownership to `habits` and `habit_logs` and assigns every
 pre-existing row to a sentinel user, `00000000-0000-0000-0000-000000000000`. That
@@ -111,6 +133,25 @@ The claim runs in one transaction and is idempotent — a second run reports zer
 rows. It moves ownership only; it never deletes habits or logs. It refuses an
 email that is not already registered, so a typo fails loudly rather than
 stranding the data under a new empty account.
+
+#### Orphaned rows, and migration 007
+
+A deployment that ran migration `004` *and* then accepted a shared-secret sync
+also holds rows owned by `"user"` — an id that names no account at all, so the
+sentinel sweep above does not match them. Migration `007` refuses to add the
+ownership foreign keys while any such row exists, and names the counts it found.
+Add `--include-orphans` to claim them too:
+
+```bash
+docker compose exec api python -m app.claim_legacy \
+  --email you@example.com --include-orphans --dry-run   # reports
+docker compose exec api python -m app.claim_legacy \
+  --email you@example.com --include-orphans             # reassigns
+```
+
+Then re-run `alembic upgrade head`. Production at the time of writing was still
+at revision `003` and had never issued a `sub="user"` token against a `004`
+schema, so it holds no orphans — this is for deployments that ran ahead of it.
 
 ### Exposing the API with Cloudflare Tunnels
 

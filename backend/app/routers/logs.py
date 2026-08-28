@@ -8,8 +8,8 @@ from sqlalchemy.dialects import mysql, postgresql, sqlite
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import require_token, user_id_from_token
-from app.models import Habit, HabitLog
+from app.middleware.auth import current_user
+from app.models import Habit, HabitLog, User
 from app.schemas import HabitLogRead, SyncError, SyncRequest, SyncResponse
 
 router = APIRouter(prefix="/logs", tags=["logs"])
@@ -50,9 +50,9 @@ def _upsert_habit_log_stmt(dialect_name: str, values: list[dict[str, Any]]):
 
 
 @router.post("/sync", response_model=SyncResponse)
-async def sync_logs(body: SyncRequest, token: dict = Depends(require_token), db: AsyncSession = Depends(get_db)):
+async def sync_logs(body: SyncRequest, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
     errors: list[SyncError] = []
-    user_id = user_id_from_token(token)
+    user_id = user.id
 
     if not body.logs:
         return SyncResponse(synced=0, errors=errors)
@@ -101,10 +101,10 @@ async def sync_logs(body: SyncRequest, token: dict = Depends(require_token), db:
 
 
 @router.get("/sync", response_model=list[HabitLogRead])
-async def pull_logs(token: dict = Depends(require_token), db: AsyncSession = Depends(get_db)):
+async def pull_logs(user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
     result = await db.scalars(
         select(HabitLog)
-        .where(HabitLog.user_id == user_id_from_token(token), HabitLog.deleted_at.is_(None))
+        .where(HabitLog.user_id == user.id, HabitLog.deleted_at.is_(None))
         .order_by(HabitLog.completed_date)
     )
     return list(result)
@@ -115,11 +115,11 @@ async def get_logs(
     habit_id: str,
     start: date = Query(...),
     end: date = Query(...),
-    token: dict = Depends(require_token),
+    user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
     # Verify habit exists
-    user_id = user_id_from_token(token)
+    user_id = user.id
     habit = await db.scalar(select(Habit).where(Habit.id == habit_id, Habit.user_id == user_id))
     if not habit:
         raise HTTPException(status_code=404, detail="Habit not found")

@@ -145,7 +145,6 @@ class SyncResponse(BaseModel):
 # ── Auth ────────────────────────────────────────────────
 
 class TokenRequest(BaseModel):
-    secret: str | None = None
     email: str | None = None
     password: str | None = None
 
