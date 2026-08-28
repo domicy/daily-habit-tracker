@@ -81,6 +81,7 @@ const StatsListScreenBody: React.FC<StatsListScreenBodyProps> = ({
               {' '}
               {String(item.streak).padStart(3, '0')} DAYS
             </Text>
+            <Text style={styles.scoreText}> · SCORE {item.score}</Text>
           </View>
         </View>
         <NBChevron color={colors.regalia} />
@@ -179,6 +180,11 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.mono,
     fontSize: 11,
     color: colors.textSoft,
+  },
+  scoreText: {
+    fontFamily: fontFamily.mono,
+    fontSize: 11,
+    color: colors.regalia,
   },
   empty: {
     paddingHorizontal: spacing.lg,

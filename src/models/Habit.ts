@@ -17,6 +17,10 @@ export default class Habit extends Model {
   @field('synced') synced!: boolean;
   @field('notifications_enabled') notificationsEnabled!: boolean;
   @field('notification_time') notificationTime!: string;
+  @field('impact') impact!: number;
+  @field('friction') friction!: number;
+  @field('keystone') keystone!: number;
+  @field('time_cost') timeCost!: number;
 
   @children('habit_logs') habitLogs!: Query<HabitLog>;
 

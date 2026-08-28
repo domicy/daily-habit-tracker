@@ -74,6 +74,12 @@ jobs:
           pip install -r requirements.txt
           pip install pytest-cov
 
+      - name: Verify Alembic migrations
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./ci-migrations.db
+          JWT_SECRET: ci-verification-secret
+        run: PYTHONPATH=. alembic upgrade head
+
       - name: Run pytest with coverage
         run: pytest --cov=app --cov-report=term-missing --cov-fail-under=85
 

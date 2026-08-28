@@ -1,6 +1,7 @@
 """add users and ownership to habit data"""
 
 from typing import Sequence, Union
+from datetime import datetime, timezone
 import uuid
 import hashlib
 from alembic import op
@@ -27,12 +28,12 @@ def upgrade() -> None:
     salt = uuid.uuid4().hex
     digest = hashlib.pbkdf2_hmac("sha256", b"legacy-disabled", salt.encode(), 240000).hex()
     op.bulk_insert(sa.table("users", sa.column("id", sa.String), sa.column("email", sa.String), sa.column("password_hash", sa.String), sa.column("created_at", sa.DateTime())), [{
-        "id": legacy_id, "email": "legacy@local.invalid", "password_hash": f"pbkdf2_sha256$240000${salt}${digest}", "created_at": sa.func.now()
+        "id": legacy_id, "email": "legacy@local.invalid", "password_hash": f"pbkdf2_sha256$240000${salt}${digest}", "created_at": datetime.now(timezone.utc)
     }])
     for table in ("habits", "habit_logs"):
         op.add_column(table, sa.Column("user_id", sa.String(36), nullable=True))
         op.create_index(f"ix_{table}_user_id", table, ["user_id"])
-        op.execute(sa.text(f"UPDATE {table} SET user_id = :legacy_id"), {"legacy_id": legacy_id})
+        op.execute(sa.text(f"UPDATE {table} SET user_id = :legacy_id").bindparams(legacy_id=legacy_id))
         with op.batch_alter_table(table) as batch:
             batch.alter_column("user_id", nullable=False)
     # Replace the old global uniqueness rule with ownership-aware uniqueness.

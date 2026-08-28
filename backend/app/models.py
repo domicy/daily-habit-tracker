@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -22,6 +22,7 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, default="user")
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
@@ -38,6 +39,10 @@ class Habit(Base):
         DateTime(timezone=True), default=_utcnow
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    impact: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
+    friction: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
+    keystone: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
+    time_cost: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
 
     logs: Mapped[list["HabitLog"]] = relationship(back_populates="habit")
 

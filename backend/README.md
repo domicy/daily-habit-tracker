@@ -13,7 +13,7 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Run database migrations
-alembic upgrade head
+PYTHONPATH=. alembic upgrade head
 
 # Start the development server
 uvicorn app.main:app --reload --port 8000
@@ -34,6 +34,25 @@ This starts:
 ```bash
 pytest
 ```
+
+### Backend verification in CI / Codex
+
+The authoritative backend verification is the `backend-tests` GitHub Actions
+job. It installs the backend requirements, applies the Alembic migrations, and
+runs the complete pytest suite with the coverage gate.
+
+In the restricted Codex sandbox, the local `aiosqlite` test path can hang while
+its worker thread tries to wake the asyncio event loop. This is a sandbox
+process-isolation limitation, not an application test result. For local
+verification, run the backend suite with unrestricted execution, or rely on
+the required GitHub Actions backend check before merging:
+
+```bash
+pytest --cov=app --cov-report=term-missing --cov-fail-under=85
+```
+
+Do not treat a restricted-sandbox hang as a passing or failing backend result;
+use unrestricted execution or CI verification instead.
 
 ## Deployment
 

@@ -5,6 +5,41 @@ import {map} from 'rxjs/operators';
 import {subDays, format} from 'date-fns';
 import type Habit from '../models/Habit';
 import type HabitLog from '../models/HabitLog';
+import {calculateHabitScore} from '../utils/habitScoring';
+
+export interface HabitMetrics {
+  habit_id: string;
+  score: number;
+  completed_days: number;
+  eligible_days: number;
+  completion_rate: number;
+  current_streak: number;
+}
+
+export interface LeaderboardRanking {
+  rank: number;
+  user_id: string;
+  display_name: string;
+  is_current_user: boolean;
+  score: number;
+  tie_breakers: {
+    streak_days: number;
+    completion_rate_pct: number;
+    last_authoritative_sync: string | null;
+  };
+}
+
+export interface HeadToHeadResponse {
+  competition_id: string;
+  meta: {
+    status: string;
+    timezone: string;
+    period_start: string;
+    period_end: string;
+    updated_at: string;
+  };
+  rankings: LeaderboardRanking[];
+}
 
 // After this many server-rejected attempts a log is treated as permanently
 // dead and excluded from the sync queue. Prevents per-log failures like
@@ -41,7 +76,12 @@ export default class HabitService {
     return this.database
       .get<Habit>('habits')
       .query(Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')), Q.where('is_active', true), Q.sortBy('created_at', Q.asc))
-      .observe();
+      .observeWithColumns([
+        'impact',
+        'friction',
+        'keystone',
+        'time_cost',
+      ]);
   }
 
   getAllHabits(): Observable<Habit[]> {
@@ -57,6 +97,10 @@ export default class HabitService {
         'is_active',
         'notifications_enabled',
         'notification_time',
+        'impact',
+        'friction',
+        'keystone',
+        'time_cost',
       ]);
   }
 
@@ -90,8 +134,71 @@ export default class HabitService {
         habit.synced = false;
         habit.notificationsEnabled = false;
         habit.notificationTime = '08:00';
+        habit.impact = 3;
+        habit.friction = 3;
+        habit.keystone = 3;
+        habit.timeCost = 3;
       });
     });
+  }
+
+  async setHabitRatings(
+    habitId: string,
+    ratings: {impact: number; friction: number; keystone: number; timeCost: number},
+  ): Promise<void> {
+    for (const value of Object.values(ratings)) {
+      if (!Number.isInteger(value) || value < 1 || value > 5) {
+        throw new Error('Habit ratings must be integers from 1 to 5.');
+      }
+    }
+    const habit = await this.getHabitById(habitId);
+    await this.database.write(async () => {
+      await habit.update(h => {
+        h.impact = ratings.impact;
+        h.friction = ratings.friction;
+        h.keystone = ratings.keystone;
+        h.timeCost = ratings.timeCost;
+        h.synced = false;
+      });
+    });
+  }
+
+  getHabitScore(habit: Habit): number {
+    return calculateHabitScore(
+      habit.impact || 3,
+      habit.friction || 3,
+      habit.keystone || 3,
+      habit.timeCost || 3,
+    );
+  }
+
+  async getHabitMetrics(
+    habitId: string,
+    start: string,
+    end: string,
+    asOf: string,
+  ): Promise<HabitMetrics> {
+    // Load the network client lazily so local-only consumers and Jest's
+    // WatermelonDB tests do not initialize native AsyncStorage.
+    const {default: apiClient} = await import('./api');
+    const response = await apiClient.get<HabitMetrics>(
+      `/habits/${habitId}/metrics`,
+      {params: {start, end, as_of: asOf}},
+    );
+    return response.data;
+  }
+
+  async getHeadToHeadLeaderboard(
+    opponentId: string,
+    start: number,
+    end: number,
+  ): Promise<HeadToHeadResponse> {
+    const {default: apiClient} = await import('./api');
+    const response = await apiClient.get<HeadToHeadResponse>(
+      '/v1/leaderboards/head-to-head',
+      {params: {opponent_id: opponentId, start, end}},
+    );
+    return response.data;
   }
 
   async setHabitNotification(
@@ -320,14 +427,14 @@ export default class HabitService {
     }
   }
 
-  async applyPulledHabits(habits: Array<{id: string; name: string; created_at: string; is_active: boolean}>): Promise<void> {
+  async applyPulledHabits(habits: Array<{id: string; name: string; created_at: string; is_active: boolean; impact: number; friction: number; keystone: number; time_cost: number}>): Promise<void> {
     await this.database.write(async () => {
       for (const remote of habits) {
         let local: Habit | null = null;
         try { local = await this.database.get<Habit>('habits').find(remote.id); } catch { /* new row */ }
         if (local) {
           if (!local.synced) continue; // never overwrite offline work
-          await local.update(h => { h.name = remote.name; h.isActive = remote.is_active; });
+          await local.update(h => { h.name = remote.name; h.isActive = remote.is_active; h.impact = remote.impact ?? 3; h.friction = remote.friction ?? 3; h.keystone = remote.keystone ?? 3; h.timeCost = remote.time_cost ?? 3; });
         } else {
           await this.database.get<Habit>('habits').create(h => {
             h._raw.id = remote.id;
@@ -338,6 +445,10 @@ export default class HabitService {
             h.synced = true;
             h.notificationsEnabled = false;
             h.notificationTime = '08:00';
+            h.impact = remote.impact ?? 3;
+            h.friction = remote.friction ?? 3;
+            h.keystone = remote.keystone ?? 3;
+            h.timeCost = remote.time_cost ?? 3;
           });
         }
       }
@@ -394,19 +505,11 @@ export default class HabitService {
     let streak = 0;
     let currentDate = asOfDate;
 
-    // Only fetch logs within the last 400 days to bound the query size.
-    // A streak longer than 400 days would be extremely rare, and this avoids
-    // scanning thousands of historical rows for long-running habits.
-    const cutoffDate = format(
-      subDays(new Date(asOfDate + 'T00:00:00'), 400),
-      'yyyy-MM-dd',
-    );
-
     const logs = await this.database
       .get<HabitLog>('habit_logs')
       .query(
         Q.where('habit_id', habitId),
-        Q.where('completed_date', Q.gte(cutoffDate)),
+        Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
         Q.where('completed_date', Q.lte(asOfDate)),
         Q.where('deleted_at', null),
       )

@@ -14,6 +14,7 @@ interface HabitCardProps {
   name: string;
   completedToday: boolean;
   streak: number;
+  score?: number;
   onToggle: (habitId: string) => void;
   onPress?: (habitId: string) => void;
 }
@@ -26,6 +27,7 @@ function areEqual(prev: HabitCardProps, next: HabitCardProps): boolean {
     prev.name === next.name &&
     prev.completedToday === next.completedToday &&
     prev.streak === next.streak &&
+    prev.score === next.score &&
     prev.onToggle === next.onToggle &&
     prev.onPress === next.onPress
   );
@@ -36,6 +38,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
   name,
   completedToday,
   streak,
+  score,
   onToggle,
   onPress,
 }) => {
@@ -104,6 +107,9 @@ const HabitCard: React.FC<HabitCardProps> = ({
         <Text style={styles.streakText} testID={`streak-${habitId}`}>
           🔥 {streakLabel}
         </Text>
+        {score !== undefined && (
+          <Text testID={`score-${habitId}`}>SCORE {score}</Text>
+        )}
       </View>
     </Pressable>
   );
