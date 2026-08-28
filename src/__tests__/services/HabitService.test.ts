@@ -351,6 +351,31 @@ describe('HabitService', () => {
       const streak = await service.calculateStreak(habit.id, '2026-03-07');
       expect(streak).toBe(1);
     });
+
+    it('does not fetch logs older than the 400-day cutoff', async () => {
+      const habit = await createTestHabit(database);
+      const today = new Date('2026-03-07T00:00:00');
+
+      // An unbroken run reaching further back than the cutoff. The query is
+      // bounded at asOf - 400, so the walk can only reach that day: 401 days
+      // inclusive. Without the bound it would run the full 411.
+      await database.write(async () => {
+        for (let i = 0; i < 411; i++) {
+          await database.get<HabitLog>('habit_logs').create(log => {
+            log.habitId = habit.id;
+            log.completedDate = formatDate(subDays(today, i));
+            log.synced = false;
+          });
+        }
+      });
+
+      const streak = await service.calculateStreak(
+        habit.id,
+        formatDate(today),
+      );
+
+      expect(streak).toBe(401);
+    });
   });
 
   // ─── getLogsForHabit ───────────────────────────────────────────────
