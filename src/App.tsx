@@ -1,5 +1,4 @@
 import React, {useEffect} from 'react';
-import {NavigationContainer} from '@react-navigation/native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppNavigator from './navigation/AppNavigator';
@@ -84,9 +83,12 @@ const App: React.FC = () => {
       <SafeAreaProvider>
         <NotificationBootstrap />
         <SyncBootstrap />
-        <NavigationContainer>
-          <NavigationBootstrap />
-        </NavigationContainer>
+        {/* No NavigationContainer here: RootNavigator mounts its own, because
+            it swaps the whole navigator between AuthNavigator and the tabs on
+            the auth state. Nesting a second one throws in React Navigation 7
+            (see issue #129), and only once auth hydration completes — which is
+            why App.test.tsx has to await that before asserting. */}
+        <NavigationBootstrap />
       </SafeAreaProvider>
     </ServicesProvider>
   );
