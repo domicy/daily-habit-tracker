@@ -60,6 +60,11 @@ export function backoffMsFor(retryCount: number): number {
   return Math.min(BACKOFF_BASE_MS * 2 ** exp, BACKOFF_CAP_MS);
 }
 
+// Owner values that mean "nobody yet": '' is what schema v5 left on rows that
+// predate the user_id column, 'user' is the placeholder this service holds
+// before the first login. Both are claimed on sign-in; see claimLegacyRows.
+const LEGACY_OWNER_IDS = ['', 'user'];
+
 export default class HabitService {
   private database: Database;
   private userId = 'user';
@@ -72,10 +77,45 @@ export default class HabitService {
     this.userId = userId;
   }
 
+  /**
+   * Assign rows that predate per-account ownership to `userId`.
+   *
+   * Schema v5 added `user_id` without a backfill, so rows created before that
+   * migration carry `''`, and rows created after it but before the first login
+   * carry the `'user'` placeholder this service starts with. Neither belongs to
+   * anyone. Queries used to match `''` explicitly, which made those rows visible
+   * to *every* account that signed in on the device; claiming them once, for the
+   * first account to sign in, is what lets every query scope on the owner alone.
+   *
+   * Idempotent: once claimed there is nothing left to match. Returns the number
+   * of rows adopted. `'user'` is never a real account id — those are UUIDs — so
+   * this cannot capture another account's rows.
+   */
+  async claimLegacyRows(userId: string): Promise<number> {
+    if (!userId) {
+      return 0;
+    }
+    const unowned = Q.where('user_id', Q.oneOf(LEGACY_OWNER_IDS));
+    const [habits, logs] = await Promise.all([
+      this.database.get<Habit>('habits').query(unowned).fetch(),
+      this.database.get<HabitLog>('habit_logs').query(unowned).fetch(),
+    ]);
+    if (habits.length === 0 && logs.length === 0) {
+      return 0;
+    }
+    await this.database.write(async () => {
+      await this.database.batch(
+        ...habits.map(habit => habit.prepareUpdate(h => { h.userId = userId; })),
+        ...logs.map(log => log.prepareUpdate(l => { l.userId = userId; })),
+      );
+    });
+    return habits.length + logs.length;
+  }
+
   getActiveHabits(): Observable<Habit[]> {
     return this.database
       .get<Habit>('habits')
-      .query(Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')), Q.where('is_active', true), Q.sortBy('created_at', Q.asc))
+      .query(Q.where('user_id', this.userId), Q.where('is_active', true), Q.sortBy('created_at', Q.asc))
       .observeWithColumns([
         'impact',
         'friction',
@@ -92,7 +132,7 @@ export default class HabitService {
     // the UI.
     return this.database
       .get<Habit>('habits')
-      .query(Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')), Q.sortBy('created_at', Q.asc))
+      .query(Q.where('user_id', this.userId), Q.sortBy('created_at', Q.asc))
       .observeWithColumns([
         'is_active',
         'notifications_enabled',
@@ -105,7 +145,7 @@ export default class HabitService {
   }
 
   async toggleHabitActive(habitId: string): Promise<void> {
-    const habit = await this.database.get<Habit>('habits').find(habitId);
+    const habit = await this.getHabitById(habitId);
     await this.database.write(async () => {
       await habit.update(h => {
         h.isActive = !h.isActive;
@@ -206,7 +246,7 @@ export default class HabitService {
     enabled: boolean,
     time: string,
   ): Promise<void> {
-    const habit = await this.database.get<Habit>('habits').find(habitId);
+    const habit = await this.getHabitById(habitId);
     await this.database.write(async () => {
       await habit.update(h => {
         h.notificationsEnabled = enabled;
@@ -224,7 +264,7 @@ export default class HabitService {
       .query(
         Q.where('notifications_enabled', true),
         Q.where('is_active', true),
-        Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
+        Q.where('user_id', this.userId),
       )
       .fetch();
   }
@@ -239,7 +279,7 @@ export default class HabitService {
         .query(
           Q.where('habit_id', habitId),
           Q.where('completed_date', date),
-          Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
+          Q.where('user_id', this.userId),
         )
         .fetch();
 
@@ -290,7 +330,7 @@ export default class HabitService {
   }
 
   async getHabitById(habitId: string): Promise<Habit> {
-    const habits = await this.database.get<Habit>('habits').query(Q.where('id', habitId), Q.or(Q.where('user_id', this.userId), Q.where('user_id', ''))).fetch();
+    const habits = await this.database.get<Habit>('habits').query(Q.where('id', habitId), Q.where('user_id', this.userId)).fetch();
     if (!habits[0]) throw new Error('Habit not found');
     return habits[0];
   }
@@ -304,7 +344,7 @@ export default class HabitService {
       .get<HabitLog>('habit_logs')
       .query(
         Q.where('habit_id', habitId),
-        Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
+        Q.where('user_id', this.userId),
         Q.where('completed_date', Q.gte(startDate)),
         Q.where('completed_date', Q.lte(endDate)),
         Q.where('deleted_at', null),
@@ -321,7 +361,7 @@ export default class HabitService {
       .get<HabitLog>('habit_logs')
       .query(
         Q.where('synced', false),
-        Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
+        Q.where('user_id', this.userId),
         Q.where('retry_count', Q.lt(MAX_LOG_RETRIES)),
       )
       .fetch();
@@ -341,7 +381,7 @@ export default class HabitService {
   async getUnsyncedHabits(): Promise<Habit[]> {
     return this.database
       .get<Habit>('habits')
-      .query(Q.where('synced', false), Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')))
+      .query(Q.where('synced', false), Q.where('user_id', this.userId))
       .fetch();
   }
 
@@ -408,6 +448,7 @@ export default class HabitService {
         .get<HabitLog>('habit_logs')
         .query(
           Q.where('habit_id', Q.oneOf(habitIds)),
+          Q.where('user_id', this.userId),
           Q.where('synced', false),
           Q.where('retry_count', Q.gt(0)),
         )
@@ -430,8 +471,13 @@ export default class HabitService {
   async applyPulledHabits(habits: Array<{id: string; name: string; created_at: string; is_active: boolean; impact: number; friction: number; keystone: number; time_cost: number}>): Promise<void> {
     await this.database.write(async () => {
       for (const remote of habits) {
+        // Look up by id regardless of owner. Scoping the lookup instead would
+        // miss another account's row and then fail on the duplicate primary
+        // key; a row we don't own is skipped, which is what the server does
+        // too (409 "Habit belongs to another user", routers/habits.py).
         let local: Habit | null = null;
         try { local = await this.database.get<Habit>('habits').find(remote.id); } catch { /* new row */ }
+        if (local && local.userId !== this.userId) continue;
         if (local) {
           if (!local.synced) continue; // never overwrite offline work
           await local.update(h => { h.name = remote.name; h.isActive = remote.is_active; h.impact = remote.impact ?? 3; h.friction = remote.friction ?? 3; h.keystone = remote.keystone ?? 3; h.timeCost = remote.time_cost ?? 3; });
@@ -460,9 +506,15 @@ export default class HabitService {
       for (const remote of logs) {
         const existing = await this.database.get<HabitLog>('habit_logs').query(
           Q.where('habit_id', remote.habit_id), Q.where('completed_date', remote.completed_date),
-          Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
+          Q.where('user_id', this.userId),
         ).fetch();
         if (existing.some(log => log.deletedAt == null)) continue;
+        // As above: never re-create an id another account already holds.
+        if (existing.length === 0) {
+          let foreign: HabitLog | null = null;
+          try { foreign = await this.database.get<HabitLog>('habit_logs').find(remote.id); } catch { /* free id */ }
+          if (foreign && foreign.userId !== this.userId) continue;
+        }
         const tombstone = existing[0];
         if (tombstone) {
           await tombstone.update(log => { log.deletedAt = null; log.synced = true; });
@@ -485,13 +537,13 @@ export default class HabitService {
       .get<HabitLog>('habit_logs')
       .query(
         Q.where('synced', false),
-        Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
+        Q.where('user_id', this.userId),
         Q.where('retry_count', Q.lt(MAX_LOG_RETRIES)),
       )
       .observe();
     const habits$ = this.database
       .get<Habit>('habits')
-      .query(Q.where('synced', false))
+      .query(Q.where('synced', false), Q.where('user_id', this.userId))
       .observe();
     return combineLatest([logs$, habits$]).pipe(
       map(([logs, habits]) => logs.length + habits.length),
@@ -517,7 +569,7 @@ export default class HabitService {
       .get<HabitLog>('habit_logs')
       .query(
         Q.where('habit_id', habitId),
-        Q.or(Q.where('user_id', this.userId), Q.where('user_id', '')),
+        Q.where('user_id', this.userId),
         Q.where('completed_date', Q.gte(cutoffDate)),
         Q.where('completed_date', Q.lte(asOfDate)),
         Q.where('deleted_at', null),

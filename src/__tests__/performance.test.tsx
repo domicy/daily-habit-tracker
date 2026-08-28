@@ -45,6 +45,7 @@ describe('Performance benchmarks', () => {
 
       const habit = await database.write(async () => {
         return database.get<Habit>('habits').create(h => {
+          h.userId = 'user';
           h.name = 'Daily Exercise';
           h.createdAt = Date.now();
           h.isActive = true;
@@ -57,6 +58,7 @@ describe('Performance benchmarks', () => {
       await database.write(async () => {
         for (let i = 0; i < 365; i++) {
           await database.get<HabitLog>('habit_logs').create(log => {
+            log.userId = 'user';
             log.habitId = habit.id;
             log.completedDate = formatDate(subDays(today, i));
             log.synced = false;
@@ -134,6 +136,7 @@ describe('Performance benchmarks', () => {
       await database.write(async () => {
         for (let i = 0; i < 100; i++) {
           await database.get<Habit>('habits').create(h => {
+            h.userId = 'user';
             h.name = `Habit ${i}`;
             h.createdAt = Date.now() + i;
             h.isActive = true;

@@ -25,13 +25,20 @@ function formatDate(date: Date): string {
   return format(date, 'yyyy-MM-dd');
 }
 
+// Ownership is explicit in these helpers. The default matches HabitService's
+// own starting userId, so tests that don't care about accounts read as before;
+// the multi-account tests pass a real id.
+const DEFAULT_OWNER = 'user';
+
 async function createTestHabit(
   database: Database,
   name: string = 'Exercise',
   synced: boolean = true,
+  owner: string = DEFAULT_OWNER,
 ): Promise<Habit> {
   return database.write(async () => {
     return database.get<Habit>('habits').create(h => {
+      h.userId = owner;
       h.name = name;
       h.createdAt = Date.now();
       h.isActive = true;
@@ -45,9 +52,11 @@ async function createTestLog(
   habitId: string,
   date: string,
   synced: boolean = false,
+  owner: string = DEFAULT_OWNER,
 ): Promise<HabitLog> {
   return database.write(async () => {
     return database.get<HabitLog>('habit_logs').create(log => {
+      log.userId = owner;
       log.habitId = habitId;
       log.completedDate = date;
       log.synced = synced;
@@ -290,6 +299,7 @@ describe('HabitService', () => {
       await database.write(async () => {
         for (let i = 0; i < 100; i++) {
           await database.get<HabitLog>('habit_logs').create(log => {
+            log.userId = DEFAULT_OWNER;
             log.habitId = habit.id;
             log.completedDate = formatDate(subDays(today, i));
             log.synced = false;
@@ -362,6 +372,7 @@ describe('HabitService', () => {
       await database.write(async () => {
         for (let i = 0; i < 411; i++) {
           await database.get<HabitLog>('habit_logs').create(log => {
+            log.userId = DEFAULT_OWNER;
             log.habitId = habit.id;
             log.completedDate = formatDate(subDays(today, i));
             log.synced = false;
@@ -375,6 +386,155 @@ describe('HabitService', () => {
       );
 
       expect(streak).toBe(401);
+    });
+  });
+
+  // ─── Multi-account isolation (#123) ────────────────────────────────
+
+  describe('account isolation', () => {
+    const ALICE = '11111111-1111-1111-1111-111111111111';
+    const BOB = '22222222-2222-2222-2222-222222222222';
+
+    it('does not show one account the other account habits', async () => {
+      await createTestHabit(database, 'Alice habit', true, ALICE);
+      await createTestHabit(database, 'Bob habit', true, BOB);
+
+      service.setUserId(BOB);
+      const habits = await new Promise<Habit[]>(resolve => {
+        const sub = service.getAllHabits().subscribe(list => {
+          resolve(list);
+          setTimeout(() => sub.unsubscribe(), 0);
+        });
+      });
+
+      expect(habits.map(h => h.name)).toEqual(['Bob habit']);
+    });
+
+    it('does not show one account the other account logs', async () => {
+      const aliceHabit = await createTestHabit(database, 'Alice habit', true, ALICE);
+      await createTestLog(database, aliceHabit.id, '2026-03-07', true, ALICE);
+
+      service.setUserId(BOB);
+
+      expect(
+        await service.getLogsForHabit(aliceHabit.id, '2026-01-01', '2026-12-31'),
+      ).toEqual([]);
+      // The habit itself is not reachable either, so Bob cannot edit it.
+      await expect(service.getHabitById(aliceHabit.id)).rejects.toThrow('Habit not found');
+    });
+
+    it('counts only the signed-in account unsynced rows', async () => {
+      await createTestHabit(database, 'Alice unsynced', false, ALICE);
+      const bobHabit = await createTestHabit(database, 'Bob unsynced', false, BOB);
+      await createTestLog(database, bobHabit.id, '2026-03-07', false, BOB);
+
+      service.setUserId(BOB);
+      const count = await new Promise<number>(resolve => {
+        const sub = service.observeUnsyncedCount().subscribe(value => {
+          resolve(value);
+          setTimeout(() => sub.unsubscribe(), 0);
+        });
+      });
+
+      // Bob's habit + Bob's log, and none of Alice's.
+      expect(count).toBe(2);
+    });
+
+    it('does not let a pulled log collide with another account row', async () => {
+      const aliceHabit = await createTestHabit(database, 'Alice habit', true, ALICE);
+      const aliceLog = await createTestLog(database, aliceHabit.id, '2026-03-07', true, ALICE);
+
+      service.setUserId(BOB);
+      await service.applyPulledLogs([
+        {id: aliceLog.id, habit_id: aliceHabit.id, completed_date: '2026-03-07'},
+      ]);
+
+      const row = await database.get<HabitLog>('habit_logs').find(aliceLog.id);
+      expect(row.userId).toBe(ALICE);
+    });
+
+    it('does not let a pulled habit overwrite another account row', async () => {
+      const aliceHabit = await createTestHabit(database, 'Alice habit', true, ALICE);
+
+      service.setUserId(BOB);
+      await service.applyPulledHabits([
+        {
+          id: aliceHabit.id,
+          name: 'Bob version',
+          created_at: new Date().toISOString(),
+          is_active: true,
+          impact: 5,
+          friction: 1,
+          keystone: 5,
+          time_cost: 1,
+        },
+      ]);
+
+      const alicesRow = await database.get<Habit>('habits').find(aliceHabit.id);
+      expect(alicesRow.name).toBe('Alice habit');
+      expect(alicesRow.userId).toBe(ALICE);
+    });
+  });
+
+  // ─── Legacy row claiming (#123) ────────────────────────────────────
+
+  describe('claimLegacyRows', () => {
+    const ALICE = '11111111-1111-1111-1111-111111111111';
+    const BOB = '22222222-2222-2222-2222-222222222222';
+
+    it('adopts rows left unowned by the schema v5 migration', async () => {
+      const habit = await createTestHabit(database, 'Legacy habit', true, '');
+      await createTestLog(database, habit.id, '2026-03-07', true, '');
+
+      const claimed = await service.claimLegacyRows(ALICE);
+
+      expect(claimed).toBe(2);
+      service.setUserId(ALICE);
+      expect(await service.getHabitById(habit.id)).toBeTruthy();
+      expect(
+        await service.getLogsForHabit(habit.id, '2026-01-01', '2026-12-31'),
+      ).toHaveLength(1);
+    });
+
+    it('adopts rows written under the pre-login placeholder owner', async () => {
+      const habit = await createTestHabit(database, 'Placeholder habit', true, 'user');
+
+      expect(await service.claimLegacyRows(ALICE)).toBe(1);
+
+      const claimedRow = await database.get<Habit>('habits').find(habit.id);
+      expect(claimedRow.userId).toBe(ALICE);
+    });
+
+    it('leaves a second account nothing to claim', async () => {
+      const habit = await createTestHabit(database, 'Legacy habit', true, '');
+      await service.claimLegacyRows(ALICE);
+
+      expect(await service.claimLegacyRows(BOB)).toBe(0);
+
+      // The rows stayed with the account that claimed them.
+      const row = await database.get<Habit>('habits').find(habit.id);
+      expect(row.userId).toBe(ALICE);
+      service.setUserId(BOB);
+      await expect(service.getHabitById(habit.id)).rejects.toThrow('Habit not found');
+    });
+
+    it('does not touch rows already owned by a real account', async () => {
+      const habit = await createTestHabit(database, 'Alice habit', true, ALICE);
+
+      expect(await service.claimLegacyRows(BOB)).toBe(0);
+
+      const row = await database.get<Habit>('habits').find(habit.id);
+      expect(row.userId).toBe(ALICE);
+    });
+
+    it('is a no-op when there is nothing to claim', async () => {
+      expect(await service.claimLegacyRows(ALICE)).toBe(0);
+    });
+
+    it('ignores an empty user id rather than claiming rows for nobody', async () => {
+      await createTestHabit(database, 'Legacy habit', true, '');
+
+      expect(await service.claimLegacyRows('')).toBe(0);
     });
   });
 

@@ -51,7 +51,14 @@ export const RootNavigator: React.FC<{habitService?: HabitService}> = ({
   }
 
   React.useEffect(() => {
-    if (habitService && userId) habitService.setUserId(userId);
+    if (!habitService || !userId) return;
+    habitService.setUserId(userId);
+    // Rows predating per-account ownership belong to nobody until the first
+    // account signs in and adopts them. Without this they would be invisible
+    // to every account, since queries now scope on the owner alone.
+    habitService.claimLegacyRows(userId).catch(error => {
+      console.warn('Failed to claim legacy rows:', error);
+    });
   }, [habitService, userId]);
 
   if (isLoading) {
