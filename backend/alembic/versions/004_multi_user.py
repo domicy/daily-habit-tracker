@@ -34,8 +34,11 @@ def upgrade() -> None:
         op.add_column(table, sa.Column("user_id", sa.String(36), nullable=True))
         op.create_index(f"ix_{table}_user_id", table, ["user_id"])
         op.execute(sa.text(f"UPDATE {table} SET user_id = :legacy_id").bindparams(legacy_id=legacy_id))
+        # batch_alter_table only rewrites the table on SQLite. On MySQL/MariaDB
+        # it degrades to a real MODIFY COLUMN, which refuses to run without the
+        # existing type -- so existing_type is required, not optional.
         with op.batch_alter_table(table) as batch:
-            batch.alter_column("user_id", nullable=False)
+            batch.alter_column("user_id", existing_type=sa.String(36), nullable=False)
     # Replace the old global uniqueness rule with ownership-aware uniqueness.
     with op.batch_alter_table("habit_logs") as batch:
         batch.drop_constraint("uq_habit_date", type_="unique")

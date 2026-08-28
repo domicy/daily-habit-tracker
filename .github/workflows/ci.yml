@@ -59,6 +59,23 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # Production runs MariaDB (backend/docker-compose.yml, backend/.env.example).
+    # batch_alter_table only rewrites the table on SQLite, so a migration that
+    # is broken on MySQL/MariaDB compiles fine against SQLite -- the MariaDB
+    # steps below are the gating ones.
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: secret
+          MARIADB_DATABASE: habits
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - uses: actions/checkout@v4
 
@@ -72,13 +89,64 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest-cov
+          # pymysql: sync MySQL driver, used only for the offline --sql compile
+          # check (alembic/env.py's online path requires an async driver).
+          pip install pytest-cov pymysql
 
-      - name: Verify Alembic migrations
+      - name: Verify Alembic migrations (SQLite)
         env:
           DATABASE_URL: sqlite+aiosqlite:///./ci-migrations.db
           JWT_SECRET: ci-verification-secret
         run: PYTHONPATH=. alembic upgrade head
+
+      - name: Verify Alembic migrations (MariaDB, empty schema)
+        env:
+          DATABASE_URL: mysql+asyncmy://root:secret@127.0.0.1:3306/habits
+          JWT_SECRET: ci-verification-secret
+        run: PYTHONPATH=. alembic upgrade head
+
+      # The path production actually takes: it sits at 003, so 004 is the very
+      # next revision it runs, against a database that already holds rows.
+      - name: Verify Alembic migrations (MariaDB, upgrading from 003 with data)
+        env:
+          DATABASE_URL: mysql+asyncmy://root:secret@127.0.0.1:3306/habits_003
+          JWT_SECRET: ci-verification-secret
+        run: |
+          python - <<'PY'
+          import pymysql
+          conn = pymysql.connect(host="127.0.0.1", user="root", password="secret")
+          conn.cursor().execute("CREATE DATABASE IF NOT EXISTS habits_003")
+          conn.close()
+          PY
+          PYTHONPATH=. alembic upgrade 003
+          python - <<'PY'
+          import pymysql
+          conn = pymysql.connect(host="127.0.0.1", user="root", password="secret", database="habits_003")
+          cur = conn.cursor()
+          cur.execute("INSERT INTO habits (id, name, created_at, is_active) VALUES ('h1', 'Read', NOW(), 1)")
+          cur.execute("INSERT INTO habit_logs (id, habit_id, completed_date, synced_at) VALUES ('l1', 'h1', '2026-08-01', NOW())")
+          conn.commit()
+          conn.close()
+          PY
+          PYTHONPATH=. alembic upgrade head
+          python - <<'PY'
+          import pymysql
+          conn = pymysql.connect(host="127.0.0.1", user="root", password="secret", database="habits_003")
+          cur = conn.cursor()
+          cur.execute("SELECT COUNT(*) FROM habits")
+          habits = cur.fetchone()[0]
+          cur.execute("SELECT COUNT(*) FROM habit_logs")
+          logs = cur.fetchone()[0]
+          conn.close()
+          assert (habits, logs) == (1, 1), f"rows lost across the migration: {habits} habits, {logs} logs"
+          print(f"survived migration: {habits} habit, {logs} log")
+          PY
+
+      - name: Compile migrations against the MySQL dialect (offline)
+        env:
+          DATABASE_URL: mysql+pymysql://root:secret@127.0.0.1:3306/habits
+          JWT_SECRET: ci-verification-secret
+        run: PYTHONPATH=. alembic upgrade head --sql > /dev/null
 
       - name: Run pytest with coverage
         run: pytest --cov=app --cov-report=term-missing --cov-fail-under=85
