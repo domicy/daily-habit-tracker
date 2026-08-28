@@ -1,6 +1,7 @@
 import {
   schemaMigrations,
   addColumns,
+  unsafeExecuteSql,
 } from '@nozbe/watermelondb/Schema/migrations';
 
 export const migrations = schemaMigrations({
@@ -56,6 +57,23 @@ export const migrations = schemaMigrations({
       steps: [
         addColumns({table: 'habits', columns: [{name: 'user_id', type: 'string', isIndexed: true}]}),
         addColumns({table: 'habit_logs', columns: [{name: 'user_id', type: 'string', isIndexed: true}]}),
+      ],
+    },
+    {
+      toVersion: 6,
+      steps: [
+        addColumns({
+          table: 'habits',
+          columns: [
+            {name: 'impact', type: 'number'},
+            {name: 'friction', type: 'number'},
+            {name: 'keystone', type: 'number'},
+            {name: 'time_cost', type: 'number'},
+          ],
+        }),
+        unsafeExecuteSql(
+          'UPDATE habits SET impact = 3, friction = 3, keystone = 3, time_cost = 3;',
+        ),
       ],
     },
   ],

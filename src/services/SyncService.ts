@@ -172,6 +172,10 @@ export default class SyncService {
         name: habit.name,
         created_at_ms: habit.createdAt,
         is_active: habit.isActive,
+        impact: habit.impact,
+        friction: habit.friction,
+        keystone: habit.keystone,
+        time_cost: habit.timeCost,
       })),
     };
 

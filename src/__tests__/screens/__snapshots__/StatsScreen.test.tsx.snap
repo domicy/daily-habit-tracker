@@ -4315,7 +4315,7 @@ exports[`StatsScreen matches snapshot 1`] = `
                   }
                 }
               >
-                MONTH
+                SELECTED WINDOW
               </Text>
               <Text
                 style={
@@ -4353,7 +4353,7 @@ exports[`StatsScreen matches snapshot 1`] = `
               >
                 0
                  / 
-                10
+                31
                  days completed
               </Text>
               <View
@@ -4384,6 +4384,129 @@ exports[`StatsScreen matches snapshot 1`] = `
                 />
               </View>
             </View>
+          </View>
+        </View>
+        <View
+          style={
+            [
+              {
+                "position": "relative",
+              },
+              undefined,
+            ]
+          }
+        >
+          <View
+            pointerEvents="none"
+            style={
+              [
+                {
+                  "bottom": 0,
+                  "left": 0,
+                  "position": "absolute",
+                  "right": 0,
+                  "top": 0,
+                },
+                {
+                  "backgroundColor": "#3D2F52",
+                  "borderRadius": 22,
+                  "transform": [
+                    {
+                      "translateX": 5,
+                    },
+                    {
+                      "translateY": 5,
+                    },
+                  ],
+                },
+              ]
+            }
+          />
+          <View
+            style={
+              [
+                {
+                  "overflow": "hidden",
+                },
+                {
+                  "backgroundColor": "#FAF5EA",
+                  "borderColor": "#6A5A86",
+                  "borderRadius": 22,
+                  "borderWidth": 2.5,
+                },
+                null,
+                {
+                  "alignItems": "center",
+                  "marginBottom": 16,
+                  "paddingBottom": 16,
+                },
+              ]
+            }
+            testID="score-section"
+          >
+            <View
+              style={
+                {
+                  "backgroundColor": "#6A5A86",
+                  "flexDirection": "row",
+                  "justifyContent": "space-between",
+                  "paddingHorizontal": 14,
+                  "paddingVertical": 8,
+                  "width": "100%",
+                }
+              }
+            >
+              <Text
+                style={
+                  {
+                    "color": "#FAF5EA",
+                    "fontFamily": "Space Mono",
+                    "fontSize": 11,
+                    "fontWeight": "700",
+                    "letterSpacing": 0.7,
+                  }
+                }
+              >
+                HABIT SCORE
+              </Text>
+              <Text
+                style={
+                  {
+                    "color": "#FAF5EA",
+                    "fontFamily": "Space Mono",
+                    "fontSize": 11,
+                    "fontWeight": "700",
+                    "letterSpacing": 0.7,
+                  }
+                }
+              >
+                0—100
+              </Text>
+            </View>
+            <Text
+              style={
+                {
+                  "color": "#6A5A86",
+                  "fontFamily": "Archivo Black",
+                  "fontSize": 64,
+                  "lineHeight": 64,
+                  "marginTop": 8,
+                }
+              }
+            >
+              50
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#5B544B",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 10,
+                }
+              }
+            >
+              SERVER-AUTHORITATIVE WEIGHTED SCORE
+            </Text>
           </View>
         </View>
         <View

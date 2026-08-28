@@ -339,12 +339,14 @@ exports[`DashboardScreen matches snapshot 1`] = `
             "completedToday": true,
             "id": "1",
             "name": "Exercise",
+            "score": 50,
             "streak": 7,
           },
           {
             "completedToday": false,
             "id": "2",
             "name": "Read",
+            "score": 50,
             "streak": 0,
           },
         ]
@@ -645,6 +647,12 @@ exports[`DashboardScreen matches snapshot 1`] = `
                 🔥 
                 7 days
               </Text>
+              <Text
+                testID="score-1"
+              >
+                SCORE 
+                50
+              </Text>
             </View>
           </View>
         </View>
@@ -858,6 +866,12 @@ exports[`DashboardScreen matches snapshot 1`] = `
               >
                 🔥 
                 0 days
+              </Text>
+              <Text
+                testID="score-2"
+              >
+                SCORE 
+                50
               </Text>
             </View>
           </View>

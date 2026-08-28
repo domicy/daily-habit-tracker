@@ -1,12 +1,25 @@
 from datetime import date, datetime
+from typing import Annotated
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StrictInt, field_validator
 
 
 # ── Habits ──────────────────────────────────────────────
 
+Rating = Annotated[StrictInt, Field(ge=1, le=5)]
+
+
+def habit_score(impact: int, friction: int, keystone: int, time_cost: int) -> int:
+    """Return the contract score using exact integer half-up rounding."""
+    raw_minus_minimum = impact + (6 - friction) + keystone + (6 - time_cost) - 4
+    return (100 * raw_minus_minimum * 2 + 16) // (16 * 2)
+
 class HabitCreate(BaseModel):
     name: str = Field(..., max_length=50)
+    impact: Rating = 3
+    friction: Rating = 3
+    keystone: Rating = 3
+    time_cost: Rating = 3
 
     @field_validator("name")
     @classmethod
@@ -20,6 +33,10 @@ class HabitCreate(BaseModel):
 class HabitUpdate(BaseModel):
     name: str | None = Field(None, max_length=50)
     is_active: bool | None = None
+    impact: Rating | None = None
+    friction: Rating | None = None
+    keystone: Rating | None = None
+    time_cost: Rating | None = None
 
     @field_validator("name")
     @classmethod
@@ -37,6 +54,11 @@ class HabitRead(BaseModel):
     name: str
     created_at: datetime
     is_active: bool
+    impact: int
+    friction: int
+    keystone: int
+    time_cost: int
+    score: int
 
     model_config = {"from_attributes": True}
 
@@ -49,6 +71,10 @@ class HabitSyncEntry(BaseModel):
     # request time so creation order is consistent across devices.
     created_at_ms: int
     is_active: bool = True
+    impact: Rating = 3
+    friction: Rating = 3
+    keystone: Rating = 3
+    time_cost: Rating = 3
 
     @field_validator("name")
     @classmethod
@@ -71,6 +97,15 @@ class HabitSyncResponse(BaseModel):
 
 class HabitSyncPullResponse(BaseModel):
     habits: list[HabitRead]
+
+
+class HabitMetricsRead(BaseModel):
+    habit_id: str
+    score: int
+    completed_days: int
+    eligible_days: int
+    completion_rate: int
+    current_streak: int
 
 
 # ── Habit Logs ──────────────────────────────────────────
@@ -118,8 +153,38 @@ class TokenRequest(BaseModel):
 class RegisterRequest(BaseModel):
     email: str
     password: str = Field(..., min_length=8)
+    username: str | None = Field(None, min_length=1, max_length=50)
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class LeaderboardTieBreakers(BaseModel):
+    streak_days: int
+    completion_rate_pct: float
+    last_authoritative_sync: datetime | None
+
+
+class LeaderboardRanking(BaseModel):
+    rank: int
+    user_id: str
+    display_name: str
+    is_current_user: bool
+    score: int
+    tie_breakers: LeaderboardTieBreakers
+
+
+class LeaderboardMeta(BaseModel):
+    status: str
+    timezone: str
+    period_start: datetime
+    period_end: datetime
+    updated_at: datetime
+
+
+class HeadToHeadResponse(BaseModel):
+    competition_id: str
+    meta: LeaderboardMeta
+    rankings: list[LeaderboardRanking]

@@ -15,11 +15,13 @@ import {fontFamily} from '../theme/typography';
 import {spacing} from '../theme/spacing';
 import {radii, borders} from '../theme';
 import MonthCalendar from '../components/MonthCalendar';
+import RatingEditor, {type HabitRatings} from '../components/RatingEditor';
 import NBSurface from '../components/atoms/NBSurface';
 import NBCard from '../components/atoms/NBCard';
 import NBChip from '../components/atoms/NBChip';
 import HabitService from '../services/HabitService';
 import {getDefaultHabitService} from '../services/defaultHabitService';
+import {calculateHabitScore} from '../utils/habitScoring';
 
 interface StatsScreenProps {
   route?: {params: {habitId: string}};
@@ -33,6 +35,7 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
   habitService,
 }) => {
   const service = habitService ?? getDefaultHabitService();
+  const canEditRatings = typeof (service as unknown as {setHabitRatings?: unknown}).setHabitRatings === 'function';
   const habitId = route?.params?.habitId ?? '';
   const insets = useSafeAreaInsets();
   // Clear the system status bar before laying out the back button + title.
@@ -40,6 +43,14 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
 
   const [habitName, setHabitName] = useState('');
   const [streak, setStreak] = useState(0);
+  const [score, setScore] = useState(50);
+  const [completionRate, setCompletionRate] = useState(0);
+  const [ratings, setRatings] = useState<HabitRatings>({
+    impact: 3,
+    friction: 3,
+    keystone: 3,
+    timeCost: 3,
+  });
   const [completedDates, setCompletedDates] = useState<Set<string>>(new Set());
   // Single Date observation so year and month can't straddle a midnight/month
   // boundary (two separate `new Date()` calls could observe different values).
@@ -76,6 +87,21 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
     (async () => {
       const habit = await service.getHabitById(habitId);
       setHabitName(habit.name);
+      const nextRatings = {
+        impact: habit.impact ?? 3,
+        friction: habit.friction ?? 3,
+        keystone: habit.keystone ?? 3,
+        timeCost: habit.timeCost ?? 3,
+      };
+      setRatings(nextRatings);
+      setScore(
+        service.getHabitScore?.(habit) ?? calculateHabitScore(
+          nextRatings.impact,
+          nextRatings.friction,
+          nextRatings.keystone,
+          nextRatings.timeCost,
+        ),
+      );
       const today = getTodayString();
       const currentStreak = await service.calculateStreak(habitId, today);
       setStreak(currentStreak);
@@ -98,8 +124,49 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
       );
       const logs = await service.getLogsForHabit(habitId, startDate, endDate);
       setCompletedDates(new Set(logs.map(log => log.completedDate)));
+      let metrics;
+      try {
+        metrics = await service.getHabitMetrics?.(
+          habitId,
+          startDate,
+          endDate,
+          getTodayString(),
+        );
+      } catch {
+        // The calendar remains useful offline; local values are provisional
+        // until the server metrics request succeeds.
+        metrics = undefined;
+      }
+      if (metrics) {
+        setCompletionRate(metrics.completion_rate);
+        setScore(metrics.score);
+        setStreak(metrics.current_streak);
+      } else {
+        const daysInMonth = getDaysInMonth(new Date(calendarYear, calendarMonth));
+        setCompletionRate(
+          daysInMonth > 0 ? Math.round((new Set(logs.map(log => log.completedDate)).size * 100) / daysInMonth) : 0,
+        );
+      }
     })();
   }, [habitId, calendarYear, calendarMonth, service]);
+
+  const handleSaveRatings = useCallback(
+    async (nextRatings: HabitRatings) => {
+      const saveRatings = (service as unknown as {
+        setHabitRatings?: HabitService['setHabitRatings'];
+      }).setHabitRatings;
+      if (!saveRatings) return;
+      await saveRatings.call(service, habitId, nextRatings);
+      setRatings(nextRatings);
+      setScore(calculateHabitScore(
+        nextRatings.impact,
+        nextRatings.friction,
+        nextRatings.keystone,
+        nextRatings.timeCost,
+      ));
+    },
+    [habitId, service],
+  );
 
   const handleMonthChange = useCallback(
     (year: number, month: number) => {
@@ -114,19 +181,12 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
   }, [navigation]);
 
   const {completedCount, totalDays} = useMemo(() => {
-    const now = new Date();
-    const isCurrentMonth =
-      now.getFullYear() === calendarYear && now.getMonth() === calendarMonth;
     const daysInMonth = getDaysInMonth(
       new Date(calendarYear, calendarMonth),
     );
-    const total = isCurrentMonth ? now.getDate() : daysInMonth;
 
-    return {completedCount: completedDates.size, totalDays: total};
+    return {completedCount: completedDates.size, totalDays: daysInMonth};
   }, [completedDates, calendarYear, calendarMonth]);
-
-  const progressPercent =
-    totalDays > 0 ? completedCount / totalDays : 0;
 
   return (
     <NBSurface testID="stats-screen">
@@ -150,6 +210,10 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
         <Text style={styles.title} testID="habit-name">
           {habitName}
         </Text>
+
+        {canEditRatings && (
+          <RatingEditor ratings={ratings} onSave={handleSaveRatings} />
+        )}
 
         <NBCard style={styles.streakCard} testID="streak-section">
           <View style={styles.streakStrip}>
@@ -175,9 +239,9 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
 
         <NBCard style={styles.summaryCard} testID="monthly-summary">
           <View style={styles.summaryStrip}>
-            <Text style={styles.summaryStripText}>MONTH</Text>
+            <Text style={styles.summaryStripText}>SELECTED WINDOW</Text>
             <Text style={styles.summaryStripText}>
-              {Math.round(progressPercent * 100)}%
+              {completionRate}%
             </Text>
           </View>
           <View style={styles.summaryBody}>
@@ -188,12 +252,21 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
               <View
                 style={[
                   styles.progressBarFill,
-                  {width: `${Math.round(progressPercent * 100)}%`},
+                  {width: `${completionRate}%`},
                 ]}
                 testID="progress-bar"
               />
             </View>
           </View>
+        </NBCard>
+
+        <NBCard style={styles.scoreCard} testID="score-section">
+          <View style={styles.scoreStrip}>
+            <Text style={styles.summaryStripText}>HABIT SCORE</Text>
+            <Text style={styles.summaryStripText}>0—100</Text>
+          </View>
+          <Text style={styles.scoreNumber}>{score}</Text>
+          <Text style={styles.scoreCaption}>SERVER-AUTHORITATIVE WEIGHTED SCORE</Text>
         </NBCard>
 
         <View style={styles.bottomSpacer} />
@@ -265,6 +338,23 @@ const styles = StyleSheet.create({
   summaryCard: {
     marginBottom: spacing.md,
   },
+  scoreCard: {marginBottom: spacing.md, alignItems: 'center', paddingBottom: spacing.md},
+  scoreStrip: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: colors.regalia,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  scoreNumber: {
+    fontFamily: fontFamily.display,
+    fontSize: 64,
+    lineHeight: 64,
+    color: colors.regalia,
+    marginTop: spacing.sm,
+  },
+  scoreCaption: {fontFamily: fontFamily.mono, fontSize: 10, color: colors.textSoft},
   summaryStrip: {
     flexDirection: 'row',
     justifyContent: 'space-between',

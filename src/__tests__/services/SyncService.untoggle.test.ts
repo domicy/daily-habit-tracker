@@ -71,6 +71,7 @@ async function createSyncedHabit(
 ): Promise<Habit> {
   return database.write(async () => {
     return database.get<Habit>('habits').create(h => {
+      h.userId = 'user';
       h.name = name;
       h.createdAt = Date.now();
       h.isActive = true;
@@ -86,6 +87,7 @@ async function createSyncedLog(
 ): Promise<HabitLog> {
   return database.write(async () => {
     return database.get<HabitLog>('habit_logs').create(log => {
+      log.userId = 'user';
       log.habitId = habitId;
       log.completedDate = date;
       log.synced = true;

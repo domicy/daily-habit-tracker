@@ -39,6 +39,11 @@ def _email(value: str) -> str:
     return value
 
 
+def _username(email: str) -> str:
+    value = email.split("@", 1)[0].strip()
+    return value[:50] or "user"
+
+
 def _token(user_id: str) -> TokenResponse:
     expire = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expiry_hours)
     return TokenResponse(access_token=jwt.encode({"sub": user_id, "exp": expire}, settings.jwt_secret, algorithm=settings.jwt_algorithm))
@@ -50,7 +55,13 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)) ->
     existing = await db.scalar(select(User).where(User.email == email))
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")
-    user = User(email=email, password_hash=_hash_password(body.password))
+    username = (body.username or _username(email)).strip()
+    if not username:
+        raise HTTPException(status_code=422, detail="Username must not be blank")
+    username_exists = await db.scalar(select(User).where(User.username == username))
+    if username_exists:
+        raise HTTPException(status_code=409, detail="Username already registered")
+    user = User(email=email, username=username, password_hash=_hash_password(body.password))
     db.add(user)
     await db.commit()
     return _token(user.id)

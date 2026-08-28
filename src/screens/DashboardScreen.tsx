@@ -135,6 +135,7 @@ const DashboardScreenBody: React.FC<DashboardScreenBodyProps> = ({
         name={item.name}
         completedToday={item.completedToday}
         streak={item.streak}
+        score={item.score}
         onToggle={handleToggle}
         onPress={handleHabitPress}
       />

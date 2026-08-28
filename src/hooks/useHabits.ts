@@ -5,12 +5,14 @@ import type Habit from '../models/Habit';
 import type HabitService from '../services/HabitService';
 import {getTodayString} from '../utils/dateUtils';
 import {useSubscriptionLeakDetector} from './useSubscriptionLeakDetector';
+import {calculateHabitScore} from '../utils/habitScoring';
 
 export interface HabitDisplayData {
   id: string;
   name: string;
   completedToday: boolean;
   streak: number;
+  score: number;
 }
 
 export function useHabits(habitService: HabitService) {
@@ -56,6 +58,12 @@ export function useHabits(habitService: HabitService) {
             name: habit.name,
             completedToday,
             streak,
+            score: habitService.getHabitScore?.(habit) ?? calculateHabitScore(
+              habit.impact || 3,
+              habit.friction || 3,
+              habit.keystone || 3,
+              habit.timeCost || 3,
+            ),
           };
         }),
       );

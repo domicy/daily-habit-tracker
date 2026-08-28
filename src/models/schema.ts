@@ -1,7 +1,7 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 5,
+  version: 6,
   tables: [
     tableSchema({
       name: 'habits',
@@ -17,6 +17,10 @@ export const schema = appSchema({
         // reminder. Empty string = unset; service/UI falls back to "08:00".
         {name: 'notifications_enabled', type: 'boolean'},
         {name: 'notification_time', type: 'string'},
+        {name: 'impact', type: 'number'},
+        {name: 'friction', type: 'number'},
+        {name: 'keystone', type: 'number'},
+        {name: 'time_cost', type: 'number'},
       ],
     }),
     tableSchema({
