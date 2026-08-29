@@ -1,6 +1,6 @@
 # Issue #105 — Habit weights and scoring contract
 
-Status: proposed for implementation
+Status: implemented — v1 shipped in PR #118 and PR #139; open corrections tracked in #105
 
 This document settles the data and metric semantics before UI or API coding
 starts. It is the v1 contract for habit weights, score, completion rate, and
