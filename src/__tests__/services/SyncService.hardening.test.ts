@@ -1,10 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient, {AUTH_TOKEN_KEY} from '../../services/api';
-import SyncService, {
-  AuthenticationError,
-  SYNC_SECRET_KEY,
-  SYNC_AUTH_FAILED_KEY,
-} from '../../services/SyncService';
+import SyncService, {SYNC_AUTH_FAILED_KEY} from '../../services/SyncService';
 import type HabitService from '../../services/HabitService';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -15,6 +11,9 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 jest.mock('../../services/api', () => {
   const mockPost = jest.fn();
+  // The pull is best-effort and irrelevant to these scenarios; default it to a
+  // network failure so it stays a no-op unless a test says otherwise.
+  const mockGet = jest.fn(() => Promise.reject({message: 'Network Error'}));
   const mockInterceptors = {
     request: {use: jest.fn(), eject: jest.fn()},
     response: {use: jest.fn(), eject: jest.fn()},
@@ -31,6 +30,7 @@ jest.mock('../../services/api', () => {
     __esModule: true,
     default: {
       post: mockPost,
+      get: mockGet,
       interceptors: mockInterceptors,
     },
     AUTH_TOKEN_KEY: 'auth_token',
@@ -90,6 +90,7 @@ function createMockHabitService(logs: ReturnType<typeof createMockLog>[] = []) {
 describe('SyncService Hardening', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (apiClient.get as jest.Mock).mockRejectedValue({message: 'Network Error'});
     // Default: no auth failed flag
     (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
       if (key === SYNC_AUTH_FAILED_KEY) {
@@ -416,167 +417,121 @@ describe('SyncService Hardening', () => {
   // Scenario 4: Token expired mid-session
   // ---------------------------------------------------------------
   describe('Scenario 4: Token expired mid-session (401)', () => {
-    it('attempts re-auth with stored secret on 401 response', async () => {
+    it('flags auth failure and ends the session on a 401, without re-minting', async () => {
       const logs = [createMockLog('habit-1', '2025-01-01')];
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
+      const onSessionExpired = jest.fn();
+      syncService.setOnSessionExpired(onSessionExpired);
 
-      // First call: 401, triggers re-auth
-      const authError = {
+      (apiClient.post as jest.Mock).mockRejectedValueOnce({
         response: {status: 401, data: {detail: 'Token expired'}},
         message: 'Unauthorized',
-      };
-      // Second call (to /auth/token): success
-      // Third call (retry /logs/sync): success
-      (apiClient.post as jest.Mock)
-        .mockRejectedValueOnce(authError)
-        .mockResolvedValueOnce({
-          data: {access_token: 'new-jwt-token', token_type: 'bearer'},
-        })
-        .mockResolvedValueOnce({
-          data: {synced: 1, errors: []},
-        });
-
-      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
-        if (key === SYNC_SECRET_KEY) {
-          return Promise.resolve('my-secret');
-        }
-        if (key === SYNC_AUTH_FAILED_KEY) {
-          return Promise.resolve(null);
-        }
-        return Promise.resolve(null);
       });
-
-      const result = await syncService.pushUnsyncedLogs();
-
-      // Re-auth was attempted
-      expect(apiClient.post).toHaveBeenCalledWith('/auth/token', {secret: 'my-secret'});
-      // New token was stored
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(AUTH_TOKEN_KEY, 'new-jwt-token');
-      // Sync succeeded after re-auth
-      expect(result.pushed).toBe(1);
-      expect(logs[0].markSynced).toHaveBeenCalled();
-    });
-
-    it('sets auth_failed flag and stops retrying when re-auth fails', async () => {
-      const logs = [createMockLog('habit-1', '2025-01-01')];
-      const habitService = createMockHabitService(logs);
-      const syncService = new SyncService(habitService);
-
-      const authError = {
-        response: {status: 401, data: {detail: 'Token expired'}},
-        message: 'Unauthorized',
-      };
-      (apiClient.post as jest.Mock)
-        .mockRejectedValueOnce(authError)
-        .mockRejectedValueOnce({
-          response: {status: 401, data: {detail: 'Invalid secret'}},
-        });
-
-      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
-        if (key === SYNC_SECRET_KEY) {
-          return Promise.resolve('wrong-secret');
-        }
-        if (key === SYNC_AUTH_FAILED_KEY) {
-          return Promise.resolve(null);
-        }
-        return Promise.resolve(null);
-      });
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
       const result = await syncService.pushUnsyncedLogs();
 
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
+      expect(onSessionExpired).toHaveBeenCalledTimes(1);
       expect(result).toEqual({pushed: 0, failed: 0});
       expect(logs[0].markSynced).not.toHaveBeenCalled();
     });
 
-    it('does NOT set auth_failed flag when re-auth fails with a network error', async () => {
+    it('never mints a token of its own on a 401', async () => {
+      // The whole defect in #125: sync used to POST /auth/token with a shared
+      // secret and overwrite the signed-in user's real token with the result.
       const logs = [createMockLog('habit-1', '2025-01-01')];
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
 
-      const authError = {
+      (apiClient.post as jest.Mock).mockRejectedValue({
         response: {status: 401, data: {detail: 'Token expired'}},
         message: 'Unauthorized',
-      };
-      const networkError = {message: 'Network Error'};
-      (apiClient.post as jest.Mock)
-        .mockRejectedValueOnce(authError)
-        .mockRejectedValueOnce(networkError);
-
-      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
-        if (key === SYNC_SECRET_KEY) {
-          return Promise.resolve('my-secret');
-        }
-        if (key === SYNC_AUTH_FAILED_KEY) {
-          return Promise.resolve(null);
-        }
-        return Promise.resolve(null);
       });
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
-      const result = await syncService.pushUnsyncedLogs();
+      await syncService.pushUnsyncedLogs();
 
-      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
-      expect(result).toEqual({pushed: 0, failed: 0});
+      const posted = (apiClient.post as jest.Mock).mock.calls.map(call => call[0]);
+      expect(posted).not.toContain('/auth/token');
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
+        AUTH_TOKEN_KEY,
+        expect.anything(),
+      );
     });
 
-    it('does NOT set auth_failed flag when re-auth fails with a 5xx error', async () => {
+    it('notifies the app only once while the session stays expired', async () => {
       const logs = [createMockLog('habit-1', '2025-01-01')];
       const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
+      const onSessionExpired = jest.fn();
+      syncService.setOnSessionExpired(onSessionExpired);
 
-      const authError = {
+      (apiClient.post as jest.Mock).mockRejectedValue({
         response: {status: 401, data: {detail: 'Token expired'}},
         message: 'Unauthorized',
-      };
-      const serverError = {
-        response: {status: 502, data: {detail: 'Bad Gateway'}},
-        message: 'Server Error',
-      };
-      (apiClient.post as jest.Mock)
-        .mockRejectedValueOnce(authError)
-        .mockRejectedValueOnce(serverError);
-
-      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
-        if (key === SYNC_SECRET_KEY) {
-          return Promise.resolve('my-secret');
-        }
-        if (key === SYNC_AUTH_FAILED_KEY) {
-          return Promise.resolve(null);
-        }
-        return Promise.resolve(null);
       });
+      // The flag is already set from an earlier failure.
+      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
+        Promise.resolve(key === SYNC_AUTH_FAILED_KEY ? 'true' : null),
+      );
 
-      const result = await syncService.pushUnsyncedLogs();
+      await syncService.pushUnsyncedLogs();
 
-      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
-      expect(result).toEqual({pushed: 0, failed: 0});
+      expect(onSessionExpired).not.toHaveBeenCalled();
     });
 
-    it('sets auth_failed flag when no stored secret exists for re-auth', async () => {
-      const logs = [createMockLog('habit-1', '2025-01-01')];
-      const habitService = createMockHabitService(logs);
+    it('ends the session on a 401 from the pull, with nothing pending to push', async () => {
+      // A user whose backlog is empty never reaches the push, so the pull is
+      // the only place their expired session can surface.
+      const habitService = createMockHabitService();
       const syncService = new SyncService(habitService);
+      const onSessionExpired = jest.fn();
+      syncService.setOnSessionExpired(onSessionExpired);
 
-      const authError = {
+      (apiClient.get as jest.Mock).mockRejectedValue({
         response: {status: 401, data: {detail: 'Token expired'}},
-        message: 'Unauthorized',
-      };
-      (apiClient.post as jest.Mock).mockRejectedValueOnce(authError);
-
-      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
-        if (key === SYNC_SECRET_KEY) {
-          return Promise.resolve(null); // No secret stored
-        }
-        if (key === SYNC_AUTH_FAILED_KEY) {
-          return Promise.resolve(null);
-        }
-        return Promise.resolve(null);
       });
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
-      const result = await syncService.pushUnsyncedLogs();
+      await syncService.pushUnsyncedLogs();
 
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
+      expect(onSessionExpired).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT set auth_failed flag on a network error', async () => {
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs);
+      const syncService = new SyncService(habitService);
+      const onSessionExpired = jest.fn();
+      syncService.setOnSessionExpired(onSessionExpired);
+
+      (apiClient.post as jest.Mock).mockRejectedValueOnce({message: 'Network Error'});
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+
+      const result = await syncService.pushUnsyncedLogs();
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
+      expect(onSessionExpired).not.toHaveBeenCalled();
+      expect(result).toEqual({pushed: 0, failed: 0});
+    });
+
+    it('does NOT set auth_failed flag on a 5xx error', async () => {
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs);
+      const syncService = new SyncService(habitService);
+
+      (apiClient.post as jest.Mock).mockRejectedValueOnce({
+        response: {status: 502, data: {detail: 'Bad Gateway'}},
+        message: 'Server Error',
+      });
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+
+      const result = await syncService.pushUnsyncedLogs();
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY, 'true');
       expect(result).toEqual({pushed: 0, failed: 0});
     });
 
@@ -597,33 +552,6 @@ describe('SyncService Hardening', () => {
       expect(result).toEqual({pushed: 0, failed: 0});
       // Should not even check for unsynced logs
       expect(apiClient.post).not.toHaveBeenCalled();
-    });
-
-    it('authenticate() stores the secret for future re-auth attempts', async () => {
-      const habitService = createMockHabitService();
-      const syncService = new SyncService(habitService);
-
-      (apiClient.post as jest.Mock).mockResolvedValueOnce({
-        data: {access_token: 'test-jwt-token', token_type: 'bearer'},
-      });
-
-      await syncService.authenticate('my-secret');
-
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(SYNC_SECRET_KEY, 'my-secret');
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(AUTH_TOKEN_KEY, 'test-jwt-token');
-    });
-
-    it('authenticate() clears auth_failed flag on success', async () => {
-      const habitService = createMockHabitService();
-      const syncService = new SyncService(habitService);
-
-      (apiClient.post as jest.Mock).mockResolvedValueOnce({
-        data: {access_token: 'test-jwt-token', token_type: 'bearer'},
-      });
-
-      await syncService.authenticate('my-secret');
-
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith(SYNC_AUTH_FAILED_KEY);
     });
 
     it('getSyncStatus returns auth_failed when flag is set', async () => {
@@ -904,37 +832,31 @@ describe('SyncService Hardening', () => {
   });
 
   // ---------------------------------------------------------------
-  // Cross-cutting: authenticate stores secret
+  // Cross-cutting: no credential minting anywhere in this service
   // ---------------------------------------------------------------
-  describe('authenticate stores secret for re-auth', () => {
-    it('stores both token and secret on successful authentication', async () => {
-      const habitService = createMockHabitService();
-      const syncService = new SyncService(habitService);
+  describe('sync never authenticates on the user\'s behalf', () => {
+    it('exposes no way to trade a shared secret for a token', () => {
+      const syncService = new SyncService(createMockHabitService());
 
-      (apiClient.post as jest.Mock).mockResolvedValueOnce({
-        data: {access_token: 'jwt-token-123', token_type: 'bearer'},
-      });
-
-      await syncService.authenticate('my-app-secret');
-
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(AUTH_TOKEN_KEY, 'jwt-token-123');
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(SYNC_SECRET_KEY, 'my-app-secret');
+      expect(
+        (syncService as unknown as {authenticate?: unknown}).authenticate,
+      ).toBeUndefined();
     });
 
-    it('does NOT store secret on failed authentication', async () => {
-      const habitService = createMockHabitService();
+    it('does not write the auth token during a successful push', async () => {
+      const logs = [createMockLog('habit-1', '2025-01-01')];
+      const habitService = createMockHabitService(logs);
       const syncService = new SyncService(habitService);
 
-      (apiClient.post as jest.Mock).mockRejectedValueOnce({
-        response: {status: 401, data: {detail: 'Invalid secret'}},
+      (apiClient.post as jest.Mock).mockResolvedValue({
+        data: {synced: 1, errors: []},
       });
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
-      await expect(syncService.authenticate('bad-secret')).rejects.toThrow(
-        AuthenticationError,
-      );
+      await syncService.pushUnsyncedLogs();
 
       expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
-        SYNC_SECRET_KEY,
+        AUTH_TOKEN_KEY,
         expect.anything(),
       );
     });

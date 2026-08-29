@@ -104,12 +104,20 @@ def _register(db_path: pathlib.Path, email: str) -> str:
     return asyncio.run(_create())
 
 
-def _claim(db_path: pathlib.Path, email: str, *, dry_run: bool = False):
+def _claim(
+    db_path: pathlib.Path,
+    email: str,
+    *,
+    dry_run: bool = False,
+    include_orphans: bool = False,
+):
     async def _run():
         engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
         factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
         async with factory() as session:
-            result = await claim_legacy_data(session, email, dry_run=dry_run)
+            result = await claim_legacy_data(
+                session, email, dry_run=dry_run, include_orphans=include_orphans
+            )
         await engine.dispose()
         return result
 
@@ -296,3 +304,134 @@ def test_cli_dry_run_writes_nothing(cli_db, capsys):
     assert exit_code == 0
     assert "dry run" in capsys.readouterr().out
     assert _owners(cli_db, "habits") == {LEGACY_USER_ID: len(PRE_004_HABITS)}
+
+
+# ── Orphans left by the retired shared-secret token (issue #125) ────────
+
+
+ORPHAN_OWNER = "user"
+
+
+def _insert_orphan(db_path: pathlib.Path, owner: str = ORPHAN_OWNER) -> None:
+    """Write a habit and a log owned by an account that does not exist.
+
+    This is exactly what the shared-secret ``/auth/token`` path produced: its
+    token subject was the literal string "user". A plain sqlite3 connection
+    leaves ``PRAGMA foreign_keys`` off, which is what lets this reproduce rows
+    written before migration 007 added the constraint.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO habits (id, name, created_at, is_active, user_id, "
+        "impact, friction, keystone, time_cost) VALUES (?, ?, ?, 1, ?, 3, 3, 3, 3)",
+        ("orphan-h", "Orphaned", "2026-08-15 00:00:00", owner),
+    )
+    conn.execute(
+        "INSERT INTO habit_logs (id, habit_id, completed_date, synced_at, user_id) "
+        "VALUES (?, ?, ?, ?, ?)",
+        ("orphan-l", "orphan-h", "2026-08-15", "2026-08-15 00:00:00", owner),
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_default_claim_leaves_orphans_alone(migrated_db):
+    """Without the flag the sweep stays exactly as #119 documented it."""
+    _insert_orphan(migrated_db)
+    user_id = _register(migrated_db, "owner@example.com")
+
+    result = _claim(migrated_db, "owner@example.com")
+
+    assert (result.orphan_habits, result.orphan_habit_logs) == (0, 0)
+    assert _owners(migrated_db, "habits") == {
+        user_id: len(PRE_004_HABITS),
+        ORPHAN_OWNER: 1,
+    }
+
+
+def test_include_orphans_dry_run_reports_without_writing(migrated_db):
+    _insert_orphan(migrated_db)
+    _register(migrated_db, "owner@example.com")
+
+    result = _claim(
+        migrated_db, "owner@example.com", dry_run=True, include_orphans=True
+    )
+
+    assert (result.orphan_habits, result.orphan_habit_logs) == (1, 1)
+    rendered = format_result(result)
+    assert "orphans (user_id names no account)" in rendered
+    assert "dry run" in rendered
+    assert _owners(migrated_db, "habits") == {
+        LEGACY_USER_ID: len(PRE_004_HABITS),
+        ORPHAN_OWNER: 1,
+    }
+
+
+def test_include_orphans_claims_sentinel_and_orphan_rows_without_double_counting(
+    migrated_db,
+):
+    _insert_orphan(migrated_db)
+    user_id = _register(migrated_db, "owner@example.com")
+
+    result = _claim(migrated_db, "owner@example.com", include_orphans=True)
+
+    # The sentinel has a users row until this command deletes it, so the two
+    # sweeps are disjoint and neither count includes the other's rows.
+    assert (result.habits, result.habit_logs) == (len(PRE_004_HABITS), len(PRE_004_LOGS))
+    assert (result.orphan_habits, result.orphan_habit_logs) == (1, 1)
+    assert _owners(migrated_db, "habits") == {user_id: len(PRE_004_HABITS) + 1}
+    assert _owners(migrated_db, "habit_logs") == {user_id: len(PRE_004_LOGS) + 1}
+
+
+def test_include_orphans_is_idempotent(migrated_db):
+    _insert_orphan(migrated_db)
+    _register(migrated_db, "owner@example.com")
+    _claim(migrated_db, "owner@example.com", include_orphans=True)
+
+    second = _claim(migrated_db, "owner@example.com", include_orphans=True)
+
+    assert (second.orphan_habits, second.orphan_habit_logs) == (0, 0)
+
+
+def test_migration_007_refuses_to_run_while_orphans_exist(tmp_path, monkeypatch):
+    """The foreign key cannot be added over rows it would immediately violate."""
+    db_path = tmp_path / "orphaned.db"
+    cfg = _alembic_config(db_path, monkeypatch)
+    command.upgrade(cfg, "003")
+    _seed_pre_004(db_path)
+    command.upgrade(cfg, "006_usernames")
+    _insert_orphan(db_path)
+
+    with pytest.raises(RuntimeError, match="names no account"):
+        command.upgrade(cfg, "head")
+
+    # It named the repair rather than performing one behind the operator's back.
+    assert _owners(db_path, "habits") == {
+        LEGACY_USER_ID: len(PRE_004_HABITS),
+        ORPHAN_OWNER: 1,
+    }
+
+
+def test_migration_007_adds_the_ownership_foreign_keys(migrated_db):
+    conn = sqlite3.connect(migrated_db)
+    try:
+        for table in ("habits", "habit_logs"):
+            referenced = {row[2] for row in conn.execute(f"PRAGMA foreign_key_list({table})")}
+            assert "users" in referenced, table
+    finally:
+        conn.close()
+
+
+def test_cli_include_orphans_claims_them(cli_db, capsys):
+    from app import claim_legacy
+
+    _insert_orphan(cli_db)
+    user_id = _register(cli_db, "owner@example.com")
+
+    exit_code = claim_legacy.main(
+        ["--email", "owner@example.com", "--include-orphans"]
+    )
+
+    assert exit_code == 0
+    assert "orphans (user_id names no account)" in capsys.readouterr().out
+    assert _owners(cli_db, "habits") == {user_id: len(PRE_004_HABITS) + 1}

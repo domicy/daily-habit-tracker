@@ -3,10 +3,17 @@ import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import { RootNavigator } from '../../navigation/AppNavigator';
 import { useAuth } from '../../context/AuthContext';
+import { useServices } from '../../services/ServicesContext';
 
 // Mock AuthContext hook
 jest.mock('../../context/AuthContext', () => ({
   useAuth: jest.fn(),
+}));
+
+// Mock ServicesContext: importing it for real pulls in SyncService and, with
+// it, the AsyncStorage native module this suite has no need for.
+jest.mock('../../services/ServicesContext', () => ({
+  useServices: jest.fn(() => null),
 }));
 
 // Mock HabitsProvider using inline require for View
@@ -84,5 +91,32 @@ describe('AppNavigator Conditional Routing', () => {
     await waitFor(() => {
       expect(getByText('DashboardScreenMock')).toBeTruthy();
     });
+  });
+
+  it('gives SyncService a way to end the session when the server rejects our token', async () => {
+    // SyncService sits above AuthProvider and can no longer mint a token of
+    // its own (issue #125), so the navigator hands it the session's own exit.
+    const sessionExpired = jest.fn();
+    const setOnSessionExpired = jest.fn();
+    (useAuth as jest.Mock).mockReturnValue({
+      isLoading: false,
+      isAuthenticated: true,
+      sessionExpired,
+    });
+    (useServices as jest.Mock).mockReturnValue({
+      syncService: { setOnSessionExpired },
+    });
+
+    const { unmount } = render(<RootNavigator />);
+
+    await waitFor(() => {
+      expect(setOnSessionExpired).toHaveBeenCalledWith(expect.any(Function));
+    });
+
+    setOnSessionExpired.mock.calls[0][0]();
+    expect(sessionExpired).toHaveBeenCalledTimes(1);
+
+    unmount();
+    expect(setOnSessionExpired).toHaveBeenLastCalledWith(null);
   });
 });

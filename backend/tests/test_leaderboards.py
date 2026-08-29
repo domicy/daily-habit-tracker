@@ -11,10 +11,13 @@ def epoch_ms(value: str) -> int:
 
 @pytest.mark.asyncio
 async def test_head_to_head_aggregates_habit_scores_and_marks_current_user(client, db_session, auth_header):
-    db_session.add_all([
-        User(id="user", email="me@example.com", username="Me", password_hash="x"),
-        User(id="opponent", email="them@example.com", username="Them", password_hash="x"),
-    ])
+    # The auth_header fixture already created "user"; merge gives it the display
+    # name this test asserts on without colliding on the primary key.
+    await db_session.merge(User(id="user", email="me@example.com", username="Me", password_hash="x"))
+    db_session.add(User(id="opponent", email="them@example.com", username="Them", password_hash="x"))
+    # Habit/HabitLog have no relationship() to User, only a raw foreign key, so
+    # the unit of work will not order the inserts for us.
+    await db_session.flush()
     db_session.add_all([
         Habit(id="my-high", user_id="user", name="High", impact=5, friction=1, keystone=5, time_cost=1),
         Habit(id="their-neutral", user_id="opponent", name="Neutral", impact=3, friction=3, keystone=3, time_cost=3),

@@ -3,7 +3,7 @@ import {Alert} from 'react-native';
 import {render, fireEvent, waitFor, act} from '@testing-library/react-native';
 import SettingsScreen from '../../screens/SettingsScreen';
 import HabitService from '../../services/HabitService';
-import SyncService, {AuthenticationError} from '../../services/SyncService';
+import SyncService from '../../services/SyncService';
 import NotificationService from '../../services/NotificationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {of} from 'rxjs';
@@ -128,7 +128,6 @@ function createMockNotificationService() {
 function createMockSyncService(pendingCount = 0) {
   return {
     pushUnsyncedLogs: jest.fn().mockResolvedValue({pushed: 0, failed: 0}),
-    authenticate: jest.fn().mockResolvedValue(undefined),
     startBackgroundSync: jest.fn(),
     stopBackgroundSync: jest.fn(),
     debouncedSync: jest.fn(),
@@ -266,149 +265,46 @@ describe('SettingsScreen', () => {
     expect(getByText(/1.*log.*pending sync/)).toBeTruthy();
   });
 
-  it('authenticates and shows success alert when Connect is tapped with a secret', async () => {
+  it('offers no way to paste a shared secret', async () => {
+    // The sync secret bought a token owned by nobody (issue #125). Sync now
+    // rides on the signed-in account, so there is nothing to connect here.
     const service = createMockHabitService([]);
     const syncService = createMockSyncService();
     const notificationService = createMockNotificationService();
 
-    const {getByTestId} = render(
+    const {queryByTestId, getByTestId} = render(
       <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
     );
 
     await waitFor(() => {
-      expect(getByTestId('sync-secret-input')).toBeTruthy();
+      expect(getByTestId('sync-now-button')).toBeTruthy();
     });
 
-    fireEvent.changeText(getByTestId('sync-secret-input'), 'my-secret');
-    await act(async () => {
-      fireEvent.press(getByTestId('connect-button'));
-    });
-
-    expect(syncService.authenticate).toHaveBeenCalledWith('my-secret');
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Connected',
-      expect.stringContaining('Sync is now enabled'),
-    );
+    expect(queryByTestId('sync-secret-input')).toBeNull();
+    expect(queryByTestId('connect-button')).toBeNull();
+    expect(queryByTestId('toggle-secret-visibility')).toBeNull();
   });
 
-  it('trims whitespace from the secret before calling authenticate', async () => {
+  it('tells the user to sign in again when sync reports auth_failed', async () => {
     const service = createMockHabitService([]);
-    const syncService = createMockSyncService();
+    const syncService = createMockSyncService(2);
+    (syncService.getSyncStatus as jest.Mock).mockResolvedValue({
+      status: 'auth_failed',
+      pendingCount: 2,
+    });
     const notificationService = createMockNotificationService();
 
-    const {getByTestId} = render(
+    const {getByTestId, getByText} = render(
       <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
     );
 
     await waitFor(() => {
-      expect(getByTestId('sync-secret-input')).toBeTruthy();
+      expect(getByTestId('sync-status')).toBeTruthy();
     });
 
-    fireEvent.changeText(getByTestId('sync-secret-input'), '  padded-secret  ');
-    await act(async () => {
-      fireEvent.press(getByTestId('connect-button'));
-    });
-
-    expect(syncService.authenticate).toHaveBeenCalledWith('padded-secret');
-  });
-
-  it('shows an error alert when authenticate rejects with AuthenticationError', async () => {
-    const service = createMockHabitService([]);
-    const syncService = createMockSyncService();
-    (syncService.authenticate as jest.Mock).mockRejectedValueOnce(
-      new AuthenticationError('Invalid secret'),
-    );
-    const notificationService = createMockNotificationService();
-
-    const {getByTestId} = render(
-      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
-    );
-
-    await waitFor(() => {
-      expect(getByTestId('sync-secret-input')).toBeTruthy();
-    });
-
-    fireEvent.changeText(getByTestId('sync-secret-input'), 'wrong');
-    await act(async () => {
-      fireEvent.press(getByTestId('connect-button'));
-    });
-
-    expect(Alert.alert).toHaveBeenCalledWith('Connection failed', 'Invalid secret');
-  });
-
-  it('shows a generic error message when authenticate rejects with a non-Authentication error', async () => {
-    const service = createMockHabitService([]);
-    const syncService = createMockSyncService();
-    (syncService.authenticate as jest.Mock).mockRejectedValueOnce(
-      new Error('boom'),
-    );
-    const notificationService = createMockNotificationService();
-
-    const {getByTestId} = render(
-      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
-    );
-
-    await waitFor(() => {
-      expect(getByTestId('sync-secret-input')).toBeTruthy();
-    });
-
-    fireEvent.changeText(getByTestId('sync-secret-input'), 'anything');
-    await act(async () => {
-      fireEvent.press(getByTestId('connect-button'));
-    });
-
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Connection failed',
-      expect.stringContaining('Could not reach the server'),
-    );
-  });
-
-  it('does not call authenticate when the input is empty', async () => {
-    const service = createMockHabitService([]);
-    const syncService = createMockSyncService();
-    const notificationService = createMockNotificationService();
-
-    const {getByTestId} = render(
-      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
-    );
-
-    await waitFor(() => {
-      expect(getByTestId('connect-button')).toBeTruthy();
-    });
-
-    await act(async () => {
-      fireEvent.press(getByTestId('connect-button'));
-    });
-
-    expect(syncService.authenticate).not.toHaveBeenCalled();
-  });
-
-  it('toggles secureTextEntry when the Show/Hide control is tapped', async () => {
-    const service = createMockHabitService([]);
-    const syncService = createMockSyncService();
-    const notificationService = createMockNotificationService();
-
-    const {getByTestId} = render(
-      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
-    );
-
-    await waitFor(() => {
-      expect(getByTestId('sync-secret-input')).toBeTruthy();
-    });
-
-    expect(getByTestId('sync-secret-input').props.secureTextEntry).toBe(true);
-
-    await act(async () => {
-      fireEvent.press(getByTestId('toggle-secret-visibility'));
-    });
-
-    expect(getByTestId('sync-secret-input').props.secureTextEntry).toBe(false);
-
-    await act(async () => {
-      fireEvent.press(getByTestId('toggle-secret-visibility'));
-    });
-
-    expect(getByTestId('sync-secret-input').props.secureTextEntry).toBe(true);
+    // With no way to re-connect in Settings, this status is the only prompt
+    // the user gets before the app returns them to the sign-in screen.
+    expect(getByText(/Authentication required/)).toBeTruthy();
   });
 
   // ─── Per-habit notifications ─────────────────────────────────────────
@@ -1075,29 +971,4 @@ describe('SettingsScreen', () => {
     expect(notificationService.cancelHabitReminder).toHaveBeenCalledWith('h1');
   });
 
-  it('does not crash when the secret input gains focus (scroll-to-end handler)', async () => {
-    jest.useFakeTimers();
-    const service = createMockHabitService([]);
-    const syncService = createMockSyncService();
-    const notificationService = createMockNotificationService();
-
-    const {getByTestId} = render(
-      <SettingsScreen habitService={service} syncService={syncService} notificationService={notificationService} />,
-    );
-
-    await waitFor(() => {
-      expect(getByTestId('sync-secret-input')).toBeTruthy();
-    });
-
-    // The handler schedules scrollRef.current?.scrollToEnd inside a 50ms
-    // setTimeout. We can't hook the ScrollView ref from outside the
-    // component, but firing focus + advancing timers exercises the path
-    // and asserts it doesn't throw on a null/undefined ref.
-    expect(() => {
-      fireEvent(getByTestId('sync-secret-input'), 'focus');
-      jest.advanceTimersByTime(60);
-    }).not.toThrow();
-
-    jest.useRealTimers();
-  });
 });

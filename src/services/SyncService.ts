@@ -6,22 +6,13 @@ import apiClient, {
   AUTH_TOKEN_KEY,
   CircuitOpenError,
   isCircuitOpen,
-  setAuthToken,
 } from './api';
 import type HabitService from './HabitService';
 
-export const SYNC_SECRET_KEY = 'sync_secret';
 export const SYNC_AUTH_FAILED_KEY = 'sync_auth_failed';
 
 const BATCH_SIZE = 100;
 const MAX_UNBATCHED = 500;
-
-export class AuthenticationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'AuthenticationError';
-  }
-}
 
 export interface SyncResult {
   pushed: number;
@@ -80,23 +71,34 @@ export default class SyncService {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
   private inFlight = false;
+  private onSessionExpired: (() => void) | null = null;
 
   constructor(habitService: HabitService) {
     this.habitService = habitService;
   }
 
-  async authenticate(secret: string): Promise<void> {
-    try {
-      const response = await apiClient.post('/auth/token', {secret});
-      const {access_token} = response.data;
-      await setAuthToken(access_token);
-      await AsyncStorage.setItem(SYNC_SECRET_KEY, secret);
-      await AsyncStorage.removeItem(SYNC_AUTH_FAILED_KEY);
-    } catch (error: unknown) {
-      const syncErr = error as SyncError;
-      const message =
-        syncErr.response?.data?.detail || syncErr.message || 'Authentication failed';
-      throw new AuthenticationError(message);
+  /**
+   * Register what to do when the server rejects our token.
+   *
+   * Sync used to re-mint one itself from a shared secret, which returned a
+   * token owned by nobody and silently replaced the signed-in user's real one
+   * (issue #125). It cannot mint credentials any more, so a 401 is now the
+   * app's problem: the callback is expected to end the session and route the
+   * user back to sign-in, without discarding unsynced local data.
+   */
+  setOnSessionExpired(callback: (() => void) | null): void {
+    this.onSessionExpired = callback;
+  }
+
+  /**
+   * Records a permanently-failed authentication and notifies the app once.
+   * Never writes a token — that is the clobbering bug this replaced.
+   */
+  private async handleAuthFailure(): Promise<void> {
+    const alreadyFailed = await AsyncStorage.getItem(SYNC_AUTH_FAILED_KEY);
+    await AsyncStorage.setItem(SYNC_AUTH_FAILED_KEY, 'true');
+    if (alreadyFailed !== 'true') {
+      this.onSessionExpired?.();
     }
   }
 
@@ -149,8 +151,13 @@ export default class SyncService {
       await this.habitService.applyPulledHabits(response.data?.habits ?? []);
       const logs = await apiClient.get('/logs/sync');
       await this.habitService.applyPulledLogs(logs.data ?? []);
-    } catch {
-      // Pull is best-effort; local-first writes remain available offline.
+    } catch (error: unknown) {
+      // Pull is best-effort; local-first reads remain available offline. A 401
+      // is the exception: it is the only signal a user with nothing pending
+      // would ever get that their session has ended.
+      if (is401Error(error as SyncError)) {
+        await this.handleAuthFailure();
+      }
     }
   }
 
@@ -179,28 +186,16 @@ export default class SyncService {
       })),
     };
 
-    let response: AxiosResponse | undefined;
+    let response: AxiosResponse;
     try {
       response = await apiClient.post('/habits/sync', payload);
     } catch (error: unknown) {
       const syncErr = error as SyncError;
       if (is401Error(syncErr)) {
-        const reauthed = await this.attemptReauth();
-        if (!reauthed) {
-          return false;
-        }
-        try {
-          response = await apiClient.post('/habits/sync', payload);
-        } catch {
-          return false;
-        }
-      } else {
-        // Network or 5xx — give up for this cycle, retry later.
-        return false;
+        await this.handleAuthFailure();
       }
-    }
-
-    if (!response) {
+      // 401, network or 5xx — give up for this cycle. A 401 needs the user to
+      // sign in again; the rest retry later.
       return false;
     }
 
@@ -224,29 +219,19 @@ export default class SyncService {
       })),
     };
 
-    let response;
+    let response: AxiosResponse;
     try {
       response = await apiClient.post('/logs/sync', payload);
     } catch (error: unknown) {
       const syncErr = error as SyncError;
       if (is401Error(syncErr)) {
-        const reauthed = await this.attemptReauth();
-        if (reauthed) {
-          // Retry once after re-auth
-          try {
-            response = await apiClient.post('/logs/sync', payload);
-          } catch (retryError: unknown) {
-            return this.handleSyncError(retryError as SyncError);
-          }
-        } else {
-          return {pushed: 0, failed: 0};
-        }
-      } else {
-        return this.handleSyncError(syncErr);
+        await this.handleAuthFailure();
+        return {pushed: 0, failed: 0};
       }
+      return this.handleSyncError(syncErr);
     }
 
-    const {synced, errors: syncErrors} = response!.data;
+    const {synced, errors: syncErrors} = response.data;
 
     const errorSet = new Set(
       (syncErrors || []).map(
@@ -301,6 +286,11 @@ export default class SyncService {
       if (isCircuitOpen()) {
         break;
       }
+      // A rejected token will reject every remaining batch too, and the
+      // breaker deliberately ignores 4xx, so stop on our own.
+      if ((await AsyncStorage.getItem(SYNC_AUTH_FAILED_KEY)) === 'true') {
+        break;
+      }
     }
 
     return {
@@ -322,27 +312,6 @@ export default class SyncService {
       }
     }
     return {pushed: 0, failed: 0};
-  }
-
-  private async attemptReauth(): Promise<boolean> {
-    const secret = await AsyncStorage.getItem(SYNC_SECRET_KEY);
-    if (!secret) {
-      await AsyncStorage.setItem(SYNC_AUTH_FAILED_KEY, 'true');
-      return false;
-    }
-
-    try {
-      const response = await apiClient.post('/auth/token', {secret});
-      const {access_token} = response.data;
-      await setAuthToken(access_token);
-      await AsyncStorage.removeItem(SYNC_AUTH_FAILED_KEY);
-      return true;
-    } catch (e) {
-      if (is401Error(e as SyncError)) {
-        await AsyncStorage.setItem(SYNC_AUTH_FAILED_KEY, 'true');
-      }
-      return false;
-    }
   }
 
   async isOffline(): Promise<boolean> {

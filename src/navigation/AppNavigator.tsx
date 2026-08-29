@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { useServices } from '../services/ServicesContext';
 import { HabitsProvider } from '../hooks/useHabitsContext';
 import type HabitService from '../services/HabitService';
 import type { AuthStackParamList } from './types';
@@ -42,7 +43,17 @@ const MainTabNavigator = () => {
 export const RootNavigator: React.FC<{habitService?: HabitService}> = ({
   habitService,
 }) => {
-  const { isAuthenticated, isLoading, userId } = useAuth();
+  const { isAuthenticated, isLoading, userId, sessionExpired } = useAuth();
+  const services = useServices();
+
+  // SyncService lives above AuthProvider, so it cannot reach the session
+  // itself. Hand it the one thing it needs when the server rejects our token.
+  React.useEffect(() => {
+    services?.syncService.setOnSessionExpired(() => {
+      sessionExpired();
+    });
+    return () => services?.syncService.setOnSessionExpired(null);
+  }, [services, sessionExpired]);
 
   // Set ownership before the provider mounts so its first query cannot expose
   // the previous account's local rows during an account switch.
