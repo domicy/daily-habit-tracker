@@ -15,6 +15,8 @@ interface HabitCardProps {
   completedToday: boolean;
   streak: number;
   score?: number;
+  /** Score is a local estimate the server has not confirmed yet. */
+  scoreIsProvisional?: boolean;
   onToggle: (habitId: string) => void;
   onPress?: (habitId: string) => void;
 }
@@ -28,6 +30,7 @@ function areEqual(prev: HabitCardProps, next: HabitCardProps): boolean {
     prev.completedToday === next.completedToday &&
     prev.streak === next.streak &&
     prev.score === next.score &&
+    prev.scoreIsProvisional === next.scoreIsProvisional &&
     prev.onToggle === next.onToggle &&
     prev.onPress === next.onPress
   );
@@ -39,6 +42,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
   completedToday,
   streak,
   score,
+  scoreIsProvisional = false,
   onToggle,
   onPress,
 }) => {
@@ -108,7 +112,17 @@ const HabitCard: React.FC<HabitCardProps> = ({
           🔥 {streakLabel}
         </Text>
         {score !== undefined && (
-          <Text testID={`score-${habitId}`}>SCORE {score}</Text>
+          <Text
+            style={styles.scoreText}
+            testID={`score-${habitId}`}
+            accessibilityLabel={
+              scoreIsProvisional
+                ? `Score ${score}, not yet synced`
+                : `Score ${score}`
+            }>
+            SCORE {score}
+            {scoreIsProvisional ? ' ·' : ''}
+          </Text>
         )}
       </View>
     </Pressable>
@@ -166,6 +180,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.text,
+  },
+  scoreText: {
+    fontFamily: fontFamily.mono,
+    fontSize: 10,
+    color: colors.textSoft,
   },
 });
 

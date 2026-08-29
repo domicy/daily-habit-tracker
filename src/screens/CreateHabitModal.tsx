@@ -1,5 +1,6 @@
 import React, {useCallback, useState} from 'react';
 import {
+  ScrollView,
   View,
   Text,
   TextInput,
@@ -13,10 +14,19 @@ import {radii, borders, shadowOffsets} from '../theme';
 import NBCard from '../components/atoms/NBCard';
 import NBButton from '../components/atoms/NBButton';
 import NBShadow from '../components/atoms/NBShadow';
+import RatingEditor, {type HabitRatings} from '../components/RatingEditor';
 import HabitService from '../services/HabitService';
 import {getDefaultHabitService} from '../services/defaultHabitService';
 
 const MAX_LENGTH = 50;
+
+// The contract's neutral starting point: a habit nobody has rated scores 50.
+const NEUTRAL_RATINGS: HabitRatings = {
+  impact: 3,
+  friction: 3,
+  keystone: 3,
+  timeCost: 3,
+};
 
 interface CreateHabitModalProps {
   navigation?: {goBack: () => void};
@@ -30,6 +40,8 @@ const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
   const service = habitService ?? getDefaultHabitService();
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [ratings, setRatings] = useState<HabitRatings>(NEUTRAL_RATINGS);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const trimmedName = name.trim();
   const isValid = trimmedName.length > 0;
@@ -39,15 +51,22 @@ const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
       return;
     }
     setCreating(true);
+    setErrorMessage(null);
     try {
-      await service.createHabit(trimmedName);
+      await service.createHabit(trimmedName, ratings);
       navigation?.goBack();
-    } catch {
-      // ignore; user can retry
+    } catch (error) {
+      // Previously swallowed, which left the modal open with no explanation
+      // and the habit uncreated.
+      setErrorMessage(
+        error instanceof Error && error.message
+          ? error.message
+          : 'Could not create the habit. Please try again.',
+      );
     } finally {
       setCreating(false);
     }
-  }, [isValid, creating, service, trimmedName, navigation]);
+  }, [isValid, creating, service, trimmedName, ratings, navigation]);
 
   const handleCancel = useCallback(() => {
     navigation?.goBack();
@@ -90,6 +109,23 @@ const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
           <Text style={styles.counter} testID="char-counter">
             {name.length}/{MAX_LENGTH}
           </Text>
+
+          {/* Ratings are set here rather than only after creation, so a habit
+              never has to be created at the neutral default and edited. */}
+          <ScrollView
+            style={styles.ratingsScroll}
+            keyboardShouldPersistTaps="handled">
+            <RatingEditor ratings={ratings} onChange={setRatings} />
+          </ScrollView>
+
+          {errorMessage !== null && (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={styles.error}
+              testID="create-habit-error">
+              {errorMessage}
+            </Text>
+          )}
 
           <View style={styles.buttons}>
             <NBButton
@@ -141,6 +177,18 @@ const styles = StyleSheet.create({
   },
   body: {
     padding: spacing.lg,
+  },
+  ratingsScroll: {
+    // Bounded so the card cannot grow past the screen on small devices once
+    // the keyboard is up.
+    maxHeight: 260,
+    marginTop: spacing.md,
+  },
+  error: {
+    marginTop: spacing.sm,
+    fontFamily: fontFamily.mono,
+    fontSize: 11,
+    color: colors.error,
   },
   title: {
     fontFamily: fontFamily.display,

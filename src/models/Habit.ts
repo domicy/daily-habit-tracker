@@ -21,6 +21,10 @@ export default class Habit extends Model {
   @field('friction') friction!: number;
   @field('keystone') keystone!: number;
   @field('time_cost') timeCost!: number;
+  // Server-authoritative score once `synced` is true; a locally derived
+  // provisional value while there are unsynced rating edits. Null on a row
+  // that predates the column and has not been pulled since.
+  @field('score') score!: number | null;
 
   @children('habit_logs') habitLogs!: Query<HabitLog>;
 

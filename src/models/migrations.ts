@@ -76,5 +76,23 @@ export const migrations = schemaMigrations({
         ),
       ],
     },
+    {
+      toVersion: 7,
+      steps: [
+        addColumns({
+          table: 'habits',
+          columns: [{name: 'score', type: 'number', isOptional: true}],
+        }),
+        // Seed the column with the contract score derived from the ratings
+        // already stored, so no habit shows a 0 between this migration and the
+        // first pull that reconciles it against the server. SQLite `/` on
+        // integers truncates, which is exactly the half-up rounding the
+        // contract specifies once the +8 is applied
+        // (docs/superpowers/specs/2026-08-26-habit-weights-scoring-contract.md).
+        unsafeExecuteSql(
+          'UPDATE habits SET score = (100 * (impact + (6 - friction) + keystone + (6 - time_cost) - 4) + 8) / 16;',
+        ),
+      ],
+    },
   ],
 });

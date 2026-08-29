@@ -2125,6 +2125,765 @@ exports[`StatsScreen matches snapshot 1`] = `
         </Text>
         <View
           style={
+            {
+              "backgroundColor": "#FAF5EA",
+              "borderColor": "#6A5A86",
+              "borderRadius": 22,
+              "borderWidth": 2,
+              "marginBottom": 16,
+              "padding": 16,
+            }
+          }
+          testID="rating-editor"
+        >
+          <Text
+            style={
+              {
+                "color": "#5B544B",
+                "fontFamily": "Space Mono",
+                "fontSize": 11,
+                "letterSpacing": 0.7,
+                "marginBottom": 8,
+              }
+            }
+          >
+            RATE THIS HABIT
+          </Text>
+          <View
+            accessibilityLabel="impact"
+            accessibilityRole="adjustable"
+            accessibilityValue={
+              {
+                "max": 5,
+                "min": 1,
+                "now": 3,
+              }
+            }
+            style={
+              {
+                "alignItems": "center",
+                "borderTopColor": "#6A5A86",
+                "borderTopWidth": 1.5,
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "minHeight": 42,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#2E2A26",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                }
+              }
+            >
+              IMPACT
+            </Text>
+            <View
+              style={
+                {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "gap": 8,
+                }
+              }
+            >
+              <View
+                accessibilityLabel="Decrease impact"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": false,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                hitSlop={8}
+                onBlur={[Function]}
+                onClick={[Function]}
+                onFocus={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "#3D2F52",
+                    "borderRadius": 22,
+                    "height": 30,
+                    "justifyContent": "center",
+                    "width": 30,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "color": "#FAF5EA",
+                      "fontSize": 20,
+                      "lineHeight": 22,
+                    }
+                  }
+                >
+                  −
+                </Text>
+              </View>
+              <Text
+                style={
+                  {
+                    "color": "#6A5A86",
+                    "fontFamily": "Archivo Black",
+                    "fontSize": 20,
+                    "minWidth": 18,
+                    "textAlign": "center",
+                  }
+                }
+                testID="rating-impact"
+              >
+                3
+              </Text>
+              <View
+                accessibilityLabel="Increase impact"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": false,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                hitSlop={8}
+                onBlur={[Function]}
+                onClick={[Function]}
+                onFocus={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "#3D2F52",
+                    "borderRadius": 22,
+                    "height": 30,
+                    "justifyContent": "center",
+                    "width": 30,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "color": "#FAF5EA",
+                      "fontSize": 20,
+                      "lineHeight": 22,
+                    }
+                  }
+                >
+                  +
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="friction"
+            accessibilityRole="adjustable"
+            accessibilityValue={
+              {
+                "max": 5,
+                "min": 1,
+                "now": 3,
+              }
+            }
+            style={
+              {
+                "alignItems": "center",
+                "borderTopColor": "#6A5A86",
+                "borderTopWidth": 1.5,
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "minHeight": 42,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#2E2A26",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                }
+              }
+            >
+              FRICTION
+            </Text>
+            <View
+              style={
+                {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "gap": 8,
+                }
+              }
+            >
+              <View
+                accessibilityLabel="Decrease friction"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": false,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                hitSlop={8}
+                onBlur={[Function]}
+                onClick={[Function]}
+                onFocus={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "#3D2F52",
+                    "borderRadius": 22,
+                    "height": 30,
+                    "justifyContent": "center",
+                    "width": 30,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "color": "#FAF5EA",
+                      "fontSize": 20,
+                      "lineHeight": 22,
+                    }
+                  }
+                >
+                  −
+                </Text>
+              </View>
+              <Text
+                style={
+                  {
+                    "color": "#6A5A86",
+                    "fontFamily": "Archivo Black",
+                    "fontSize": 20,
+                    "minWidth": 18,
+                    "textAlign": "center",
+                  }
+                }
+                testID="rating-friction"
+              >
+                3
+              </Text>
+              <View
+                accessibilityLabel="Increase friction"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": false,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                hitSlop={8}
+                onBlur={[Function]}
+                onClick={[Function]}
+                onFocus={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "#3D2F52",
+                    "borderRadius": 22,
+                    "height": 30,
+                    "justifyContent": "center",
+                    "width": 30,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "color": "#FAF5EA",
+                      "fontSize": 20,
+                      "lineHeight": 22,
+                    }
+                  }
+                >
+                  +
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="keystone"
+            accessibilityRole="adjustable"
+            accessibilityValue={
+              {
+                "max": 5,
+                "min": 1,
+                "now": 3,
+              }
+            }
+            style={
+              {
+                "alignItems": "center",
+                "borderTopColor": "#6A5A86",
+                "borderTopWidth": 1.5,
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "minHeight": 42,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#2E2A26",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                }
+              }
+            >
+              KEYSTONE
+            </Text>
+            <View
+              style={
+                {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "gap": 8,
+                }
+              }
+            >
+              <View
+                accessibilityLabel="Decrease keystone"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": false,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                hitSlop={8}
+                onBlur={[Function]}
+                onClick={[Function]}
+                onFocus={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "#3D2F52",
+                    "borderRadius": 22,
+                    "height": 30,
+                    "justifyContent": "center",
+                    "width": 30,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "color": "#FAF5EA",
+                      "fontSize": 20,
+                      "lineHeight": 22,
+                    }
+                  }
+                >
+                  −
+                </Text>
+              </View>
+              <Text
+                style={
+                  {
+                    "color": "#6A5A86",
+                    "fontFamily": "Archivo Black",
+                    "fontSize": 20,
+                    "minWidth": 18,
+                    "textAlign": "center",
+                  }
+                }
+                testID="rating-keystone"
+              >
+                3
+              </Text>
+              <View
+                accessibilityLabel="Increase keystone"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": false,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                hitSlop={8}
+                onBlur={[Function]}
+                onClick={[Function]}
+                onFocus={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "#3D2F52",
+                    "borderRadius": 22,
+                    "height": 30,
+                    "justifyContent": "center",
+                    "width": 30,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "color": "#FAF5EA",
+                      "fontSize": 20,
+                      "lineHeight": 22,
+                    }
+                  }
+                >
+                  +
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="time cost"
+            accessibilityRole="adjustable"
+            accessibilityValue={
+              {
+                "max": 5,
+                "min": 1,
+                "now": 3,
+              }
+            }
+            style={
+              {
+                "alignItems": "center",
+                "borderTopColor": "#6A5A86",
+                "borderTopWidth": 1.5,
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "minHeight": 42,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#2E2A26",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                }
+              }
+            >
+              TIME COST
+            </Text>
+            <View
+              style={
+                {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "gap": 8,
+                }
+              }
+            >
+              <View
+                accessibilityLabel="Decrease time cost"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": false,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                hitSlop={8}
+                onBlur={[Function]}
+                onClick={[Function]}
+                onFocus={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "#3D2F52",
+                    "borderRadius": 22,
+                    "height": 30,
+                    "justifyContent": "center",
+                    "width": 30,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "color": "#FAF5EA",
+                      "fontSize": 20,
+                      "lineHeight": 22,
+                    }
+                  }
+                >
+                  −
+                </Text>
+              </View>
+              <Text
+                style={
+                  {
+                    "color": "#6A5A86",
+                    "fontFamily": "Archivo Black",
+                    "fontSize": 20,
+                    "minWidth": 18,
+                    "textAlign": "center",
+                  }
+                }
+                testID="rating-timeCost"
+              >
+                3
+              </Text>
+              <View
+                accessibilityLabel="Increase time cost"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": false,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                hitSlop={8}
+                onBlur={[Function]}
+                onClick={[Function]}
+                onFocus={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "#3D2F52",
+                    "borderRadius": 22,
+                    "height": 30,
+                    "justifyContent": "center",
+                    "width": 30,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "color": "#FAF5EA",
+                      "fontSize": 20,
+                      "lineHeight": 22,
+                    }
+                  }
+                >
+                  +
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="Save habit ratings"
+            accessibilityRole="button"
+            accessibilityState={
+              {
+                "busy": false,
+                "checked": undefined,
+                "disabled": false,
+                "expanded": undefined,
+                "selected": undefined,
+              }
+            }
+            accessibilityValue={
+              {
+                "max": undefined,
+                "min": undefined,
+                "now": undefined,
+                "text": undefined,
+              }
+            }
+            accessible={true}
+            collapsable={false}
+            focusable={true}
+            onBlur={[Function]}
+            onClick={[Function]}
+            onFocus={[Function]}
+            onResponderGrant={[Function]}
+            onResponderMove={[Function]}
+            onResponderRelease={[Function]}
+            onResponderTerminate={[Function]}
+            onResponderTerminationRequest={[Function]}
+            onStartShouldSetResponder={[Function]}
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#C7754A",
+                "borderColor": "#8E4F2E",
+                "borderRadius": 22,
+                "borderWidth": 2,
+                "marginTop": 16,
+                "paddingVertical": 8,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#3D2F52",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                }
+              }
+            >
+              SAVE RATINGS
+            </Text>
+          </View>
+        </View>
+        <View
+          style={
             [
               {
                 "position": "relative",
@@ -4493,6 +5252,7 @@ exports[`StatsScreen matches snapshot 1`] = `
                   "marginTop": 8,
                 }
               }
+              testID="score-value"
             >
               50
             </Text>
@@ -4504,8 +5264,9 @@ exports[`StatsScreen matches snapshot 1`] = `
                   "fontSize": 10,
                 }
               }
+              testID="score-caption"
             >
-              SERVER-AUTHORITATIVE WEIGHTED SCORE
+              PROVISIONAL — NOT YET CONFIRMED BY THE SERVER
             </Text>
           </View>
         </View>

@@ -474,6 +474,110 @@ describe('HabitService', () => {
       expect(alicesRow.name).toBe('Alice habit');
       expect(alicesRow.userId).toBe(ALICE);
     });
+
+    // ─── Score reconciliation (#115) ─────────────────────────────────
+
+    it('stores the score the server computed rather than discarding it', async () => {
+      await service.applyPulledHabits([
+        {
+          id: 'remote-1',
+          name: 'Remote habit',
+          created_at: new Date().toISOString(),
+          is_active: true,
+          impact: 4,
+          friction: 2,
+          keystone: 3,
+          time_cost: 4,
+          score: 56,
+        },
+      ]);
+
+      const row = await database.get<Habit>('habits').find('remote-1');
+      expect(row.score).toBe(56);
+      expect(row.synced).toBe(true);
+      expect(service.getHabitScore(row)).toBe(56);
+      expect(service.isScoreProvisional(row)).toBe(false);
+    });
+
+    it('reconciles an existing synced habit to the server score', async () => {
+      const habit = await createTestHabit(database, 'Exercise', true);
+      await database.write(async () => {
+        await habit.update(h => {
+          h.impact = 3;
+          h.friction = 3;
+          h.keystone = 3;
+          h.timeCost = 3;
+          h.score = 50;
+        });
+      });
+
+      await service.applyPulledHabits([
+        {
+          id: habit.id,
+          name: 'Exercise',
+          created_at: new Date().toISOString(),
+          is_active: true,
+          impact: 5,
+          friction: 1,
+          keystone: 5,
+          time_cost: 1,
+          score: 100,
+        },
+      ]);
+
+      const row = await database.get<Habit>('habits').find(habit.id);
+      expect(row.score).toBe(100);
+    });
+
+    it('derives the score when the server omits it', async () => {
+      await service.applyPulledHabits([
+        {
+          id: 'remote-2',
+          name: 'Legacy server',
+          created_at: new Date().toISOString(),
+          is_active: true,
+          impact: 4,
+          friction: 2,
+          keystone: 3,
+          time_cost: 4,
+        },
+      ]);
+
+      const row = await database.get<Habit>('habits').find('remote-2');
+      // Identical formula to the server's, so the fallback is the same number.
+      expect(row.score).toBe(56);
+    });
+
+    it('leaves a locally edited habit alone, server score included', async () => {
+      const habit = await createTestHabit(database, 'Exercise', true);
+      await service.setHabitRatings(habit.id, {
+        impact: 5,
+        friction: 1,
+        keystone: 5,
+        timeCost: 1,
+      });
+
+      await service.applyPulledHabits([
+        {
+          id: habit.id,
+          name: 'Server name',
+          created_at: new Date().toISOString(),
+          is_active: true,
+          impact: 1,
+          friction: 5,
+          keystone: 1,
+          time_cost: 5,
+          score: 0,
+        },
+      ]);
+
+      const row = await database.get<Habit>('habits').find(habit.id);
+      expect(row.name).toBe('Exercise');
+      expect(row.impact).toBe(5);
+      expect(row.score).toBe(100);
+      expect(row.synced).toBe(false);
+      expect(service.isScoreProvisional(row)).toBe(true);
+    });
   });
 
   // ─── Legacy row claiming (#123) ────────────────────────────────────
@@ -806,6 +910,116 @@ describe('HabitService', () => {
 
     it('is a no-op for an empty batch', async () => {
       await expect(service.markHabitsSynced([])).resolves.toBeUndefined();
+    });
+
+    // ─── In-flight edits must not be lost (#115) ───────────────────
+
+    it('leaves a habit dirty when its ratings changed after the push started', async () => {
+      const habit = await createTestHabit(database, 'Exercise', false);
+      await service.setHabitRatings(habit.id, {
+        impact: 3,
+        friction: 3,
+        keystone: 3,
+        timeCost: 3,
+      });
+
+      // What SyncService put on the wire.
+      const pushed = new Map([
+        [
+          habit.id,
+          {
+            name: 'Exercise',
+            is_active: true,
+            impact: 3,
+            friction: 3,
+            keystone: 3,
+            time_cost: 3,
+          },
+        ],
+      ]);
+
+      // The user edits while the request is still in flight.
+      await service.setHabitRatings(habit.id, {
+        impact: 5,
+        friction: 1,
+        keystone: 5,
+        timeCost: 1,
+      });
+
+      await service.markHabitsSynced([habit], pushed);
+
+      const row = await database.get<Habit>('habits').find(habit.id);
+      // Clearing it here would strand the newer ratings: they were never sent.
+      expect(row.synced).toBe(false);
+      expect(row.impact).toBe(5);
+      expect(await service.getUnsyncedHabits()).toHaveLength(1);
+    });
+
+    it('marks a habit synced when it still matches what was pushed', async () => {
+      const habit = await createTestHabit(database, 'Exercise', false);
+      await service.setHabitRatings(habit.id, {
+        impact: 4,
+        friction: 2,
+        keystone: 3,
+        timeCost: 4,
+      });
+
+      const pushed = new Map([
+        [
+          habit.id,
+          {
+            name: 'Exercise',
+            is_active: true,
+            impact: 4,
+            friction: 2,
+            keystone: 3,
+            time_cost: 4,
+          },
+        ],
+      ]);
+
+      await service.markHabitsSynced([habit], pushed);
+
+      const row = await database.get<Habit>('habits').find(habit.id);
+      expect(row.synced).toBe(true);
+      expect(await service.getUnsyncedHabits()).toHaveLength(0);
+    });
+
+    it('holds back only the habits that moved', async () => {
+      const stable = await createTestHabit(database, 'Stable', false);
+      const edited = await createTestHabit(database, 'Edited', false);
+      const fields = (name: string) => ({
+        name,
+        is_active: true,
+        impact: 3,
+        friction: 3,
+        keystone: 3,
+        time_cost: 3,
+      });
+      for (const h of [stable, edited]) {
+        await service.setHabitRatings(h.id, {
+          impact: 3,
+          friction: 3,
+          keystone: 3,
+          timeCost: 3,
+        });
+      }
+      const pushed = new Map([
+        [stable.id, fields('Stable')],
+        [edited.id, fields('Edited')],
+      ]);
+
+      await service.setHabitRatings(edited.id, {
+        impact: 1,
+        friction: 1,
+        keystone: 1,
+        timeCost: 1,
+      });
+
+      await service.markHabitsSynced([stable, edited], pushed);
+
+      expect((await database.get<Habit>('habits').find(stable.id)).synced).toBe(true);
+      expect((await database.get<Habit>('habits').find(edited.id)).synced).toBe(false);
     });
   });
 
