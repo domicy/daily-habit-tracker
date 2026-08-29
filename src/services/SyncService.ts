@@ -8,6 +8,7 @@ import apiClient, {
   isCircuitOpen,
 } from './api';
 import type HabitService from './HabitService';
+import type {PushedHabitFields} from './HabitService';
 
 export const SYNC_AUTH_FAILED_KEY = 'sync_auth_failed';
 
@@ -183,18 +184,26 @@ export default class SyncService {
       return true;
     }
 
-    const payload = {
-      habits: unsyncedHabits.map(habit => ({
-        id: habit.id,
-        name: habit.name,
-        created_at_ms: habit.createdAt,
-        is_active: habit.isActive,
-        impact: habit.impact,
-        friction: habit.friction,
-        keystone: habit.keystone,
-        time_cost: habit.timeCost,
-      })),
-    };
+    const entries = unsyncedHabits.map(habit => ({
+      id: habit.id,
+      name: habit.name,
+      created_at_ms: habit.createdAt,
+      is_active: habit.isActive,
+      impact: habit.impact,
+      friction: habit.friction,
+      keystone: habit.keystone,
+      time_cost: habit.timeCost,
+    }));
+    const payload = {habits: entries};
+    // Snapshot of exactly what goes on the wire. markHabitsSynced compares the
+    // habit against it so an edit made during the request is not cleared
+    // without ever having been sent.
+    const pushed = new Map<string, PushedHabitFields>(
+      entries.map(({id, name, is_active, impact, friction, keystone, time_cost}) => [
+        id,
+        {name, is_active, impact, friction, keystone, time_cost},
+      ]),
+    );
 
     let response: AxiosResponse;
     try {
@@ -212,7 +221,7 @@ export default class SyncService {
     const syncedIds: string[] = response.data?.synced_ids ?? [];
     const syncedSet = new Set(syncedIds);
     const syncedHabits = unsyncedHabits.filter(habit => syncedSet.has(habit.id));
-    await this.habitService.markHabitsSynced(syncedHabits);
+    await this.habitService.markHabitsSynced(syncedHabits, pushed);
     // Only proceed to logs if every habit was accepted; otherwise some logs
     // would still hit "Habit not found".
     return syncedSet.size === unsyncedHabits.length;

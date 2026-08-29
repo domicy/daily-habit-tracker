@@ -1,7 +1,7 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 6,
+  version: 7,
   tables: [
     tableSchema({
       name: 'habits',
@@ -21,6 +21,14 @@ export const schema = appSchema({
         {name: 'friction', type: 'number'},
         {name: 'keystone', type: 'number'},
         {name: 'time_cost', type: 'number'},
+        // Last score the server told us about, reconciled on every pull.
+        // Provisional (locally derived) while `synced` is false — see
+        // HabitService.getHabitScore / isScoreProvisional.
+        //
+        // Optional so "never written" reads as null: an unset number column
+        // reads as 0, and 0 is a legitimate score (ratings 1/5/1/5), so
+        // without this the two are indistinguishable.
+        {name: 'score', type: 'number', isOptional: true},
       ],
     }),
     tableSchema({

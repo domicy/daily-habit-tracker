@@ -13,6 +13,12 @@ export interface HabitDisplayData {
   completedToday: boolean;
   streak: number;
   score: number;
+  /**
+   * True while the score is a local estimate whose ratings have not reached
+   * the server yet. Comes from HabitService.isScoreProvisional, which is the
+   * single source of the distinction.
+   */
+  scoreIsProvisional: boolean;
 }
 
 export function useHabits(habitService: HabitService) {
@@ -64,6 +70,8 @@ export function useHabits(habitService: HabitService) {
               habit.keystone || 3,
               habit.timeCost || 3,
             ),
+            scoreIsProvisional:
+              habitService.isScoreProvisional?.(habit) ?? !habit.synced,
           };
         }),
       );

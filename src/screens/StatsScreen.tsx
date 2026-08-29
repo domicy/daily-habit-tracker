@@ -35,7 +35,6 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
   habitService,
 }) => {
   const service = habitService ?? getDefaultHabitService();
-  const canEditRatings = typeof (service as unknown as {setHabitRatings?: unknown}).setHabitRatings === 'function';
   const habitId = route?.params?.habitId ?? '';
   const insets = useSafeAreaInsets();
   // Clear the system status bar before laying out the back button + title.
@@ -44,6 +43,9 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
   const [habitName, setHabitName] = useState('');
   const [streak, setStreak] = useState(0);
   const [score, setScore] = useState(50);
+  // False until a metrics response actually lands, so the card cannot claim a
+  // server-authoritative number while showing a local estimate.
+  const [scoreIsAuthoritative, setScoreIsAuthoritative] = useState(false);
   const [completionRate, setCompletionRate] = useState(0);
   const [ratings, setRatings] = useState<HabitRatings>({
     impact: 3,
@@ -82,88 +84,105 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
     };
   }, [streak, animatedStreak]);
 
+  // Owns the habit's own fields only. Score, streak and completion rate are
+  // owned by the metrics effect below: both used to write them, with no
+  // ordering guarantee, so a slow local read could clobber a server value that
+  // had already arrived.
   useEffect(() => {
     if (!habitId) return;
+    let ignore = false;
     (async () => {
       const habit = await service.getHabitById(habitId);
+      if (ignore) return;
       setHabitName(habit.name);
-      const nextRatings = {
+      setRatings({
         impact: habit.impact ?? 3,
         friction: habit.friction ?? 3,
         keystone: habit.keystone ?? 3,
         timeCost: habit.timeCost ?? 3,
-      };
-      setRatings(nextRatings);
-      setScore(
-        service.getHabitScore?.(habit) ?? calculateHabitScore(
-          nextRatings.impact,
-          nextRatings.friction,
-          nextRatings.keystone,
-          nextRatings.timeCost,
-        ),
-      );
-      const today = getTodayString();
-      const currentStreak = await service.calculateStreak(habitId, today);
-      setStreak(currentStreak);
+      });
     })();
+    return () => {
+      ignore = true;
+    };
   }, [habitId, service]);
 
+  // The sole owner of score, streak and completion rate. `ratings` is a
+  // dependency so saving an edit re-reconciles against the server instead of
+  // leaving the provisional value on screen until the month changes.
   useEffect(() => {
     if (!habitId) return;
+    let ignore = false;
     (async () => {
-      const startDate = format(
-        new Date(calendarYear, calendarMonth, 1),
-        'yyyy-MM-dd',
-      );
-      const daysInMonth = getDaysInMonth(
-        new Date(calendarYear, calendarMonth),
-      );
+      const monthStart = new Date(calendarYear, calendarMonth, 1);
+      const daysInMonth = getDaysInMonth(new Date(calendarYear, calendarMonth));
+      const startDate = format(monthStart, 'yyyy-MM-dd');
       const endDate = format(
         new Date(calendarYear, calendarMonth, daysInMonth),
         'yyyy-MM-dd',
       );
+      const today = getTodayString();
+
       const logs = await service.getLogsForHabit(habitId, startDate, endDate);
-      setCompletedDates(new Set(logs.map(log => log.completedDate)));
+      if (ignore) return;
+      const completed = new Set(logs.map(log => log.completedDate));
+      setCompletedDates(completed);
+
       let metrics;
       try {
         metrics = await service.getHabitMetrics?.(
           habitId,
           startDate,
           endDate,
-          getTodayString(),
+          today,
         );
       } catch {
         // The calendar remains useful offline; local values are provisional
         // until the server metrics request succeeds.
         metrics = undefined;
       }
+      if (ignore) return;
+
       if (metrics) {
         setCompletionRate(metrics.completion_rate);
         setScore(metrics.score);
         setStreak(metrics.current_streak);
-      } else {
-        const daysInMonth = getDaysInMonth(new Date(calendarYear, calendarMonth));
-        setCompletionRate(
-          daysInMonth > 0 ? Math.round((new Set(logs.map(log => log.completedDate)).size * 100) / daysInMonth) : 0,
-        );
+        setScoreIsAuthoritative(true);
+        return;
       }
-    })();
-  }, [habitId, calendarYear, calendarMonth, service]);
 
+      // Offline fallback: the same formula the server would apply, so the
+      // number does not jump when the request later succeeds.
+      setScoreIsAuthoritative(false);
+      setScore(
+        calculateHabitScore(
+          ratings.impact,
+          ratings.friction,
+          ratings.keystone,
+          ratings.timeCost,
+        ),
+      );
+      setCompletionRate(
+        daysInMonth > 0
+          ? Math.round((completed.size * 100) / daysInMonth)
+          : 0,
+      );
+      const localStreak = await service.calculateStreak(habitId, today);
+      if (ignore) return;
+      setStreak(localStreak);
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, [habitId, calendarYear, calendarMonth, service, ratings]);
+
+  // Deliberately not caught: RatingEditor owns the failure message and keeps
+  // the user's draft (issue #127). setRatings only runs on success, and it
+  // re-triggers the metrics effect, which reconciles the score.
   const handleSaveRatings = useCallback(
     async (nextRatings: HabitRatings) => {
-      const saveRatings = (service as unknown as {
-        setHabitRatings?: HabitService['setHabitRatings'];
-      }).setHabitRatings;
-      if (!saveRatings) return;
-      await saveRatings.call(service, habitId, nextRatings);
+      await service.setHabitRatings(habitId, nextRatings);
       setRatings(nextRatings);
-      setScore(calculateHabitScore(
-        nextRatings.impact,
-        nextRatings.friction,
-        nextRatings.keystone,
-        nextRatings.timeCost,
-      ));
     },
     [habitId, service],
   );
@@ -211,9 +230,7 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
           {habitName}
         </Text>
 
-        {canEditRatings && (
-          <RatingEditor ratings={ratings} onSave={handleSaveRatings} />
-        )}
+        <RatingEditor ratings={ratings} onSave={handleSaveRatings} />
 
         <NBCard style={styles.streakCard} testID="streak-section">
           <View style={styles.streakStrip}>
@@ -265,8 +282,14 @@ const StatsScreen: React.FC<StatsScreenProps> = ({
             <Text style={styles.summaryStripText}>HABIT SCORE</Text>
             <Text style={styles.summaryStripText}>0—100</Text>
           </View>
-          <Text style={styles.scoreNumber}>{score}</Text>
-          <Text style={styles.scoreCaption}>SERVER-AUTHORITATIVE WEIGHTED SCORE</Text>
+          <Text style={styles.scoreNumber} testID="score-value">
+            {score}
+          </Text>
+          <Text style={styles.scoreCaption} testID="score-caption">
+            {scoreIsAuthoritative
+              ? 'SERVER-AUTHORITATIVE WEIGHTED SCORE'
+              : 'PROVISIONAL — NOT YET CONFIRMED BY THE SERVER'}
+          </Text>
         </NBCard>
 
         <View style={styles.bottomSpacer} />

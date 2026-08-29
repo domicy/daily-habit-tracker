@@ -82,7 +82,17 @@ const StatsListScreenBody: React.FC<StatsListScreenBodyProps> = ({
               {' '}
               {String(item.streak).padStart(3, '0')} DAYS
             </Text>
-            <Text style={styles.scoreText}> · SCORE {item.score}</Text>
+            <Text
+              style={styles.scoreText}
+              accessibilityLabel={
+                item.scoreIsProvisional
+                  ? `Score ${item.score}, not yet synced`
+                  : `Score ${item.score}`
+              }>
+              {' '}
+              · SCORE {item.score}
+              {item.scoreIsProvisional ? ' ·' : ''}
+            </Text>
           </View>
         </View>
         <NBChevron color={colors.regalia} />

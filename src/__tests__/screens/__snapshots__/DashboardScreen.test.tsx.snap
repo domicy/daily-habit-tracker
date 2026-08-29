@@ -340,6 +340,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
             "id": "1",
             "name": "Exercise",
             "score": 50,
+            "scoreIsProvisional": true,
             "streak": 7,
           },
           {
@@ -347,6 +348,7 @@ exports[`DashboardScreen matches snapshot 1`] = `
             "id": "2",
             "name": "Read",
             "score": 50,
+            "scoreIsProvisional": true,
             "streak": 0,
           },
         ]
@@ -648,10 +650,19 @@ exports[`DashboardScreen matches snapshot 1`] = `
                 7 days
               </Text>
               <Text
+                accessibilityLabel="Score 50, not yet synced"
+                style={
+                  {
+                    "color": "#5B544B",
+                    "fontFamily": "Space Mono",
+                    "fontSize": 10,
+                  }
+                }
                 testID="score-1"
               >
                 SCORE 
                 50
+                 ·
               </Text>
             </View>
           </View>
@@ -868,10 +879,19 @@ exports[`DashboardScreen matches snapshot 1`] = `
                 0 days
               </Text>
               <Text
+                accessibilityLabel="Score 50, not yet synced"
+                style={
+                  {
+                    "color": "#5B544B",
+                    "fontFamily": "Space Mono",
+                    "fontSize": 10,
+                  }
+                }
                 testID="score-2"
               >
                 SCORE 
                 50
+                 ·
               </Text>
             </View>
           </View>

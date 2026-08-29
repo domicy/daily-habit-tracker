@@ -70,6 +70,14 @@ function createMockHabit(id: string, name: string = 'Habit') {
     createdAt: 1_700_000_000_000,
     isActive: true,
     synced: false,
+    // Non-neutral on purpose: with the ratings left unset the payload carried
+    // `impact: undefined`, and toHaveBeenCalledWith's toEqual semantics treat
+    // an undefined property as absent — so the four rating lines could be
+    // deleted from SyncService and this suite would stay green.
+    impact: 5,
+    friction: 2,
+    keystone: 4,
+    timeCost: 1,
     markSynced: jest.fn().mockResolvedValue(undefined),
   };
 }
@@ -228,6 +236,10 @@ describe('SyncService', () => {
             name: 'Drink water',
             created_at_ms: 1_700_000_000_000,
             is_active: true,
+            impact: 5,
+            friction: 2,
+            keystone: 4,
+            time_cost: 1,
           },
         ],
       });

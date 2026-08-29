@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, fireEvent, act} from '@testing-library/react-native';
+import {render, fireEvent, act, waitFor} from '@testing-library/react-native';
 import CreateHabitModal from '../../screens/CreateHabitModal';
 import HabitService from '../../services/HabitService';
 
@@ -61,7 +61,12 @@ describe('CreateHabitModal', () => {
       fireEvent.press(getByTestId('create-button'));
     });
 
-    expect(service.createHabit).toHaveBeenCalledWith('Drink Water');
+    expect(service.createHabit).toHaveBeenCalledWith('Drink Water', {
+      impact: 3,
+      friction: 3,
+      keystone: 3,
+      timeCost: 3,
+    });
     expect(navigation.goBack).toHaveBeenCalled();
   });
 
@@ -141,5 +146,66 @@ describe('CreateHabitModal', () => {
     expect(input.props.placeholder).toBe(
       'e.g., Drink Water, Read 10 Pages',
     );
+  });
+
+  // ─── Ratings on create (#115) ──────────────────────────────────────
+
+  it('exposes all four rating controls at the neutral default', async () => {
+    const service = createMockHabitService();
+    const {getByTestId} = render(<CreateHabitModal habitService={service} />);
+
+    expect(getByTestId('rating-editor')).toBeTruthy();
+    expect(getByTestId('rating-impact').props.children).toBe(3);
+    expect(getByTestId('rating-friction').props.children).toBe(3);
+    expect(getByTestId('rating-keystone').props.children).toBe(3);
+    expect(getByTestId('rating-timeCost').props.children).toBe(3);
+  });
+
+  it('creates the habit with the ratings the user chose', async () => {
+    const service = createMockHabitService();
+    const navigation = {goBack: jest.fn()};
+    const {getByTestId, getByLabelText} = render(
+      <CreateHabitModal habitService={service} navigation={navigation} />,
+    );
+
+    fireEvent.changeText(getByTestId('habit-name-input'), 'Read');
+    fireEvent.press(getByLabelText('Increase impact'));
+    fireEvent.press(getByLabelText('Increase impact'));
+    fireEvent.press(getByLabelText('Decrease friction'));
+
+    await act(async () => {
+      fireEvent.press(getByTestId('create-button'));
+    });
+
+    expect(service.createHabit).toHaveBeenCalledWith('Read', {
+      impact: 5,
+      friction: 2,
+      keystone: 3,
+      timeCost: 3,
+    });
+  });
+
+  it('shows an error instead of silently swallowing a failed create', async () => {
+    const service = createMockHabitService();
+    const navigation = {goBack: jest.fn()};
+    (service.createHabit as jest.Mock).mockRejectedValue(
+      new Error('Habit name must be 50 characters or fewer.'),
+    );
+    const {getByTestId} = render(
+      <CreateHabitModal habitService={service} navigation={navigation} />,
+    );
+
+    fireEvent.changeText(getByTestId('habit-name-input'), 'Read');
+    await act(async () => {
+      fireEvent.press(getByTestId('create-button'));
+    });
+
+    await waitFor(() =>
+      expect(getByTestId('create-habit-error').props.children).toBe(
+        'Habit name must be 50 characters or fewer.',
+      ),
+    );
+    // The modal stays open so the user can correct and retry.
+    expect(navigation.goBack).not.toHaveBeenCalled();
   });
 });

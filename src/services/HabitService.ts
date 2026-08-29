@@ -60,6 +60,49 @@ export function backoffMsFor(retryCount: number): number {
   return Math.min(BACKOFF_BASE_MS * 2 ** exp, BACKOFF_CAP_MS);
 }
 
+export interface HabitRatingValues {
+  impact: number;
+  friction: number;
+  keystone: number;
+  timeCost: number;
+}
+
+// The neutral rating every habit starts at, and what migration 006 backfilled
+// onto rows that predate the columns. Matches the API's own default.
+export const NEUTRAL_RATINGS: HabitRatingValues = {
+  impact: 3,
+  friction: 3,
+  keystone: 3,
+  timeCost: 3,
+};
+
+/**
+ * Enforce the contract's 1-5 integer range before anything is persisted.
+ *
+ * The server rejects out-of-range values with a 422, so failing here keeps a
+ * doomed edit out of the sync queue rather than letting it retry forever.
+ */
+export function validateRatings(ratings: HabitRatingValues): void {
+  for (const value of Object.values(ratings)) {
+    if (!Number.isInteger(value) || value < 1 || value > 5) {
+      throw new Error('Habit ratings must be integers from 1 to 5.');
+    }
+  }
+}
+
+/**
+ * The habit fields SyncService puts on the wire, in the server's snake_case.
+ * Used to detect an edit that landed while the push was in flight.
+ */
+export interface PushedHabitFields {
+  name: string;
+  is_active: boolean;
+  impact: number;
+  friction: number;
+  keystone: number;
+  time_cost: number;
+}
+
 // Owner values that mean "nobody yet": '' is what schema v5 left on rows that
 // predate the user_id column, 'user' is the placeholder this service holds
 // before the first login. Both are claimed on sign-in; see claimLegacyRows.
@@ -121,6 +164,11 @@ export default class HabitService {
         'friction',
         'keystone',
         'time_cost',
+        // `score` changes when a pull reconciles it; `synced` is what flips a
+        // score between provisional and authoritative, so a list that ignored
+        // it would keep showing the provisional marker after a successful sync.
+        'score',
+        'synced',
       ]);
   }
 
@@ -141,6 +189,8 @@ export default class HabitService {
         'friction',
         'keystone',
         'time_cost',
+        'score',
+        'synced',
       ]);
   }
 
@@ -154,7 +204,10 @@ export default class HabitService {
     });
   }
 
-  async createHabit(name: string): Promise<Habit> {
+  async createHabit(
+    name: string,
+    ratings: HabitRatingValues = NEUTRAL_RATINGS,
+  ): Promise<Habit> {
     const trimmed = name.trim();
     if (trimmed.length === 0) {
       throw new Error('Habit name cannot be empty.');
@@ -165,6 +218,8 @@ export default class HabitService {
       );
     }
 
+    validateRatings(ratings);
+
     return this.database.write(async () => {
       return this.database.get<Habit>('habits').create(habit => {
         habit.name = trimmed;
@@ -174,23 +229,27 @@ export default class HabitService {
         habit.synced = false;
         habit.notificationsEnabled = false;
         habit.notificationTime = '08:00';
-        habit.impact = 3;
-        habit.friction = 3;
-        habit.keystone = 3;
-        habit.timeCost = 3;
+        habit.impact = ratings.impact;
+        habit.friction = ratings.friction;
+        habit.keystone = ratings.keystone;
+        habit.timeCost = ratings.timeCost;
+        // Provisional until the first push comes back and a pull reconciles
+        // the server's own value into this column.
+        habit.score = calculateHabitScore(
+          ratings.impact,
+          ratings.friction,
+          ratings.keystone,
+          ratings.timeCost,
+        );
       });
     });
   }
 
   async setHabitRatings(
     habitId: string,
-    ratings: {impact: number; friction: number; keystone: number; timeCost: number},
+    ratings: HabitRatingValues,
   ): Promise<void> {
-    for (const value of Object.values(ratings)) {
-      if (!Number.isInteger(value) || value < 1 || value > 5) {
-        throw new Error('Habit ratings must be integers from 1 to 5.');
-      }
-    }
+    validateRatings(ratings);
     const habit = await this.getHabitById(habitId);
     await this.database.write(async () => {
       await habit.update(h => {
@@ -198,18 +257,47 @@ export default class HabitService {
         h.friction = ratings.friction;
         h.keystone = ratings.keystone;
         h.timeCost = ratings.timeCost;
+        // Provisional: the server recomputes the score from these ratings and
+        // the next pull overwrites this with the authoritative value.
+        h.score = calculateHabitScore(
+          ratings.impact,
+          ratings.friction,
+          ratings.keystone,
+          ratings.timeCost,
+        );
         h.synced = false;
       });
     });
   }
 
+  /**
+   * The score to display for a habit.
+   *
+   * A synced habit shows the column, which the last pull filled from the
+   * server. An unsynced habit's ratings have not reached the server yet, so
+   * its score is recomputed locally from those ratings — the client and server
+   * formulas are the same, so this is the value the server will confirm.
+   * Pair with `isScoreProvisional` to label which of the two is on screen.
+   */
   getHabitScore(habit: Habit): number {
+    if (habit.synced && habit.score != null) {
+      return habit.score;
+    }
     return calculateHabitScore(
       habit.impact || 3,
       habit.friction || 3,
       habit.keystone || 3,
       habit.timeCost || 3,
     );
+  }
+
+  /**
+   * True when the displayed score is a local estimate rather than a value the
+   * server has confirmed. The single source of this distinction — do not
+   * re-derive it at a call site.
+   */
+  isScoreProvisional(habit: Habit): boolean {
+    return !habit.synced;
   }
 
   async getHabitMetrics(
@@ -424,20 +512,54 @@ export default class HabitService {
     });
   }
 
-  async markHabitsSynced(habits: Habit[]): Promise<void> {
+  /**
+   * Mark pushed habits as synced.
+   *
+   * `pushed` is what actually went on the wire, keyed by id. A habit is only
+   * cleared if its current values still match: WatermelonDB hands out one live
+   * instance per record, so an edit made while the request was in flight is
+   * already visible here. Without that check a rating saved mid-push would be
+   * marked synced and never sent — a silent lost update. Rows that moved stay
+   * dirty and go out on the next cycle.
+   *
+   * Omitting `pushed` keeps the previous unconditional behaviour.
+   */
+  async markHabitsSynced(
+    habits: Habit[],
+    pushed?: Map<string, PushedHabitFields>,
+  ): Promise<void> {
     if (habits.length === 0) {
       return;
     }
+    // The push succeeded, so every one of these habits now exists server-side
+    // regardless of whether it has since been edited again locally. Their
+    // backlogged logs deserve a retry either way.
     const habitIds = habits.map(h => h.id);
-    await this.database.write(async () => {
-      await this.database.batch(
-        ...habits.map(habit =>
-          habit.prepareUpdate(h => {
-            h.synced = true;
-          }),
-        ),
+    const unchanged = habits.filter(habit => {
+      const sent = pushed?.get(habit.id);
+      if (!sent) {
+        return true;
+      }
+      return (
+        habit.name === sent.name &&
+        habit.isActive === sent.is_active &&
+        habit.impact === sent.impact &&
+        habit.friction === sent.friction &&
+        habit.keystone === sent.keystone &&
+        habit.timeCost === sent.time_cost
       );
     });
+    if (unchanged.length > 0) {
+      await this.database.write(async () => {
+        await this.database.batch(
+          ...unchanged.map(habit =>
+            habit.prepareUpdate(h => {
+              h.synced = true;
+            }),
+          ),
+        );
+      });
+    }
 
     // The most common cause of per-log "Habit not found" is that the habit
     // hadn't been pushed yet. Now that the habit is on the server, give its
@@ -468,7 +590,19 @@ export default class HabitService {
     }
   }
 
-  async applyPulledHabits(habits: Array<{id: string; name: string; created_at: string; is_active: boolean; impact: number; friction: number; keystone: number; time_cost: number}>): Promise<void> {
+  async applyPulledHabits(habits: Array<{id: string; name: string; created_at: string; is_active: boolean; impact: number; friction: number; keystone: number; time_cost: number; score?: number}>): Promise<void> {
+    // The server computes `score` from the ratings it stores and returns it on
+    // every habit read, so this is the authoritative value. Older servers that
+    // predate the field fall back to the identical local formula.
+    const scoreOf = (remote: {impact: number; friction: number; keystone: number; time_cost: number; score?: number}) =>
+      remote.score ??
+      calculateHabitScore(
+        remote.impact ?? 3,
+        remote.friction ?? 3,
+        remote.keystone ?? 3,
+        remote.time_cost ?? 3,
+      );
+
     await this.database.write(async () => {
       for (const remote of habits) {
         // Look up by id regardless of owner. Scoping the lookup instead would
@@ -480,7 +614,7 @@ export default class HabitService {
         if (local && local.userId !== this.userId) continue;
         if (local) {
           if (!local.synced) continue; // never overwrite offline work
-          await local.update(h => { h.name = remote.name; h.isActive = remote.is_active; h.impact = remote.impact ?? 3; h.friction = remote.friction ?? 3; h.keystone = remote.keystone ?? 3; h.timeCost = remote.time_cost ?? 3; });
+          await local.update(h => { h.name = remote.name; h.isActive = remote.is_active; h.impact = remote.impact ?? 3; h.friction = remote.friction ?? 3; h.keystone = remote.keystone ?? 3; h.timeCost = remote.time_cost ?? 3; h.score = scoreOf(remote); });
         } else {
           await this.database.get<Habit>('habits').create(h => {
             h._raw.id = remote.id;
@@ -495,6 +629,7 @@ export default class HabitService {
             h.friction = remote.friction ?? 3;
             h.keystone = remote.keystone ?? 3;
             h.timeCost = remote.time_cost ?? 3;
+            h.score = scoreOf(remote);
           });
         }
       }
