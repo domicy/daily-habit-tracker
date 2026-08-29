@@ -9,7 +9,7 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 import { useServices } from '../services/ServicesContext';
 import { HabitsProvider } from '../hooks/useHabitsContext';
 import type HabitService from '../services/HabitService';
-import type { AuthStackParamList } from './types';
+import type { AuthStackParamList, RootStackParamList } from './types';
 
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
@@ -17,8 +17,11 @@ import DashboardScreen from '../screens/DashboardScreen';
 import StreaksScreen from '../screens/StreaksScreen';
 import StatsListScreen from '../screens/StatsListScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import StatsScreen from '../screens/StatsScreen';
+import CreateHabitModal from '../screens/CreateHabitModal';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
 const AuthNavigator = () => (
@@ -39,6 +42,26 @@ const MainTabNavigator = () => {
     </Tab.Screen>
   </Tab.Navigator>;
 };
+
+/**
+ * The tab navigator sits inside a stack so the habit detail and create screens
+ * have routes at all. Before this they were rendered nowhere, which is why
+ * `navigate('CreateHabit')` threw and `navigate('Stats', {habitId})` silently
+ * landed on the Stats *tab* (the habit list) rather than the detail screen.
+ *
+ * Every screen draws its own header, so the stack's is hidden.
+ */
+const MainNavigator = () => (
+  <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <RootStack.Screen name="Tabs" component={MainTabNavigator} />
+    <RootStack.Screen name="HabitDetail" component={StatsScreen} />
+    <RootStack.Screen
+      name="CreateHabit"
+      component={CreateHabitModal}
+      options={{ presentation: 'modal' }}
+    />
+  </RootStack.Navigator>
+);
 
 export const RootNavigator: React.FC<{habitService?: HabitService}> = ({
   habitService,
@@ -109,10 +132,10 @@ export const RootNavigator: React.FC<{habitService?: HabitService}> = ({
     <NavigationContainer>
       {isAuthenticated && habitService ? (
         <HabitsProvider key={userId ?? 'user'} habitService={habitService}>
-          <MainTabNavigator />
+          <MainNavigator />
         </HabitsProvider>
       ) : isAuthenticated ? (
-        <MainTabNavigator />
+        <MainNavigator />
       ) : (
         <AuthNavigator />
       )}
