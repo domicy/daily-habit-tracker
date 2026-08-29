@@ -119,4 +119,120 @@ describe('AppNavigator Conditional Routing', () => {
     unmount();
     expect(setOnSessionExpired).toHaveBeenLastCalledWith(null);
   });
+
+  it('clears the auth-failure latch and pushes the backlog once a session is valid', async () => {
+    // A 401 latches sync_auth_failed and nothing else releases it, so one
+    // expired token used to kill syncing on that device permanently (issue
+    // #134). This effect is the only place that knows a real account just
+    // became active.
+    let resolveClaim: (value: number) => void = () => {};
+    const claimLegacyRows = jest.fn(
+      () => new Promise<number>(resolve => { resolveClaim = resolve; }),
+    );
+    const setUserId = jest.fn();
+    const clearAuthFailedFlag = jest.fn().mockResolvedValue(undefined);
+    const pushUnsyncedLogs = jest.fn().mockResolvedValue({pushed: 0, failed: 0});
+
+    (useAuth as jest.Mock).mockReturnValue({
+      isLoading: false,
+      isAuthenticated: true,
+      userId: 'user-1',
+      sessionExpired: jest.fn(),
+    });
+    (useServices as jest.Mock).mockReturnValue({
+      syncService: {
+        setOnSessionExpired: jest.fn(),
+        clearAuthFailedFlag,
+        pushUnsyncedLogs,
+      },
+    });
+
+    const habitService = { setUserId, claimLegacyRows } as never;
+    render(<RootNavigator habitService={habitService} />);
+
+    await waitFor(() => {
+      expect(claimLegacyRows).toHaveBeenCalledWith('user-1');
+    });
+
+    // The unsynced queries scope on the owner, so a push that overtook
+    // claimLegacyRows would look at rows the account does not own yet and
+    // find an empty backlog.
+    expect(clearAuthFailedFlag).not.toHaveBeenCalled();
+    expect(pushUnsyncedLogs).not.toHaveBeenCalled();
+
+    resolveClaim(0);
+
+    await waitFor(() => {
+      expect(pushUnsyncedLogs).toHaveBeenCalledTimes(1);
+    });
+    expect(clearAuthFailedFlag).toHaveBeenCalledTimes(1);
+    expect(clearAuthFailedFlag.mock.invocationCallOrder[0]).toBeLessThan(
+      pushUnsyncedLogs.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('still restores sync when claiming legacy rows fails', async () => {
+    // The claim is best-effort; letting it abort the chain would leave the
+    // latch set and reinstate the very bug this effect fixes.
+    const clearAuthFailedFlag = jest.fn().mockResolvedValue(undefined);
+    const pushUnsyncedLogs = jest.fn().mockResolvedValue({pushed: 0, failed: 0});
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    (useAuth as jest.Mock).mockReturnValue({
+      isLoading: false,
+      isAuthenticated: true,
+      userId: 'user-1',
+      sessionExpired: jest.fn(),
+    });
+    (useServices as jest.Mock).mockReturnValue({
+      syncService: {
+        setOnSessionExpired: jest.fn(),
+        clearAuthFailedFlag,
+        pushUnsyncedLogs,
+      },
+    });
+
+    const habitService = {
+      setUserId: jest.fn(),
+      claimLegacyRows: jest.fn().mockRejectedValue(new Error('db locked')),
+    } as never;
+    render(<RootNavigator habitService={habitService} />);
+
+    await waitFor(() => {
+      expect(pushUnsyncedLogs).toHaveBeenCalledTimes(1);
+    });
+    expect(clearAuthFailedFlag).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it('does not clear the latch or sync while signed out', async () => {
+    const clearAuthFailedFlag = jest.fn().mockResolvedValue(undefined);
+    const pushUnsyncedLogs = jest.fn().mockResolvedValue({pushed: 0, failed: 0});
+
+    (useAuth as jest.Mock).mockReturnValue({
+      isLoading: false,
+      isAuthenticated: false,
+      userId: null,
+      sessionExpired: jest.fn(),
+    });
+    (useServices as jest.Mock).mockReturnValue({
+      syncService: {
+        setOnSessionExpired: jest.fn(),
+        clearAuthFailedFlag,
+        pushUnsyncedLogs,
+      },
+    });
+
+    const habitService = {
+      setUserId: jest.fn(),
+      claimLegacyRows: jest.fn().mockResolvedValue(0),
+    } as never;
+    const { getByText } = render(<RootNavigator habitService={habitService} />);
+
+    await waitFor(() => {
+      expect(getByText('LoginScreenMock')).toBeTruthy();
+    });
+    expect(clearAuthFailedFlag).not.toHaveBeenCalled();
+    expect(pushUnsyncedLogs).not.toHaveBeenCalled();
+  });
 });

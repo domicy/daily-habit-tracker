@@ -7,7 +7,7 @@ import Habit from '../../models/Habit';
 import HabitLog from '../../models/HabitLog';
 import HabitService from '../../services/HabitService';
 import SyncService, {SYNC_AUTH_FAILED_KEY} from '../../services/SyncService';
-import apiClient from '../../services/api';
+import apiClient, {AUTH_TOKEN_KEY} from '../../services/api';
 
 // End-to-end coverage for the N-C1 divergence (PR#27): un-toggling a log
 // that was already synced to the server must leave a tombstone locally and
@@ -103,8 +103,10 @@ describe('SyncService — un-toggle of a synced log (N-C1 / PR#27)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (AsyncStorage.getItem as jest.Mock).mockImplementation(() =>
-      Promise.resolve(null),
+    // The sync cycle is skipped outright without a stored token, so these
+    // end-to-end push assertions need the device to look signed in.
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
+      Promise.resolve(key === AUTH_TOKEN_KEY ? 'stored-token' : null),
     );
     database = createTestDatabase();
     habitService = new HabitService(database);
@@ -231,7 +233,7 @@ describe('SyncService — un-toggle of a synced log (N-C1 / PR#27)', () => {
       if (key === SYNC_AUTH_FAILED_KEY) {
         return Promise.resolve('true');
       }
-      return Promise.resolve(null);
+      return Promise.resolve(key === AUTH_TOKEN_KEY ? 'stored-token' : null);
     });
 
     const result = await syncService.pushUnsyncedLogs();

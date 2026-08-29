@@ -109,6 +109,13 @@ function createTestJwt(exp: number): string {
 describe('SyncService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // pushUnsyncedLogs skips the whole cycle without a stored token, so the
+    // default has to look signed in or every push test short-circuits before
+    // it reaches the network. Tests needing another shape override this, and
+    // mockResolvedValueOnce still takes precedence over the implementation.
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
+      Promise.resolve(key === AUTH_TOKEN_KEY ? 'stored-token' : null),
+    );
   });
 
   describe('pushUnsyncedLogs', () => {
@@ -447,7 +454,10 @@ describe('SyncService', () => {
       (apiClient.post as jest.Mock).mockRejectedValue({
         response: {status: 401, data: {detail: 'Token expired'}},
       });
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+      // Signed in with a token the server is about to reject.
+      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
+        Promise.resolve(key === AUTH_TOKEN_KEY ? 'stored-token' : null),
+      );
 
       const result = await syncService.pushUnsyncedLogs();
 
@@ -473,7 +483,10 @@ describe('SyncService', () => {
       (apiClient.post as jest.Mock).mockRejectedValue({
         response: {status: 401, data: {detail: 'Token expired'}},
       });
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+      // Signed in with a token the server is about to reject.
+      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
+        Promise.resolve(key === AUTH_TOKEN_KEY ? 'stored-token' : null),
+      );
 
       await syncService.pushUnsyncedLogs();
 
