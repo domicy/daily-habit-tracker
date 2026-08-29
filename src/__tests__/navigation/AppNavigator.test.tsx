@@ -1,6 +1,6 @@
 // src/__tests__/navigation/AppNavigator.test.tsx
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { RootNavigator } from '../../navigation/AppNavigator';
 import { useAuth } from '../../context/AuthContext';
 import { useServices } from '../../services/ServicesContext';
@@ -39,9 +39,33 @@ jest.mock('../../screens/RegisterScreen', () => {
     RegisterScreen: () => <Text>RegisterScreenMock</Text>,
   };
 });
+// Stands in for the real Dashboard, but keeps its two navigation calls so the
+// routes they target are exercised for real by the navigator under test.
 jest.mock('../../screens/DashboardScreen', () => {
-  const { Text } = jest.requireActual('react-native') as typeof import('react-native');
-  return () => <Text>DashboardScreenMock</Text>;
+  const { Text, Pressable } = jest.requireActual('react-native') as typeof import('react-native');
+  const { useNavigation } = jest.requireActual(
+    '@react-navigation/native',
+  ) as typeof import('@react-navigation/native');
+  return () => {
+    const navigation = useNavigation<{
+      navigate: (screen: string, params?: object) => void;
+    }>();
+    return (
+      <>
+        <Text>DashboardScreenMock</Text>
+        <Pressable
+          testID="go-create-habit"
+          onPress={() => navigation.navigate('CreateHabit')}>
+          <Text>add</Text>
+        </Pressable>
+        <Pressable
+          testID="go-habit-detail"
+          onPress={() => navigation.navigate('HabitDetail', { habitId: 'h1' })}>
+          <Text>open</Text>
+        </Pressable>
+      </>
+    );
+  };
 });
 jest.mock('../../screens/StreaksScreen', () => {
   const { Text } = jest.requireActual('react-native') as typeof import('react-native');
@@ -54,6 +78,16 @@ jest.mock('../../screens/StatsListScreen', () => {
 jest.mock('../../screens/SettingsScreen', () => {
   const { Text } = jest.requireActual('react-native') as typeof import('react-native');
   return () => <Text>SettingsScreenMock</Text>;
+});
+jest.mock('../../screens/StatsScreen', () => {
+  const { Text } = jest.requireActual('react-native') as typeof import('react-native');
+  return ({ route }: { route?: { params?: { habitId?: string } } }) => (
+    <Text>StatsScreenMock:{route?.params?.habitId}</Text>
+  );
+});
+jest.mock('../../screens/CreateHabitModal', () => {
+  const { Text } = jest.requireActual('react-native') as typeof import('react-native');
+  return () => <Text>CreateHabitModalMock</Text>;
 });
 
 describe('AppNavigator Conditional Routing', () => {
@@ -90,6 +124,38 @@ describe('AppNavigator Conditional Routing', () => {
 
     await waitFor(() => {
       expect(getByText('DashboardScreenMock')).toBeTruthy();
+    });
+  });
+
+  // Issue #101: StatsScreen and CreateHabitModal were rendered by no navigator
+  // at all, so `navigate('CreateHabit')` hit a route that did not exist and
+  // `navigate('Stats', {habitId})` silently switched to the Stats *tab* (the
+  // habit list) instead of opening the detail screen.
+  describe('routes above the tab navigator', () => {
+    beforeEach(() => {
+      (useAuth as jest.Mock).mockReturnValue({
+        isLoading: false,
+        isAuthenticated: true,
+      });
+    });
+
+    it('opens the create-habit modal rather than throwing on an unknown route', async () => {
+      const { getByTestId, getByText } = render(<RootNavigator />);
+
+      await waitFor(() => expect(getByTestId('go-create-habit')).toBeTruthy());
+      fireEvent.press(getByTestId('go-create-habit'));
+
+      await waitFor(() => expect(getByText('CreateHabitModalMock')).toBeTruthy());
+    });
+
+    it('opens the habit detail screen, not the Stats tab, and passes the habitId', async () => {
+      const { getByTestId, getByText, queryByText } = render(<RootNavigator />);
+
+      await waitFor(() => expect(getByTestId('go-habit-detail')).toBeTruthy());
+      fireEvent.press(getByTestId('go-habit-detail'));
+
+      await waitFor(() => expect(getByText('StatsScreenMock:h1')).toBeTruthy());
+      expect(queryByText('StatsListScreenMock')).toBeNull();
     });
   });
 

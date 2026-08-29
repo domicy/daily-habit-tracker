@@ -12,9 +12,10 @@ import {useHabits} from '../hooks/useHabits';
 import type {HabitDisplayData} from '../hooks/useHabits';
 import {useHabitsContext} from '../hooks/useHabitsContext';
 import HabitService from '../services/HabitService';
+import type {RootNavigation} from '../navigation/types';
 
 interface StatsListScreenProps {
-  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  navigation?: RootNavigation;
   habitService?: HabitService;
 }
 
@@ -32,7 +33,7 @@ const StatsListScreen: React.FC<StatsListScreenProps> = ({
   );
 
 interface StatsListScreenWithServiceProps {
-  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  navigation?: RootNavigation;
   habitService: HabitService;
 }
 
@@ -45,14 +46,14 @@ const StatsListScreenWithService: React.FC<StatsListScreenWithServiceProps> = ({
 };
 
 const StatsListScreenFromContext: React.FC<{
-  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  navigation?: RootNavigation;
 }> = ({navigation}) => {
   const {habits} = useHabitsContext();
   return <StatsListScreenBody navigation={navigation} habits={habits} />;
 };
 
 interface StatsListScreenBodyProps {
-  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  navigation?: RootNavigation;
   habits: HabitDisplayData[];
 }
 
@@ -62,7 +63,7 @@ const StatsListScreenBody: React.FC<StatsListScreenBodyProps> = ({
 }) => {
   const handlePress = useCallback(
     (habitId: string) => {
-      navigation?.navigate('Stats', {habitId});
+      navigation?.navigate('HabitDetail', {habitId});
     },
     [navigation],
   );

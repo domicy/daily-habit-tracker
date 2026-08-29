@@ -21,9 +21,10 @@ import {useHabits} from '../hooks/useHabits';
 import type {HabitDisplayData} from '../hooks/useHabits';
 import {useHabitsContext} from '../hooks/useHabitsContext';
 import HabitService from '../services/HabitService';
+import type {RootNavigation} from '../navigation/types';
 
 interface DashboardScreenProps {
-  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  navigation?: RootNavigation;
   habitService?: HabitService;
 }
 
@@ -41,7 +42,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   );
 
 interface DashboardScreenWithServiceProps {
-  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  navigation?: RootNavigation;
   habitService: HabitService;
 }
 
@@ -54,14 +55,14 @@ const DashboardScreenWithService: React.FC<DashboardScreenWithServiceProps> = ({
 };
 
 const DashboardScreenFromContext: React.FC<{
-  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  navigation?: RootNavigation;
 }> = ({navigation}) => {
   const state = useHabitsContext();
   return <DashboardScreenBody navigation={navigation} {...state} />;
 };
 
 interface DashboardScreenBodyProps {
-  navigation?: {navigate: (screen: string, params?: Record<string, unknown>) => void};
+  navigation?: RootNavigation;
   habits: HabitDisplayData[];
   toggleHabit: (habitId: string) => Promise<void>;
   loading: boolean;
@@ -112,7 +113,7 @@ const DashboardScreenBody: React.FC<DashboardScreenBodyProps> = ({
 
   const handleHabitPress = useCallback(
     (habitId: string) => {
-      navigation?.navigate('Stats', {habitId});
+      navigation?.navigate('HabitDetail', {habitId});
     },
     [navigation],
   );
