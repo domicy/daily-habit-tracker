@@ -61,16 +61,41 @@ export const RootNavigator: React.FC<{habitService?: HabitService}> = ({
     habitService.setUserId(userId);
   }
 
+  // Fires exactly when a session becomes valid — a sign-in, a registration, or
+  // a launch that hydrated a stored token — which is the only moment the app
+  // knows a real account is active again.
   React.useEffect(() => {
     if (!habitService || !userId) return;
+    let cancelled = false;
     habitService.setUserId(userId);
-    // Rows predating per-account ownership belong to nobody until the first
-    // account signs in and adopts them. Without this they would be invisible
-    // to every account, since queries now scope on the owner alone.
-    habitService.claimLegacyRows(userId).catch(error => {
-      console.warn('Failed to claim legacy rows:', error);
+    (async () => {
+      try {
+        // Rows predating per-account ownership belong to nobody until the
+        // first account signs in and adopts them. Without this they would be
+        // invisible to every account, since queries now scope on the owner
+        // alone.
+        await habitService.claimLegacyRows(userId);
+      } catch (error) {
+        // Isolated deliberately: a failed claim must not stop the sync
+        // recovery below, which is the whole reason this effect exists.
+        console.warn('Failed to claim legacy rows:', error);
+      }
+      if (cancelled) return;
+      // A 401 latches sync_auth_failed and nothing else ever releases it, so
+      // one expired token used to end syncing on that device for good (issue
+      // #134). Lift it now the session is valid, then push the backlog it was
+      // stranding — the sync has to follow claimLegacyRows, because the unsynced
+      // queries scope on the owner and would not see the adopted rows yet.
+      await services?.syncService.clearAuthFailedFlag();
+      if (cancelled) return;
+      await services?.syncService.pushUnsyncedLogs();
+    })().catch(error => {
+      console.warn('Post-sign-in sync failed:', error);
     });
-  }, [habitService, userId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [habitService, userId, services]);
 
   if (isLoading) {
     return (

@@ -110,6 +110,16 @@ export default class SyncService {
     }
     this.inFlight = true;
     try {
+      // A request with no token 401s exactly like one with a rejected token,
+      // and nothing downstream can tell the two apart. Without this guard the
+      // launch sync on a fresh install — which runs before anyone has signed
+      // in — latches sync_auth_failed and strands the account that is about to
+      // be created. Must precede the pull, which is where that 401 is raised.
+      const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+      if (!token) {
+        return {pushed: 0, failed: 0};
+      }
+
       await this.pullHabits();
       // If auth previously failed permanently, don't retry
       const authFailed = await AsyncStorage.getItem(SYNC_AUTH_FAILED_KEY);
