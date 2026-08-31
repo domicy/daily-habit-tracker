@@ -177,3 +177,36 @@ without opening inbound ports or configuring a reverse proxy.
 Install `cloudflared` on the host, authenticate, create a tunnel, and run it
 as a systemd service. The full guide is at
 [`docs/cloudflare-tunnel-setup.md`](../docs/cloudflare-tunnel-setup.md).
+
+### Production deployment
+
+Production runs on `hosting.internal` from `docker-compose.prod.yml`, which is a
+standalone file rather than an override of `docker-compose.yml` — the latter is
+the development setup documented above, and Compose merges `ports` by appending,
+so an override could not remove the published ports.
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec api sh -c "PYTHONPATH=. alembic upgrade head"
+```
+
+It differs from the development stack in three ways:
+
+- **No published host ports.** Port 8000 on that host belongs to another
+  service; the tunnel reaches the API over the compose network as
+  `http://api:8000`, so nothing needs exposing.
+- **A token-managed tunnel.** `TUNNEL_TOKEN` instead of a mounted
+  `config.yml` plus credentials JSON, so no credentials sit on disk. Ingress is
+  configured in the Cloudflare dashboard.
+- **No default database password.** `MARIADB_ROOT_PASSWORD` is required rather
+  than defaulting, so production cannot silently fall back to the development
+  value.
+
+`backend/.env` on the host supplies `DATABASE_URL`, `JWT_SECRET`,
+`JWT_ALGORITHM`, `JWT_EXPIRY_HOURS`, `MARIADB_ROOT_PASSWORD` and `TUNNEL_TOKEN`.
+It is not in the repository and the deploy explicitly preserves it — **changing
+`JWT_SECRET` invalidates every issued token and signs every user out.**
+
+Deploys are automatic: `.github/workflows/deploy-prod.yml` runs on the
+repo's self-hosted runner after CI passes on `main`. A manual run with a `ref`
+input redeploys any tag or SHA, which is the rollback path.

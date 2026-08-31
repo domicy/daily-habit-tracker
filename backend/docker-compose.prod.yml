@@ -1,0 +1,72 @@
+# Production stack for hosting.internal (192.168.60.56).
+#
+# Standalone rather than an override of docker-compose.yml: that file is the
+# documented local development setup (see README -- MariaDB on 3306, API on
+# 8000), and Compose merges `ports` and `volumes` by appending, so an override
+# could not have removed them. Keeping the two separate leaves `docker compose
+# up -d` working unchanged for development.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Requires backend/.env on the host with DATABASE_URL, JWT_SECRET,
+# JWT_ALGORITHM, JWT_EXPIRY_HOURS, MARIADB_ROOT_PASSWORD and TUNNEL_TOKEN.
+# JWT_SECRET must be carried over from the previous host verbatim -- changing it
+# invalidates every issued token and signs every user out.
+
+services:
+  db:
+    image: mariadb:11
+    container_name: habit-db
+    restart: unless-stopped
+    environment:
+      # No default: production must not fall back to the development password.
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set in backend/.env}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-habits}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - habit-network
+
+  api:
+    build: .
+    container_name: habit-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - habit-network
+    # Deliberately publishes no host port. 8000 on this host already belongs to
+    # workout-api, and the tunnel reaches this service over habit-network as
+    # http://api:8000 -- so nothing needs to be exposed on the host at all.
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: habit-tunnel
+    restart: unless-stopped
+    # Token-managed tunnel, matching workout-tunnel on this host: ingress is
+    # configured in the Cloudflare dashboard rather than a mounted config.yml,
+    # so there are no credentials on disk. The file-based form in
+    # docker-compose.yml stays available for local experimentation.
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set in backend/.env}
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - habit-network
+
+volumes:
+  db_data:
+
+networks:
+  habit-network:
+    driver: bridge

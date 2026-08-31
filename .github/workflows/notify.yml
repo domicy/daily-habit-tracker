@@ -1,0 +1,99 @@
+name: Notify
+
+# Shared Discord notifier. Called by ci.yml and deploy-prod.yml so a failure in
+# either reaches the same channel, and the payload logic lives in one place
+# rather than being copied into each workflow where the copies would drift.
+on:
+  workflow_call:
+    inputs:
+      context:
+        description: What is being reported, e.g. "CI" or "Deploy".
+        required: true
+        type: string
+      results:
+        description: >-
+          Comma-separated job results. Anything containing "failure" or
+          "cancelled" is reported as a failure. Callers pass
+          join(needs.*.result, ',') for a fan-in, or a single result.
+        required: true
+        type: string
+      ref:
+        description: Branch, tag or SHA the run applied to. Defaults to the triggering ref.
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  notify:
+    name: Notify Discord
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord
+        env:
+          # Interpolated into the environment rather than into the script, so a
+          # branch name can never be executed as shell.
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ID }}
+          CONTEXT: ${{ inputs.context }}
+          RESULTS: ${{ inputs.results }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ inputs.ref != '' && inputs.ref || github.ref_name }}
+          EVENT: ${{ github.event_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DISCORD_WEBHOOK}" ]; then
+            echo "::warning::DISCORD_WEBHOOK_URL is not set; skipping notification"
+            exit 0
+          fi
+
+          # `needs` results are success | failure | cancelled | skipped.
+          # Anything that is not a success makes the run a failure.
+          if printf '%s' "${RESULTS}" | grep -qE 'failure|cancelled'; then
+            OUTCOME="failed"
+            COLOR=16711680
+          else
+            OUTCOME="passed"
+            COLOR=65280
+          fi
+
+          MENTION=""
+          if [ "${OUTCOME}" = "failed" ] && [ -n "${DISCORD_ROLE_ID}" ]; then
+            MENTION=" <@&${DISCORD_ROLE_ID}>"
+          fi
+
+          if [ "${OUTCOME}" = "failed" ]; then
+            CONTENT="🚨 **${CONTEXT} failed**${MENTION}"
+          else
+            CONTENT="✅ **${CONTEXT} passed**"
+          fi
+
+          # Built with jq so a branch name containing a quote or backslash
+          # cannot produce malformed JSON.
+          jq -n \
+            --arg content "${CONTENT}" \
+            --arg title "${CONTEXT} ${OUTCOME} — ${REPOSITORY}" \
+            --arg url "${RUN_URL}" \
+            --arg branch "${BRANCH}" \
+            --arg event "${EVENT}" \
+            --arg results "${RESULTS}" \
+            --argjson color "${COLOR}" \
+            '{
+              content: $content,
+              allowed_mentions: {parse: ["roles"]},
+              embeds: [{
+                title: $title,
+                url: $url,
+                color: $color,
+                fields: [
+                  {name: "Ref", value: $branch, inline: true},
+                  {name: "Event", value: $event, inline: true},
+                  {name: "Jobs", value: $results, inline: false}
+                ]
+              }]
+            }' > payload.json
+
+          curl -sS --fail-with-body \
+               -H "Content-Type: application/json" \
+               -X POST -d @payload.json "${DISCORD_WEBHOOK}"
