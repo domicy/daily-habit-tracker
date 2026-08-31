@@ -1,0 +1,100 @@
+name: Deploy production (.56)
+
+# Deploys the backend to hosting.internal after CI passes on main, using the
+# repo-scoped self-hosted runner on that host. Mirrors the convention already
+# used by genapplyx-sports-dash: single-slot concurrency, and a
+# workflow_dispatch `ref` input so a rollback is a re-run rather than a revert.
+on:
+  # Waits for CI rather than triggering on push, so a deploy can never race the
+  # tests that gate it. sports-dash re-runs its tests inside the deploy job
+  # instead; here the suite plus the Android build is ~13 minutes and is already
+  # a required check, so running it twice would double every deploy.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or SHA to deploy (defaults to the last commit CI passed on)
+        required: false
+        default: ''
+
+# Never two deploys mutating the live directory at once.
+concurrency:
+  group: habit-prod-56
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    # A manual run deploys whatever ref was asked for; an automatic one only
+    # proceeds when the CI run it is reacting to actually succeeded.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: [self-hosted, habit-prod]
+    timeout-minutes: 15
+    env:
+      PROD_DIR: /home/not_host/daily-habit-tracker
+      COMPOSE: docker compose -f docker-compose.prod.yml
+    steps:
+      - name: Checkout ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Sync to live directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$PROD_DIR"
+          # backend/.env holds the production secrets and is not in the repo, so
+          # it must survive the sync -- excluding it is what keeps JWT_SECRET
+          # stable across deploys.
+          rsync -a --delete \
+                --exclude '.git' \
+                --exclude 'backend/.env' \
+                ./ "$PROD_DIR/"
+
+      - name: Build and start
+        working-directory: /home/not_host/daily-habit-tracker/backend
+        run: $COMPOSE up -d --build
+
+      - name: Apply database migrations
+        working-directory: /home/not_host/daily-habit-tracker/backend
+        # Before the health check, so a deploy that cannot migrate fails here
+        # rather than serving against a schema it does not match.
+        run: $COMPOSE exec -T api sh -c "PYTHONPATH=. alembic upgrade head"
+
+      - name: Health check
+        working-directory: /home/not_host/daily-habit-tracker/backend
+        run: |
+          set -euo pipefail
+          # urllib rather than curl: the image is python:3.12-slim and has no
+          # curl. urlopen raises on a non-2xx status, so a bad response is a
+          # non-zero exit without any extra checking.
+          PROBE="import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"
+          for attempt in $(seq 1 20); do
+            if $COMPOSE exec -T api python -c "$PROBE" >/dev/null 2>&1; then
+              echo "healthy after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::API did not become healthy after 60s"
+          $COMPOSE logs --tail 50 api
+          exit 1
+
+      - name: Report deployed revision
+        run: echo "Deployed ${GITHUB_SHA} to ${PROD_DIR}"
+
+  notify:
+    name: Notify
+    needs: deploy
+    if: always()
+    uses: ./.github/workflows/notify.yml
+    with:
+      context: Deploy
+      results: ${{ needs.deploy.result }}
+      ref: ${{ github.event.inputs.ref || github.event.workflow_run.head_branch || github.ref_name }}
+    secrets: inherit
