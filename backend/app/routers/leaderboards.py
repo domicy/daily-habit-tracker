@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -13,6 +13,7 @@ from app.schemas import (
     LeaderboardRanking,
     LeaderboardTieBreakers,
     habit_score,
+    streak_days,
 )
 
 router = APIRouter(prefix="/v1/leaderboards", tags=["leaderboards"])
@@ -26,21 +27,6 @@ def _epoch_datetime(value: int) -> datetime:
         return datetime.fromtimestamp(seconds, tz=timezone.utc)
     except (OverflowError, OSError, ValueError) as exc:
         raise HTTPException(status_code=422, detail="Invalid epoch boundary") from exc
-
-
-def _streak_days(completed: set[date], as_of: date) -> int:
-    """Consecutive completed days ending at or immediately before ``as_of``.
-
-    Implements section 5 of the scoring contract: start at ``as_of``, or at the
-    previous day when ``as_of`` is not completed, so a user who has completed
-    yesterday but not yet today still sees the active streak.
-    """
-    current = as_of if as_of in completed else as_of - timedelta(days=1)
-    streak = 0
-    while current in completed:
-        streak += 1
-        current -= timedelta(days=1)
-    return streak
 
 
 @router.get("/head-to-head", response_model=HeadToHeadResponse)
@@ -133,7 +119,7 @@ async def head_to_head(
             "display_name": users_by_id[user_id].username,
             "is_current_user": user_id == current_user_id,
             "score": points[user_id],
-            "streak_days": _streak_days(streak_dates[user_id], streak_as_of),
+            "streak_days": streak_days(streak_dates[user_id], streak_as_of),
             "completion_rate_pct": round(completion_rate, 2),
             "last_authoritative_sync": last_sync[user_id],
         })
