@@ -65,4 +65,7 @@ backend/.env
 
 # testing
 coverage/
+# pytest-cov writes this next to backend/ when running the documented
+# `pytest --cov` command; it is a local artifact, never committed.
+.coverage
 __pycache__/

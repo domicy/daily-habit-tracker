@@ -29,6 +29,12 @@ def _epoch_datetime(value: int) -> datetime:
 
 
 def _streak_days(completed: set[date], as_of: date) -> int:
+    """Consecutive completed days ending at or immediately before ``as_of``.
+
+    Implements section 5 of the scoring contract: start at ``as_of``, or at the
+    previous day when ``as_of`` is not completed, so a user who has completed
+    yesterday but not yet today still sees the active streak.
+    """
     current = as_of if as_of in completed else as_of - timedelta(days=1)
     streak = 0
     while current in completed:
@@ -42,6 +48,10 @@ async def head_to_head(
     opponent_id: str = Query(..., min_length=1),
     start: int = Query(..., description="UTC epoch boundary in milliseconds"),
     end: int = Query(..., description="UTC epoch boundary in milliseconds"),
+    as_of: date | None = Query(
+        None,
+        description="Local calendar date the streak is measured from; defaults to today (UTC)",
+    ),
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ) -> HeadToHeadResponse:
@@ -64,6 +74,10 @@ async def head_to_head(
     start_date = period_start.date()
     end_date = period_end.date()
     day_count = (end_date - start_date).days + 1
+    # The streak is measured from a caller-supplied local date, clamped to the
+    # period end so a finished window reports the streak as it stood then. An
+    # active window is unaffected, since its end date is today or later.
+    streak_as_of = min(as_of or datetime.now(timezone.utc).date(), end_date)
     user_ids = [current_user_id, opponent_id]
     rows = await db.execute(
         select(HabitLog, Habit)
@@ -76,6 +90,21 @@ async def head_to_head(
             HabitLog.deleted_at.is_(None),
         )
     )
+    # The streak's candidate set is deliberately unwindowed below: a run that
+    # started before start_date still counts, so the number reflects the user's
+    # real streak rather than the width of the selected tab. The ownership join
+    # and tombstone filter mirror the windowed query above.
+    streak_rows = await db.execute(
+        select(HabitLog.user_id, HabitLog.completed_date)
+        .join(Habit, Habit.id == HabitLog.habit_id)
+        .where(
+            HabitLog.user_id.in_(user_ids),
+            Habit.user_id == HabitLog.user_id,
+            HabitLog.completed_date <= streak_as_of,
+            HabitLog.deleted_at.is_(None),
+        )
+        .distinct()
+    )
     habits = list(await db.scalars(select(Habit).where(Habit.user_id.in_(user_ids))))
     habit_counts = {user_id: 0 for user_id in user_ids}
     for habit in habits:
@@ -83,14 +112,16 @@ async def head_to_head(
 
     points = {user_id: 0 for user_id in user_ids}
     completed_pairs: dict[str, set[tuple[str, date]]] = {user_id: set() for user_id in user_ids}
-    completed_dates: dict[str, set[date]] = {user_id: set() for user_id in user_ids}
     last_sync: dict[str, datetime | None] = {user_id: None for user_id in user_ids}
     for log, habit in rows:
         points[log.user_id] += habit_score(habit.impact, habit.friction, habit.keystone, habit.time_cost)
         completed_pairs[log.user_id].add((log.habit_id, log.completed_date))
-        completed_dates[log.user_id].add(log.completed_date)
         if last_sync[log.user_id] is None or log.synced_at > last_sync[log.user_id]:
             last_sync[log.user_id] = log.synced_at
+
+    streak_dates: dict[str, set[date]] = {user_id: set() for user_id in user_ids}
+    for streak_user_id, completed_date in streak_rows:
+        streak_dates[streak_user_id].add(completed_date)
 
     updated_at = max((sync for sync in last_sync.values() if sync is not None), default=datetime.now(timezone.utc))
     rankings_data = []
@@ -102,7 +133,7 @@ async def head_to_head(
             "display_name": users_by_id[user_id].username,
             "is_current_user": user_id == current_user_id,
             "score": points[user_id],
-            "streak_days": _streak_days(completed_dates[user_id], end_date),
+            "streak_days": _streak_days(streak_dates[user_id], streak_as_of),
             "completion_rate_pct": round(completion_rate, 2),
             "last_authoritative_sync": last_sync[user_id],
         })

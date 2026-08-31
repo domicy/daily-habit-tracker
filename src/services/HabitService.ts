@@ -6,6 +6,7 @@ import {subDays, format} from 'date-fns';
 import type Habit from '../models/Habit';
 import type HabitLog from '../models/HabitLog';
 import {calculateHabitScore} from '../utils/habitScoring';
+import {getTodayString} from '../utils/dateUtils';
 
 export interface HabitMetrics {
   habit_id: string;
@@ -316,15 +317,22 @@ export default class HabitService {
     return response.data;
   }
 
+  /**
+   * `asOf` is the local calendar date the streak tie-breaker is measured from,
+   * independent of the [start, end] window and clamped server-side to the
+   * period end. It is last in the signature because #151 removes `opponentId`
+   * from the front of it.
+   */
   async getHeadToHeadLeaderboard(
     opponentId: string,
     start: number,
     end: number,
+    asOf: string = getTodayString(),
   ): Promise<HeadToHeadResponse> {
     const {default: apiClient} = await import('./api');
     const response = await apiClient.get<HeadToHeadResponse>(
       '/v1/leaderboards/head-to-head',
-      {params: {opponent_id: opponentId, start, end}},
+      {params: {opponent_id: opponentId, start, end, as_of: asOf}},
     );
     return response.data;
   }
