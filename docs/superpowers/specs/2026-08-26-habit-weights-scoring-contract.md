@@ -198,18 +198,37 @@ one user's local habits.
 The head-to-head integration defined by #107 uses:
 
 ```text
-GET /v1/leaderboards/head-to-head?opponent_id={user_id}&start={epoch_ms}&end={epoch_ms}
+GET /v1/leaderboards/head-to-head?opponent_id={user_id}&start={epoch_ms}&end={epoch_ms}[&as_of={YYYY-MM-DD}]
 ```
 
 `opponent_id` is required and must identify a user other than the authenticated
-caller. Boundaries are generated dynamically by the client for daily, weekly,
-monthly, and yearly tabs; they are not persisted as competitions. The response
+caller. `as_of` is optional and defaults to today (UTC); it is the local calendar
+date the streak tie-breaker is measured from. Boundaries are generated
+dynamically by the client for daily, weekly, monthly, and yearly tabs; they are
+not persisted as competitions. The response
 contains exactly the authenticated user and opponent. Each user's aggregate
 score is the sum of the derived habit score for every distinct, non-deleted
 habit log inside the requested window. Rankings sort by score descending,
 streak descending, completion rate descending, then earliest authoritative sync.
+
+The tie-breaker's streak is **user-level**: consecutive calendar days on which the
+user completed at least one non-deleted log for *any* of their habits. It is
+therefore not the per-habit streak of §5, and equals
+`GET /habits/{id}/metrics.current_streak` only for a user who owns exactly one
+habit. It is measured from `as_of`, clamped to the period end so a finished window
+reports the streak as it stood at that point, and is otherwise **independent of
+`[start, end]`** — history from before the window counts toward it. It applies no
+creation-date floor: a user-level streak has no single habit creation date to floor
+against. (The per-habit streak is floored at the habit's creation date by the
+metrics implementation; whether §5 intends that is tracked in #164.) §5's rule
+still applies: start at `as_of`, or at the previous calendar day when `as_of` is
+not completed.
+
 The current storage represents completion as a calendar date, so epoch
-boundaries are normalized to UTC dates by the backend.
+boundaries are normalized to UTC dates by the backend. Both representations
+therefore cross the wire together on this endpoint: `as_of` is a local calendar
+date, as §5 requires of an as-of date, while `start` and `end` remain
+UTC-normalized epoch boundaries until #149 settles the window representation.
 
 ## Migration and testing requirements
 
