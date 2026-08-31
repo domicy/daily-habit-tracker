@@ -151,6 +151,26 @@ jobs:
       - name: Run pytest with coverage
         run: pytest --cov=app --cov-report=term-missing --cov-fail-under=85
 
+      # The suite above runs on in-memory SQLite. app/routers/logs.py builds a
+      # dialect-native upsert, so its MySQL/MariaDB branch -- the atomic
+      # ON DUPLICATE KEY UPDATE that stops two concurrent /logs/sync requests
+      # racing on the same (habit_id, completed_date) -- is only executed when
+      # the suite runs on that dialect. Re-run it against the MariaDB service
+      # that the migration checks above already start.
+      - name: Run pytest against MariaDB
+        env:
+          # A database of its own, so creating and dropping the schema per test
+          # cannot disturb the migration checks' `habits` / `habits_003`.
+          TEST_DATABASE_URL: mysql+asyncmy://root:secret@127.0.0.1:3306/habits_pytest
+        run: |
+          python - <<'PY'
+          import pymysql
+          conn = pymysql.connect(host="127.0.0.1", user="root", password="secret")
+          conn.cursor().execute("CREATE DATABASE IF NOT EXISTS habits_pytest")
+          conn.close()
+          PY
+          pytest -q
+
   android-build:
     name: Android Build
     runs-on: ubuntu-latest

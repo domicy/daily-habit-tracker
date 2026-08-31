@@ -18,7 +18,12 @@ from app.database import get_db
 from app.main import app
 from app.models import Base, User
 
-TEST_DB_URL = "sqlite+aiosqlite://"
+# In-memory SQLite by default, so a local run needs no database server. CI
+# overrides this to re-run the whole suite against MariaDB, which is what
+# production actually runs: app/routers/logs.py builds a dialect-native upsert,
+# and the branch that guards production against the concurrent-sync race is
+# only exercised when the tests run on that dialect.
+TEST_DB_URL = os.environ.get("TEST_DATABASE_URL", "sqlite+aiosqlite://")
 
 # The account every authenticated test acts as. It is a real row in ``users``:
 # habits.user_id and habit_logs.user_id are foreign keys to it, and the API
@@ -30,12 +35,15 @@ TEST_USER_ID = "user"
 async def db_session():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     # SQLite ignores foreign keys unless asked, which would let the suite pass
-    # while the constraints added in migration 007 went unexercised.
-    event.listen(
-        engine.sync_engine,
-        "connect",
-        lambda dbapi_conn, _record: dbapi_conn.execute("PRAGMA foreign_keys=ON"),
-    )
+    # while the constraints added in migration 007 went unexercised. MariaDB
+    # enforces them natively and rejects the PRAGMA as a syntax error, so this
+    # is registered for SQLite only.
+    if engine.dialect.name == "sqlite":
+        event.listen(
+            engine.sync_engine,
+            "connect",
+            lambda dbapi_conn, _record: dbapi_conn.execute("PRAGMA foreign_keys=ON"),
+        )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
