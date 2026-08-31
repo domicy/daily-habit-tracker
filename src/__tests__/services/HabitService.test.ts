@@ -30,17 +30,23 @@ function formatDate(date: Date): string {
 // the multi-account tests pass a real id.
 const DEFAULT_OWNER = 'user';
 
+// Habits are created long before anything these tests log. A log dated before
+// its habit existed counts toward nothing, so a fixture stamped Date.now()
+// would floor out every backdated log the streak tests rely on.
+const LONG_AGO = Date.UTC(2020, 0, 1);
+
 async function createTestHabit(
   database: Database,
   name: string = 'Exercise',
   synced: boolean = true,
   owner: string = DEFAULT_OWNER,
+  createdAt: number = LONG_AGO,
 ): Promise<Habit> {
   return database.write(async () => {
     return database.get<Habit>('habits').create(h => {
       h.userId = owner;
       h.name = name;
-      h.createdAt = Date.now();
+      h.createdAt = createdAt;
       h.isActive = true;
       h.synced = synced;
     });
@@ -360,6 +366,47 @@ describe('HabitService', () => {
 
       const streak = await service.calculateStreak(habit.id, '2026-03-07');
       expect(streak).toBe(1);
+    });
+
+    it('stops at the habit creation date, matching the server', async () => {
+      // Created 2026-03-06T12:00Z, so the floor is 2026-03-05 -- the same
+      // one-day grace creation_floor applies in backend/app/schemas.py. The
+      // 3rd and 4th predate the habit and must not extend the run, so the
+      // number here matches what GET /habits/{id}/metrics returns and no
+      // longer shifts when the device reconnects.
+      const habit = await createTestHabit(
+        database,
+        'Backdated',
+        true,
+        DEFAULT_OWNER,
+        Date.UTC(2026, 2, 6, 12, 0),
+      );
+      await createTestLog(database, habit.id, '2026-03-03', true);
+      await createTestLog(database, habit.id, '2026-03-04', true);
+      await createTestLog(database, habit.id, '2026-03-05', true);
+      await createTestLog(database, habit.id, '2026-03-06', true);
+      await createTestLog(database, habit.id, '2026-03-07', true);
+
+      const streak = await service.calculateStreak(habit.id, '2026-03-07');
+      expect(streak).toBe(3);
+    });
+
+    it('keeps the day before creation for a habit added west of UTC', async () => {
+      // 2026-03-06T01:00Z is 2026-03-05 20:00 at UTC-5, so the first log a
+      // user there records is dated the day before the UTC creation date.
+      // The grace is what stops it being discarded.
+      const habit = await createTestHabit(
+        database,
+        'Westerly',
+        true,
+        DEFAULT_OWNER,
+        Date.UTC(2026, 2, 6, 1, 0),
+      );
+      await createTestLog(database, habit.id, '2026-03-05', true);
+      await createTestLog(database, habit.id, '2026-03-06', true);
+
+      const streak = await service.calculateStreak(habit.id, '2026-03-06');
+      expect(streak).toBe(2);
     });
 
     it('does not fetch logs older than the 400-day cutoff', async () => {

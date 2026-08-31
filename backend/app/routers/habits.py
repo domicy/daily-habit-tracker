@@ -15,6 +15,7 @@ from app.schemas import (
     HabitSyncPullResponse,
     HabitUpdate,
     HabitMetricsRead,
+    creation_floor,
     habit_score,
     streak_days,
 )
@@ -140,14 +141,10 @@ async def get_habit_metrics(
     if not habit:
         raise HTTPException(status_code=404, detail="Habit not found")
 
-    # SQLite may return a naive value for a timezone-aware column. Stored
-    # habit timestamps are UTC by contract, so interpret a naive value as UTC
-    # rather than allowing the caller's local timezone to affect the date.
-    created_at = habit.created_at
-    if created_at.tzinfo is None:
-        creation_date = created_at.date()
-    else:
-        creation_date = created_at.astimezone(timezone.utc).date()
+    # Universal data-validity boundary: a log dated before the habit existed
+    # counts toward neither the completion rate nor the streak. See
+    # creation_floor for why it carries a one-day grace.
+    creation_date = creation_floor(habit.created_at)
 
     completed_days = await db.scalar(
         select(func.count(func.distinct(HabitLog.completed_date))).where(

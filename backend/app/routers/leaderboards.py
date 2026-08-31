@@ -12,6 +12,7 @@ from app.schemas import (
     LeaderboardMeta,
     LeaderboardRanking,
     LeaderboardTieBreakers,
+    creation_floor,
     habit_score,
     streak_days,
 )
@@ -81,7 +82,7 @@ async def head_to_head(
     # real streak rather than the width of the selected tab. The ownership join
     # and tombstone filter mirror the windowed query above.
     streak_rows = await db.execute(
-        select(HabitLog.user_id, HabitLog.completed_date)
+        select(HabitLog.user_id, HabitLog.completed_date, Habit.created_at)
         .join(Habit, Habit.id == HabitLog.habit_id)
         .where(
             HabitLog.user_id.in_(user_ids),
@@ -100,13 +101,22 @@ async def head_to_head(
     completed_pairs: dict[str, set[tuple[str, date]]] = {user_id: set() for user_id in user_ids}
     last_sync: dict[str, datetime | None] = {user_id: None for user_id in user_ids}
     for log, habit in rows:
+        # A habit created mid-window accrues nothing for the days before it
+        # existed. Applied here rather than in SQL so one Python definition of
+        # the floor serves both dialects the suite runs on.
+        if log.completed_date < creation_floor(habit.created_at):
+            continue
         points[log.user_id] += habit_score(habit.impact, habit.friction, habit.keystone, habit.time_cost)
         completed_pairs[log.user_id].add((log.habit_id, log.completed_date))
         if last_sync[log.user_id] is None or log.synced_at > last_sync[log.user_id]:
             last_sync[log.user_id] = log.synced_at
 
     streak_dates: dict[str, set[date]] = {user_id: set() for user_id in user_ids}
-    for streak_user_id, completed_date in streak_rows:
+    for streak_user_id, completed_date, habit_created_at in streak_rows:
+        # A day counts toward the user-level streak only if the user completed a
+        # habit that already existed on it.
+        if completed_date < creation_floor(habit_created_at):
+            continue
         streak_dates[streak_user_id].add(completed_date)
 
     updated_at = max((sync for sync in last_sync.values() if sync is not None), default=datetime.now(timezone.utc))
