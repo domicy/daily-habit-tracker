@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Annotated
 
 from pydantic import BaseModel, Field, StrictInt, field_validator
@@ -15,6 +15,31 @@ def habit_score(impact: int, friction: int, keystone: int, time_cost: int) -> in
     return (100 * raw_minus_minimum * 2 + 16) // (16 * 2)
 
 
+def creation_floor(created_at: datetime) -> date:
+    """Earliest calendar date a log may count toward any metric for this habit.
+
+    The contract treats the habit's creation as a universal data-validity
+    boundary: a log dated before the habit existed counts toward nothing.
+
+    The one-day grace is not slack, it is the closest the stored data allows.
+    ``created_at`` is an absolute UTC instant while ``completed_date`` is a
+    device-local calendar date, so the two are not directly comparable. A user
+    west of UTC creating a habit in their evening lands a UTC creation date one
+    day *ahead* of their own, and a strict comparison would discard the first
+    log they ever record. One day covers the whole UTC-12..+14 range. Carrying
+    the local creation date properly is #149.
+
+    SQLite returns a naive value for a timezone-aware column. Stored timestamps
+    are UTC by contract, so a naive value is read as UTC rather than letting the
+    server's local zone shift the date.
+    """
+    if created_at.tzinfo is None:
+        creation_date = created_at.date()
+    else:
+        creation_date = created_at.astimezone(timezone.utc).date()
+    return creation_date - timedelta(days=1)
+
+
 def streak_days(completed: set[date], as_of: date) -> int:
     """Consecutive completed days ending at or immediately before ``as_of``.
 
@@ -22,9 +47,9 @@ def streak_days(completed: set[date], as_of: date) -> int:
     previous day when ``as_of`` is not completed, so a user who has completed
     yesterday but not yet today still sees the active streak.
 
-    The candidate set is the caller's decision — the metrics endpoint floors it
-    at the habit's creation date, the leaderboard does not — so the scope stays
-    visible at each call site rather than being fixed here.
+    The candidate set is the caller's decision, but both call sites now apply
+    the same rule: dates are floored at ``creation_floor`` of the habit they
+    belong to, so a log predating its habit extends no streak.
     """
     current = as_of if as_of in completed else as_of - timedelta(days=1)
     streak = 0

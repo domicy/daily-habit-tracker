@@ -9,20 +9,33 @@ def epoch_ms(value: str) -> int:
     return int(datetime.fromisoformat(value).replace(tzinfo=timezone.utc).timestamp() * 1000)
 
 
-async def _seed_pair(db_session, habit_id: str = "my-habit") -> str:
+# Habits are created before anything these tests log. A habit defaults to
+# created_at=now, which would floor out every fixture log dated in the past.
+_LONG_AGO = datetime(2020, 1, 1, tzinfo=timezone.utc)
+
+
+async def _seed_pair(
+    db_session, habit_id: str = "my-habit", created_at: datetime = _LONG_AGO
+) -> str:
     """The authenticated user plus an opponent, each owning one neutral habit.
 
     The auth_header fixture already created "user"; merge gives it the display
     name without colliding on the primary key. Habit/HabitLog have no
     relationship() to User, only a raw foreign key, so the inserts are flushed
     in dependency order rather than left to the unit of work.
+
+    ``created_at`` defaults to well before any date these tests log, because a
+    log predating its habit counts toward nothing; tests that care about that
+    boundary pass an explicit value.
     """
     await db_session.merge(User(id="user", email="me@example.com", username="Me", password_hash="x"))
     db_session.add(User(id="opponent", email="them@example.com", username="Them", password_hash="x"))
     await db_session.flush()
     db_session.add_all([
-        Habit(id=habit_id, user_id="user", name="Mine", impact=3, friction=3, keystone=3, time_cost=3),
-        Habit(id="their-habit", user_id="opponent", name="Theirs", impact=3, friction=3, keystone=3, time_cost=3),
+        Habit(id=habit_id, user_id="user", name="Mine", created_at=created_at,
+              impact=3, friction=3, keystone=3, time_cost=3),
+        Habit(id="their-habit", user_id="opponent", name="Theirs", created_at=created_at,
+              impact=3, friction=3, keystone=3, time_cost=3),
     ])
     await db_session.flush()
     return habit_id
@@ -63,8 +76,10 @@ async def test_head_to_head_aggregates_habit_scores_and_marks_current_user(clien
     # the unit of work will not order the inserts for us.
     await db_session.flush()
     db_session.add_all([
-        Habit(id="my-high", user_id="user", name="High", impact=5, friction=1, keystone=5, time_cost=1),
-        Habit(id="their-neutral", user_id="opponent", name="Neutral", impact=3, friction=3, keystone=3, time_cost=3),
+        Habit(id="my-high", user_id="user", name="High", created_at=_LONG_AGO,
+              impact=5, friction=1, keystone=5, time_cost=1),
+        Habit(id="their-neutral", user_id="opponent", name="Neutral", created_at=_LONG_AGO,
+              impact=3, friction=3, keystone=3, time_cost=3),
     ])
     db_session.add_all([
         HabitLog(id="my-log-1", user_id="user", habit_id="my-high", completed_date=date(2026, 8, 30)),
@@ -242,6 +257,48 @@ async def test_streak_breaks_on_a_gap_and_ignores_a_deleted_log_outside_the_wind
     response = await _head_to_head(
         client, auth_header,
         start="2099-08-26T00:00:00", end="2099-08-30T23:59:59.999", as_of="2099-08-27",
+    )
+
+    assert response.status_code == 200
+    assert _streak_for(response.json()) == 3
+
+
+@pytest.mark.asyncio
+async def test_points_exclude_days_before_the_habit_existed(client, db_session, auth_header):
+    """A habit created mid-window accrues nothing for the days before it existed."""
+    # Created 2099-08-15T12:00Z → floor 2099-08-14, mid-way through the window.
+    await _seed_pair(db_session, created_at=datetime(2099, 8, 15, 12, 0, tzinfo=timezone.utc))
+    db_session.add_all([
+        HabitLog(id="before-1", user_id="user", habit_id="my-habit", completed_date=date(2099, 8, 10)),
+        HabitLog(id="before-2", user_id="user", habit_id="my-habit", completed_date=date(2099, 8, 11)),
+        HabitLog(id="after-1", user_id="user", habit_id="my-habit", completed_date=date(2099, 8, 16)),
+    ])
+    await db_session.commit()
+
+    response = await _head_to_head(
+        client, auth_header,
+        start="2099-08-01T00:00:00", end="2099-08-31T23:59:59.999", as_of="2099-08-16",
+    )
+
+    assert response.status_code == 200
+    ranking = next(r for r in response.json()["rankings"] if r["user_id"] == "user")
+    # One neutral habit (3/3/3/3 → 50) counted once, for 2099-08-16 alone.
+    assert ranking["score"] == 50
+
+
+@pytest.mark.asyncio
+async def test_streak_ignores_days_before_the_habit_existed(client, db_session, auth_header):
+    """A day only extends the user-level streak if a habit existed on it."""
+    await _seed_pair(db_session, created_at=datetime(2099, 8, 15, 12, 0, tzinfo=timezone.utc))
+    # An unbroken run of five days ending 2099-08-16, so 12th through 16th.
+    # created_at 2099-08-15 gives a floor of 2099-08-14 once the timezone grace
+    # is applied, so the 12th and 13th drop out and the streak is 3, not 5.
+    db_session.add_all(_run("my-habit", "user", date(2099, 8, 16), 5))
+    await db_session.commit()
+
+    response = await _head_to_head(
+        client, auth_header,
+        start="2099-08-01T00:00:00", end="2099-08-31T23:59:59.999", as_of="2099-08-16",
     )
 
     assert response.status_code == 200

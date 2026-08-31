@@ -708,12 +708,32 @@ export default class HabitService {
       'yyyy-MM-dd',
     );
 
+    // A log dated before the habit existed counts toward nothing, so the walk
+    // must stop there. This mirrors `creation_floor` in backend/app/schemas.py
+    // exactly -- including the one-day grace that keeps a first log recorded
+    // west of UTC from being discarded. Deriving it any other way would put the
+    // server and this fallback back out of step, which is the whole point of
+    // the floor being here: StatsScreen shows the server's number when the
+    // metrics request succeeds and this one when it fails.
+    //
+    // toISOString() is deliberate here, and is the one place it is correct:
+    // created_at is an absolute instant and the server takes its UTC calendar
+    // date, so this must too. Everywhere else, use getTodayString().
+    const habit = await this.getHabitById(habitId);
+    const creationUtcDate = new Date(habit.createdAt).toISOString().slice(0, 10);
+    const creationFloor = format(
+      subDays(new Date(creationUtcDate + 'T00:00:00'), 1),
+      'yyyy-MM-dd',
+    );
+    // ISO dates sort lexicographically, so the later bound is the stricter one.
+    const lowerBound = cutoffDate > creationFloor ? cutoffDate : creationFloor;
+
     const logs = await this.database
       .get<HabitLog>('habit_logs')
       .query(
         Q.where('habit_id', habitId),
         Q.where('user_id', this.userId),
-        Q.where('completed_date', Q.gte(cutoffDate)),
+        Q.where('completed_date', Q.gte(lowerBound)),
         Q.where('completed_date', Q.lte(asOfDate)),
         Q.where('deleted_at', null),
       )

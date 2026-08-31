@@ -29,7 +29,10 @@ async function createTestHabit(
     return database.get<Habit>('habits').create(h => {
       h.userId = 'user';
       h.name = name;
-      h.createdAt = Date.now();
+      // Before any date these tests log: a log predating its habit counts
+      // toward nothing, so a Date.now() stamp would floor out the 2024
+      // fixtures these DST cases rely on.
+      h.createdAt = Date.UTC(2020, 0, 1);
       h.isActive = true;
     });
   });
