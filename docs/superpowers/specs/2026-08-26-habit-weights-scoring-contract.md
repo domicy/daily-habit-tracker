@@ -125,6 +125,20 @@ rather than returning a fabricated percentage.
 Logs before creation, logs marked deleted, and logs belonging to another user
 do not count. Historical logs remain valid after a habit is deactivated.
 
+This is a **universal data-validity rule, not a completion-rate one**: it governs
+every derived metric — the completion rate, the per-habit streak of §5, and the
+head-to-head score and streak alike. A habit's creation is a hard boundary, and
+backfilling history from before it is explicitly not supported.
+
+The boundary carries a **one-day grace**: it is `date(created_at) - 1 day`, in
+UTC. This is not slack. `created_at` is an absolute UTC instant while
+`completed_date` is a device-local calendar date, so the two are not directly
+comparable — a user west of UTC creating a habit in their evening lands a UTC
+creation date one day *ahead* of their own, and a strict comparison would discard
+the first log they ever record. One day covers the whole UTC-12..+14 range.
+Carrying the local creation date properly, and removing the need for the grace,
+is tracked in #149.
+
 ### 5. Streak
 
 Streak is the number of consecutive completed calendar days ending at the
@@ -147,6 +161,11 @@ Examples as of Friday:
 The as-of date is a local calendar date, not a timestamp. Inactive status does
 not erase or truncate a streak; the caller can choose whether to request
 metrics for an inactive habit.
+
+A streak **is** bounded below by the habit's creation date, under §4's universal
+rule and with the same one-day grace. Lifecycle *status* never truncates a
+streak; the habit's *existence* does. A day before the habit existed therefore
+breaks the walk exactly as an uncompleted day would.
 
 ## Data flow and interface requirements
 
@@ -217,12 +236,12 @@ therefore not the per-habit streak of §5, and equals
 `GET /habits/{id}/metrics.current_streak` only for a user who owns exactly one
 habit. It is measured from `as_of`, clamped to the period end so a finished window
 reports the streak as it stood at that point, and is otherwise **independent of
-`[start, end]`** — history from before the window counts toward it. It applies no
-creation-date floor: a user-level streak has no single habit creation date to floor
-against. (The per-habit streak is floored at the habit's creation date by the
-metrics implementation; whether §5 intends that is tracked in #164.) §5's rule
-still applies: start at `as_of`, or at the previous calendar day when `as_of` is
-not completed.
+`[start, end]`** — history from before the window counts toward it. §4's creation
+floor applies per habit: a day counts toward the user-level streak only if the
+user completed at least one habit that **already existed on that day**. Points are
+floored the same way, so a habit created mid-window accrues nothing for the days
+before it existed. §5's rule still applies: start at `as_of`, or at the previous
+calendar day when `as_of` is not completed.
 
 The current storage represents completion as a calendar date, so epoch
 boundaries are normalized to UTC dates by the backend. Both representations

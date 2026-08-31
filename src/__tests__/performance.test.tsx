@@ -47,7 +47,9 @@ describe('Performance benchmarks', () => {
         return database.get<Habit>('habits').create(h => {
           h.userId = 'user';
           h.name = 'Daily Exercise';
-          h.createdAt = Date.now();
+          // Predates the 365 logs below; otherwise the creation floor trims
+          // them and the benchmark stops measuring a 365-day walk.
+          h.createdAt = Date.UTC(2020, 0, 1);
           h.isActive = true;
         });
       });
