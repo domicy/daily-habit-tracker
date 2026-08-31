@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -16,6 +16,7 @@ from app.schemas import (
     HabitUpdate,
     HabitMetricsRead,
     habit_score,
+    streak_days,
 )
 
 router = APIRouter(prefix="/habits", tags=["habits"])
@@ -169,12 +170,7 @@ async def get_habit_metrics(
         HabitLog.completed_date <= as_of,
         HabitLog.deleted_at.is_(None),
     ))
-    date_set = set(streak_dates)
-    current = as_of if as_of in date_set else as_of - timedelta(days=1)
-    current_streak = 0
-    while current in date_set:
-        current_streak += 1
-        current -= timedelta(days=1)
+    current_streak = streak_days(set(streak_dates), as_of)
 
     return HabitMetricsRead(
         habit_id=habit.id,

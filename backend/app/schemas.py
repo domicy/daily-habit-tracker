@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Annotated
 
 from pydantic import BaseModel, Field, StrictInt, field_validator
@@ -13,6 +13,26 @@ def habit_score(impact: int, friction: int, keystone: int, time_cost: int) -> in
     """Return the contract score using exact integer half-up rounding."""
     raw_minus_minimum = impact + (6 - friction) + keystone + (6 - time_cost) - 4
     return (100 * raw_minus_minimum * 2 + 16) // (16 * 2)
+
+
+def streak_days(completed: set[date], as_of: date) -> int:
+    """Consecutive completed days ending at or immediately before ``as_of``.
+
+    Implements section 5 of the scoring contract: start at ``as_of``, or at the
+    previous day when ``as_of`` is not completed, so a user who has completed
+    yesterday but not yet today still sees the active streak.
+
+    The candidate set is the caller's decision — the metrics endpoint floors it
+    at the habit's creation date, the leaderboard does not — so the scope stays
+    visible at each call site rather than being fixed here.
+    """
+    current = as_of if as_of in completed else as_of - timedelta(days=1)
+    streak = 0
+    while current in completed:
+        streak += 1
+        current -= timedelta(days=1)
+    return streak
+
 
 class HabitCreate(BaseModel):
     name: str = Field(..., max_length=50)
