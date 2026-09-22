@@ -103,6 +103,41 @@ HEAD`, which should always increase on `main`. If someone force-pushed to
 `main`, the count could regress; a force-push to revert that history fixes
 it.
 
+## Signing keystore — where it is, and verifying it before you use it
+
+**Always check the fingerprint before signing or copying a keystore.** Two
+apps' keys have lived side by side on the dev box, and signing with the wrong
+one produces an APK that cannot install over the existing install. Recovering
+from that needs an uninstall, which loses local-only state.
+
+| | |
+|---|---|
+| File | `~/keystores/daily-habit-tracker.keystore` (outside any repo, gitignored) |
+| Alias | `dailyhabittracker` |
+| Certificate SHA-256 | `0b05ccb2263bdea8885d1bf104fa10dd7e07fac1c184728b47921cc53cd42c9b` |
+| Format | PKCS12 — the key password is necessarily the same as the store password |
+| Password | 1Password, "DailyHabitTracker Android Keystore" |
+
+```bash
+keytool -list -keystore ~/keystores/daily-habit-tracker.keystore
+```
+
+The alias and fingerprint above are what you should see. CI does not read this
+file — the pipeline uses the `ANDROID_KEYSTORE_BASE64` secret (`ci.yml`) — so
+this copy is the master for backup and rotation purposes.
+
+**Renamed 2026-09-22.** It was previously `~/keystores/release.keystore`.
+Contents are byte-identical; only the filename changed. The old name did not
+identify which app it belonged to, and it was mistaken for the
+`fitness-app-mobile` release key and staged onto that project's CI signing
+host. A fingerprint check caught it before anything was signed. The historical
+plan doc (`docs/superpowers/plans/2026-05-12-android-only-pivot.md`) still shows
+the original commands with the old filename, annotated accordingly.
+
+For the avoidance of doubt, `fitness-app-mobile`'s key is a **different** key
+(alias `workout-tracker`, certificate `ebae77fd…`) and is not stored in
+`~/keystores/`.
+
 ## Apksigner verification (one-time, after first release)
 
 After the first release publishes, download the APK and confirm v2 + v3

@@ -1030,6 +1030,17 @@
 
 **Files:** None in repo (keystore is gitignored).
 
+> **NOTE (2026-09-22): the keystore file has been renamed.** The steps below
+> were written against `~/keystores/release.keystore`; that file is now
+> `~/keystores/daily-habit-tracker.keystore`. Contents are unchanged — only the
+> name. It was renamed because "release.keystore" identifies no app, and it was
+> consequently mistaken for a different project's release key. The alias
+> (`dailyhabittracker`) and the 1Password entry are unchanged. See
+> `docs/android-setup.md` for the current location and verification steps, and
+> `~/keystores/README.md` on the dev box. The commands below are kept as the
+> historical record of how the key was created — substitute the new filename if
+> you are following them.
+
 - [ ] **Step 1: Generate the keystore**
 
   In a working directory **outside the repo** (e.g., `~/keystores/`):
